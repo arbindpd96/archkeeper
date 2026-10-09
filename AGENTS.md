@@ -39,18 +39,18 @@ After adding a package, module or shared util, update `docs/architecture.md` in 
   - No TODO without an issue reference (`TODO(#12): ...`).
 - Limits: function ≤ 50 lines, cyclomatic complexity ≤ 10, ≤ 4 parameters, nesting depth ≤ 3, file ≤ 300 lines.
 - Never swallow errors silently. Throw typed errors with actionable messages.
-- No new runtime dependency without a one-line justification in the PR.
+- No runtime dependencies (ADR-0011): every library is a devDependency that tsdown inlines. `budgets.json` caps sizes (ADR-0017).
 
 The full guide is in `CONTRIBUTING.md`.
 
 ## Commands
 
-| Command               | Purpose                                                                |
-| --------------------- | ---------------------------------------------------------------------- |
-| `npm install`         | Install the toolchain and the git hooks                                |
-| `npm run check`       | Everything CI runs: format, lint, types, comments, brand, tests, build |
-| `npm run check:quick` | Types and tests (fast loop)                                            |
-| `npm test`            | Tests only                                                             |
+| Command               | Purpose                                                                         |
+| --------------------- | ------------------------------------------------------------------------------- |
+| `npm install`         | Install the toolchain and the git hooks                                         |
+| `npm run check`       | Everything CI runs: format, lint, types, comments, brand, tests, build, package |
+| `npm run check:quick` | Types and tests (fast loop)                                                     |
+| `npm test`            | Tests only                                                                      |
 
 ## Git
 

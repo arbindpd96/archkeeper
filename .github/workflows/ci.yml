@@ -90,6 +90,58 @@ jobs:
           cat "$RUNNER_TEMP/first.sha256"
           diff "$RUNNER_TEMP/first.sha256" "$RUNNER_TEMP/second.sha256"
 
+  package:
+    name: Package checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Integrity and lightness budgets (publint, pack snapshot, budgets.json)
+        run: npm run package
+      - name: Publish dry run
+        run: npm publish --dry-run --ignore-scripts
+
+  install-smoke:
+    name: Install smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Install the packed tarball under a path with a space and run the bin
+        shell: bash
+        run: |
+          smoke="${RUNNER_TEMP//\\//}/install smoke"
+          mkdir -p "$smoke/project"
+          tarball="$(npm pack --ignore-scripts --json --pack-destination "$smoke" | node -p "JSON.parse(require('node:fs').readFileSync(0, 'utf8'))[0].filename")"
+          bin="$(node -p "Object.keys(require('./package.json').bin)[0]")"
+          version="$(node -p "require('./package.json').version")"
+          cd "$smoke/project"
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund "$smoke/$tarball"
+          printed="$(npx --no-install "$bin" --version)"
+          echo "$bin --version printed $printed"
+          test "$printed" = "$version"
+
   commits:
     name: Conventional commits
     if: github.event_name == 'pull_request'
@@ -131,7 +183,7 @@ jobs:
   ci-ok:
     name: CI passed
     if: always()
-    needs: [quality, test, reproducible-build, commits, dependency-review]
+    needs: [quality, test, reproducible-build, package, install-smoke, commits, dependency-review]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
