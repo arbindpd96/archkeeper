@@ -5,21 +5,24 @@ import { compareText } from './text.js';
 /** An ownership strategy of ADR-0014. */
 export type Strategy = 'owned' | 'blocks' | 'json' | 'create-only';
 
-/** One piece of rendered output: a whole file, one managed block, or one module's entries in a JSON file. */
+/**
+ * One piece of rendered output: a whole file, one managed block, or one module's entries in a JSON file. A JSON
+ * entry lists the keys it owns, such as `mcpServers docs`, for the lock's ownedKeys (ADR-0014).
+ */
 export interface RenderedEntry {
   readonly content: string;
   readonly strategy: Strategy;
   readonly module: string;
   readonly blockId?: string;
+  readonly keys?: readonly string[];
 }
 
 /** Rendered output by project path in sorted order; a blocks or json path holds one entry per block or module. */
 export type RenderTree = ReadonlyMap<string, readonly RenderedEntry[]>;
 
-/** An entry on its way into the tree, with its path and, for JSON, the keys it owns. */
+/** An entry on its way into the tree, with its path. */
 export interface Draft extends RenderedEntry {
   readonly path: string;
-  readonly keys?: readonly string[];
 }
 
 function clash(path: string, problem: string, hint: string): RenderError {
@@ -75,8 +78,14 @@ function entryOrder(left: Draft, right: Draft): number {
   return compareText(left.blockId ?? '', right.blockId ?? '') || compareText(left.module, right.module);
 }
 
-function entryOf({ content, strategy, module, blockId }: Draft): RenderedEntry {
-  return blockId === undefined ? { content, strategy, module } : { content, strategy, module, blockId };
+function entryOf({ content, strategy, module, blockId, keys }: Draft): RenderedEntry {
+  return {
+    content,
+    strategy,
+    module,
+    ...(blockId === undefined ? {} : { blockId }),
+    ...(keys === undefined ? {} : { keys: [...keys].sort(compareText) }),
+  };
 }
 
 /**
