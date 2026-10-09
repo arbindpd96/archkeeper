@@ -35,7 +35,7 @@ After adding a package, module or shared util, update `docs/architecture.md` in 
 - Use strict TypeScript and ESM. Keep functions small with descriptive names; code should read clearly without comments.
 - Comments:
   - Give each exported function, class or type a one-line JSDoc summary. Otherwise comment only a non-obvious _why_.
-  - No comments that restate the code, no commented-out code, no trailing inline comments.
+  - No comments that restate the code (reviewers reject them; CI rejects JSDoc that only restates a name), no commented-out code, no trailing inline comments.
   - No TODO without an issue reference (`TODO(#12): ...`).
 - Limits: function ≤ 50 lines, cyclomatic complexity ≤ 10, ≤ 4 parameters, nesting depth ≤ 3, file ≤ 300 lines.
 - Never swallow errors silently. Throw typed errors with actionable messages.

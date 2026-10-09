@@ -19,25 +19,29 @@ Environment (2026-10-09): Node 26 current, Node 24 active LTS, npm 11 (install s
   `jsdoc/informative-docs`, `no-inline-comments`, and justified disables.
 - **Readability limits:** complexity 10, max-depth 3, 50 lines per function, 4 params, 300 lines per file.
 - **Comment policy checker:** `scripts/check-comments.mjs`, built on the TypeScript AST. It fails on commented-out code, dividers,
-  TODOs without an issue, and files with more than 15% comment lines (JSDoc excluded).
+  TODOs without an issue, and (in files with 20+ code lines) non-JSDoc comment lines above 15% of code lines.
+  Commented-out code is detected by parsing the comment text, so prose "why" comments never trip it.
 - **Format:** Prettier (110 columns).
 - **Tests:** Vitest 5 with v8 coverage.
-- **Commits:** commitlint (Conventional Commits plus a local `no-ai-attribution` rule). husky and lint-staged run the same checks before each commit.
+- **Commits:** commitlint (Conventional Commits plus a local `no-ai-attribution` rule). husky and lint-staged run format, lint and the comment check on staged files before each commit; types and tests run in CI.
+- **Node floor (contributors):** `^22.22.2 || >=24.15.0`, the minimum required by eslint-plugin-jsdoc and lint-staged.
 - **CI (GitHub Actions):**
   - Quality gates job.
   - Test matrix: Ubuntu on Node 22/24/26, plus macOS and Windows on Node 24.
   - commitlint on PR commits; Conventional PR titles.
-  - CodeQL (`security-and-quality`) and dependency review.
+  - Dependency review (PR-only) inside the CI workflow, so it is part of `CI passed`.
+  - CodeQL (`security-and-quality`) as its own workflow.
   - A single `CI passed` aggregator job for branch protection.
+  - Hardening: actions pinned to commit SHAs (Dependabot bumps them), `persist-credentials: false`, `npm ci --ignore-scripts`, job timeouts.
 - **Branch rules on `main`:**
   - PRs required.
-  - `CI passed` and the PR-title check required.
+  - Required checks: `CI passed`, `Conventional PR title`, `Analyze (javascript-typescript)`.
   - Linear history; rebase or squash merges only; no force-push or deletion.
   - Admins may bypass only in emergencies.
 
 ## Consequences
 
-- Contributors get fast local feedback (hooks), and CI repeats the same gates.
+- Contributors get fast local feedback from the git hooks, and CI runs the full gate set.
 - The comment policy is opinionated. Edge cases are handled with a justified `eslint-disable ... -- reason` or a code change, not by weakening the rule.
 - Release automation (changesets or release-please, npm trusted publishing with provenance) is added when the first package is publishable (v0.1).
 

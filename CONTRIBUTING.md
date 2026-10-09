@@ -7,7 +7,7 @@ Thanks for helping. This guide is short on purpose: most rules are enforced by t
 ```bash
 git clone https://github.com/arbindpd96/claude-codekit.git
 cd claude-codekit
-npm install        # Node >= 22.13; also installs the git hooks
+npm install        # Node ^22.22.2 or >= 24.15; also installs the git hooks
 npm run check      # everything CI runs
 ```
 
@@ -23,17 +23,17 @@ Commits are authored by people. Do not add AI co-author trailers or "generated w
 
 ## What CI checks
 
-| Gate                 | Command                   | What it enforces                                    |
-| -------------------- | ------------------------- | --------------------------------------------------- |
-| Formatting           | `npm run format:check`    | Prettier, 110 columns, single quotes                |
-| Lint                 | `npm run lint`            | typescript-eslint strict, readability limits, JSDoc |
-| Types                | `npm run typecheck`       | TypeScript strict, `noUncheckedIndexedAccess`       |
-| Comment policy       | `npm run comments`        | See [Comments](#comments)                           |
-| Tests                | `npm test`                | Vitest on Linux, macOS, Windows; Node 22, 24, 26    |
-| Commits and PR title | commitlint                | Conventional Commits, no AI attribution             |
-| Security             | CodeQL, dependency review | Code scanning; no vulnerable dependencies added     |
+| Gate                 | Command                   | What it enforces                                            |
+| -------------------- | ------------------------- | ----------------------------------------------------------- |
+| Formatting           | `npm run format:check`    | Prettier, 110 columns, single quotes                        |
+| Lint                 | `npm run lint`            | typescript-eslint strict, readability limits, JSDoc         |
+| Types                | `npm run typecheck`       | TypeScript strict, `noUncheckedIndexedAccess`               |
+| Comment policy       | `npm run comments`        | See [Comments](#comments)                                   |
+| Tests                | `npm test`                | Vitest: Linux on Node 22/24/26, macOS + Windows on 24       |
+| Commits and PR title | commitlint                | Conventional Commits, no AI attribution                     |
+| Security             | CodeQL, dependency review | Code scanning; no new dependency with a known vulnerability |
 
-The pre-commit hook runs Prettier, ESLint and the comment check on staged files, and commit-msg runs commitlint, so most problems never reach CI.
+The pre-commit hook runs Prettier, ESLint and the comment check on staged files, and commit-msg runs commitlint. Types and tests run in CI (and in `npm run check`), not in the hook, to keep commits fast.
 
 ## Code style
 
@@ -54,12 +54,12 @@ We keep comments few and useful. The rules:
    Add `@param` and `@returns` only when the name and type do not already say it.
 2. **Inside code, comment only a non-obvious _why_**: a constraint, a workaround, a surprising decision. Never the _what_.
 3. **Not allowed** (CI fails):
-   - comments that restate the code (`jsdoc/informative-docs`)
+   - JSDoc that only restates the symbol's name (`jsdoc/informative-docs`); plain `//` comments that restate code are caught in review
    - trailing inline comments (`no-inline-comments`)
    - commented-out code
    - decorative divider lines
    - `TODO` / `FIXME` without an issue: write `TODO(#123): ...`
-   - more than 15% comment lines in a file (JSDoc excluded)
+   - in files with 20+ code lines: non-JSDoc comment lines above 15% of code lines (tool directives such as `eslint-disable` don't count)
    - `eslint-disable` without a `-- reason`
 
 ```ts
