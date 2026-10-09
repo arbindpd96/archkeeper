@@ -59,7 +59,9 @@ function failingCheckReason(changed, state) {
   const fingerprint = treeFingerprint(changed);
   if (!hasScript('check:quick') || state.greenFingerprint === fingerprint) return null;
   const run = runQuickCheck();
-  if (run.error) return null;
+  if (run.error) {
+    return `\`npm run check:quick\` could not run (${run.error.code ?? run.error.message}). Run it yourself before finishing.`;
+  }
   if (run.status !== 0) {
     const output = `${run.stdout}\n${run.stderr}`.trim().slice(-3000);
     return `Code changed but \`npm run check:quick\` fails. Fix it before finishing:\n${output}`;

@@ -128,3 +128,29 @@ describe('stop-guard', () => {
     expect(stop(dir, { session_id: 's1', stop_hook_active: true })).toBe('');
   });
 });
+
+describe('stop-guard quick check', () => {
+  function repoWithQuickCheck(script: string): string {
+    const pkg = JSON.stringify({ name: 'fixture', private: true, scripts: { 'check:quick': script } });
+    const dir = tempRepo({ 'package.json': pkg, 'node_modules/.keep': '' });
+    writeFiles(dir, { 'scripts/tool.mjs': 'export {};\n' });
+    return dir;
+  }
+
+  it('blocks stopping when check:quick fails on changed code', () => {
+    const dir = repoWithQuickCheck('node -e "process.exit(1)"');
+    const verdict = JSON.parse(stop(dir, { session_id: 's1' })) as { decision: string; reason: string };
+    expect(verdict.decision).toBe('block');
+    expect(verdict.reason).toContain('check:quick` fails');
+  });
+
+  it('does not re-run check:quick for a tree that already passed', () => {
+    const counter = path.join(tempDir(), 'runs.txt');
+    const dir = repoWithQuickCheck(
+      `node -e "require('fs').appendFileSync(process.argv[1], 'x')" ${JSON.stringify(counter)}`,
+    );
+    expect(stop(dir, { session_id: 's1' })).toBe('');
+    expect(stop(dir, { session_id: 's2' })).toBe('');
+    expect(readFileSync(counter, 'utf8')).toBe('x');
+  });
+});

@@ -131,12 +131,13 @@ export function writeState(name, content) {
   }
 }
 
-/** Returns working-tree paths with uncommitted changes (staged, unstaged or untracked). */
+/** Returns uncommitted working-tree paths (staged, unstaged or untracked), excluding the hooks' own state. */
 export function changedFiles() {
   return git('status', '--porcelain', '--untracked-files=all')
     .split('\n')
     .filter(Boolean)
-    .map((line) => line.slice(3).replace(/^.* -> /, ''));
+    .map((line) => line.slice(3).replace(/^.* -> /, ''))
+    .filter((file) => !file.startsWith('.claude/state/'));
 }
 
 /** Shortens text to `max` characters, marking the cut. */
