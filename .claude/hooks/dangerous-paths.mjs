@@ -34,11 +34,17 @@ function resolveSegments(path) {
   return segments;
 }
 
+const HOME = homedir().replaceAll('\\', '/');
+const HOME_PREFIX = /^(?:~|\$HOME|\$\{HOME(?::?[-=?+][^}]*)?\})(?=\/|$)/;
+
 // The user's home and the project root, and every directory above them, must never be deleted wholesale.
-const PROTECTED_DIRS = [homedir(), process.env.CLAUDE_PROJECT_DIR ?? process.cwd()]
+const PROTECTED_DIRS = [HOME, process.env.CLAUDE_PROJECT_DIR ?? process.cwd()]
   .map((dir) => dir.replaceAll('\\', '/'))
   .filter((dir) => dir.startsWith('/'))
   .map((dir) => resolveSegments(dir).map((segment) => segment.toLowerCase()));
+
+// `~/Documents` holds the project when it lives there, which only the absolute form reveals.
+const expandHome = (path) => (HOME.startsWith('/') ? path.replace(HOME_PREFIX, HOME) : path);
 
 function isProtectedAbsolute(segments) {
   const lower = segments.map((segment) => segment.toLowerCase());
@@ -57,8 +63,9 @@ export function isUncheckedPath(path) {
 }
 
 /** Tells whether deleting `path` recursively would remove a root, system, home or project directory or a parent of one. */
-export function isDangerousPath(path) {
-  if (path === '') return false;
+export function isDangerousPath(word) {
+  if (word === '') return false;
+  const path = expandHome(word);
   const segments = resolveSegments(path);
   if (path.startsWith('/')) return isProtectedAbsolute(segments);
   const [first, ...rest] = segments;
