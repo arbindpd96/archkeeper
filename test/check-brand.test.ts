@@ -19,6 +19,7 @@ describe('check-brand', () => {
       'README.md': `# ${SLUG}\n`,
       'docs/adr/0001.md': `${SLUG} decision\n`,
       '.claude/hooks/guard.mjs': `export const label = '${SLUG} guard';\n`,
+      '.changeset/brave-owls-sing.md': `---\n'${SLUG}': minor\n---\n\nAdd init.\n`,
       'src/cli/main.ts': 'export const ready = true;\n',
     });
     expect(result.stderr).toBe('');
