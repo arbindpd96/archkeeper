@@ -84,7 +84,7 @@ const DESCRIBERS: Describers = {
   unrecognized_keys: unknownKey,
   invalid_type: invalidType,
   invalid_value: (issue) => ({
-    problem: `${show(issue.input)} is not allowed`,
+    problem: issue.input === undefined ? 'is required' : `${show(issue.input)} is not allowed`,
     hint: `use ${oneOf(issue.values)}`,
   }),
   invalid_union: invalidUnion,

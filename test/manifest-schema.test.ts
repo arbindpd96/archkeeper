@@ -180,6 +180,10 @@ describe('module manifest schema', () => {
     expect(error.hint).toContain(fix);
   });
 
+  it('says that a missing literal field is required', () => {
+    expect(load((m) => delete m.schemaVersion).message).toContain('schemaVersion: is required');
+  });
+
   it('names the offending path and value in the problem', () => {
     expect(load((m) => (file(m, 1).to = '/etc/notes.md')).message).toContain('files[1].to: is absolute');
     expect(load((m) => (hook(m, 0).event = 'Notification')).message).toContain(
