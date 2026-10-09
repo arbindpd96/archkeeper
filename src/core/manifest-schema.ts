@@ -2,6 +2,7 @@ import * as z from 'zod/mini';
 import { hasControlCharacter } from './paths.js';
 import {
   described,
+  KEBAB_ID,
   kebabId,
   listOf,
   oneLine,
@@ -93,11 +94,10 @@ const rule = z.string().check(
   }),
 );
 const SCRIPT_HINT = 'name a bundle under dist/hooks/, such as dist/hooks/guard-bash.mjs (ADR-0015)';
+const HOOK_SCRIPT = new RegExp(String.raw`^dist\/hooks\/${KEBAB_ID.source.slice(1, -1)}\.mjs$`);
 const hookFields = {
   matcher: z.optional(z.string().check(z.minLength(1))),
-  script: z
-    .string()
-    .check(z.regex(/^dist\/hooks\/[a-z][a-z0-9]*(?:-[a-z0-9]+)*\.mjs$/, { error: SCRIPT_HINT })),
+  script: z.string().check(z.regex(HOOK_SCRIPT, { error: SCRIPT_HINT })),
   timeout: z.int().check(z.minimum(1), z.maximum(600)),
   once: z.optional(
     z.never({ error: 'remove once: settings files ignore it; only skill frontmatter honours it' }),
