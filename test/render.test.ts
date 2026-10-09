@@ -155,6 +155,11 @@ describe('render', () => {
     });
   });
 
+  it('lists the keys each JSON entry owns, for the lock', () => {
+    const [servers] = render(MODULES, CONTEXT).get('.mcp.json') ?? [];
+    expect(servers?.keys).toEqual(['mcpServers docs', 'mcpServers graph']);
+  });
+
   it('renders a file only when its when holds', () => {
     const python = `${BRAND.rulesDir}/python.md`;
     expect(render(MODULES, CONTEXT).has(python)).toBe(true);
