@@ -26,13 +26,15 @@ This repo itself runs on that setup (dogfooding).
 - [x] Claude Code setup for this repo: hooks, settings, rules, skills, agents, AGENTS.md/CLAUDE.md, architecture map
 - [x] Toolchain + CI/CD gates (lint, format, types, comment policy, tests, commitlint, CodeQL, dependency review) and hook hardening (PR #1)
 - [ ] Branch ruleset on `main` after PR #1 merges
-- [ ] Research reference committed (docs/research/claude-code-reference.md)
-- [ ] ROADMAP.md with phases; GitHub milestones and v0.1 issues
-- [ ] Owner approves v0.1 task list, then scaffold `packages/core`
+- [x] Research reference committed (docs/research/claude-code-reference.md)
+- [x] Renamed to archkeeper (ADR-0010, PR #2)
+- [x] ROADMAP.md with phases; GitHub milestones (v0.0–v1.0) and issues #3–#65, including owner-action issues
+- [ ] Guard hardening from the focused review (#65)
+- [ ] v0.0 Runway: #3 ADR-0011 single package, #4 restructure to `src/`, #5 brand constants, #6 tsdown bundle, #7 budgets
 
 ## Next step
 
-Merge PR #1, enable the `main` ruleset, then merge the rename (#2) and roadmap (#64) PRs.
+Enable the `main` ruleset, then fix #65 (guard hardening) in its own PR. Then start v0.0 R1 with `/new-feature runway-r1`: issue #3 (ADR-0011) and #4 (restructure to `src/core`, `src/cli`, `src/hooks`).
 
 ## Gotchas / don't try again
 
