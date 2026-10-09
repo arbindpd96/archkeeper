@@ -15,7 +15,7 @@ Create the demo for `$ARGUMENTS`.
    - `Wait` for each result (a timeout fails the render), and `Sleep` long enough to read it.
 2. Render it. Never run `vhs` on a tape directly.
    - Tapes not marked `# live`: push. The **demo-gifs** workflow renders them against the packed CLI and uploads the `demo-gifs` artifact. Copy the GIFs with `npm run gifs:pull -- <run-id>`.
-   - Live tapes: review the tape like a shell script, then `npm run build` and `node scripts/render-tapes.mjs --live <feature>`, with VHS 0.12.1 (the version CI pins) and JetBrains Mono installed.
+   - Live tapes run in the maintainer's real shell with the real `HOME`. Record only tapes the maintainer wrote or reviewed, preferably in a throwaway VM or container (`ghcr.io/charmbracelet/vhs`) holding only a narrowly scoped key: `npm run build`, then `node scripts/render-tapes.mjs --live <feature>`, with VHS 0.12.1 (the version CI pins) and JetBrains Mono installed. `--live` refuses a tape, `_settings.tape` or fixture that anyone but the repo-local `user.email` committed to.
    - Pushing a new workflow file needs `gh auth refresh -h github.com -s workflow`.
 3. Run `npm run demos`: each GIF must be 2 MB or less and 20 s or less (30 s for the hero). If not, shorten the tape.
 4. In `README.md`, add or update the feature's section: one sentence of value, the GIF
