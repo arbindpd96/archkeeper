@@ -1,17 +1,11 @@
-import { hasLong, parseOptions } from './cli-options.mjs';
-import { isDangerousPath, isUncheckedPath } from './dangerous-paths.mjs';
+import { parseOptions } from './cli-options.mjs';
+import { findPipedToRm, findRule, rmRule } from './delete-rules.mjs';
 import { isEnvFileName, isEnvTemplateName } from './env-files.mjs';
 import { gitRule, HOOKS_PATH, HUSKY_OFF } from './git-rules.mjs';
 import { globMatches } from './glob-match.mjs';
 import { parseCommands } from './shell-commands.mjs';
+import { ask, deny, strictest } from './verdicts.mjs';
 
-const deny = (reason) => Object.freeze({ decision: 'deny', reason });
-const ask = (reason) => Object.freeze({ decision: 'ask', reason });
-
-const DANGEROUS_DELETE = deny('Recursive delete of a root, home or whole-directory path is blocked.');
-const UNSEEN_DELETE = ask(
-  'Recursive delete of paths from a variable, command output, xargs or find cannot be checked. Confirm with the user.',
-);
 const UNKNOWN_PROGRAM = ask('The command name comes from an unquoted expansion. Confirm with the user.');
 const UNCHECKED_VALUE = ask(
   'A variable or command output decides what this command does. Confirm with the user.',
@@ -34,49 +28,7 @@ const PRIVILEGED = new Set(['sudo', 'doas', 'su']);
 const ENV_FILE_NAMES = ['.env', '.envrc', '.env.local', '.env.production', '.env.development'];
 const HOOKS_PATH_SETTING = /core\.hookspath/i;
 const HOOK_SETTING_VALUE = /^(?:HUSKY|GIT_CONFIG_\w+)=.*[$`]/;
-const FIND_NAME_FILTERS = new Set(
-  '-name -iname -path -ipath -wholename -iwholename -regex -iregex -lname -ilname'.split(' '),
-);
-const FIND_LOGIC = new Set(['-o', '-or', '!', '-not']);
 const hasExpansion = (word) => /[$`]/.test(word);
-
-const isRecursive = (options) =>
-  options.short.has('r') || options.short.has('R') || hasLong(options, '--recursive', 3);
-
-function rmRule({ args, wrappers, splitArgs }) {
-  const options = parseOptions(args);
-  const recursive = isRecursive(options);
-  const targets = [...options.operands, ...options.afterDashes];
-  // An unquoted expansion such as `rm $FLAGS /` may supply -r at run time, so a dangerous target is enough.
-  if ((recursive || splitArgs) && targets.some(isDangerousPath)) return DANGEROUS_DELETE;
-  // find -exec and xargs supply the targets at run time, so even a plain `rm` there deletes unseen paths.
-  const runner = wrappers.includes('xargs') || wrappers.includes('find');
-  const unseen = runner || targets.some(isUncheckedPath);
-  return (recursive || splitArgs || runner) && unseen ? UNSEEN_DELETE : null;
-}
-
-function findRoots(args) {
-  let index = 0;
-  while (/^-(?:[HLP]|O\d*|D)$/.test(args[index] ?? '')) index += args[index] === '-D' ? 2 : 1;
-  const roots = [];
-  for (; index < args.length && !/^[-(!)]/.test(args[index]); index += 1) roots.push(args[index]);
-  return roots.length > 0 ? roots : ['.'];
-}
-
-// A name filter narrows a delete only if it has literal text and the expression has no -o or negation.
-const isNarrowingPattern = (pattern) =>
-  !/[$`]/.test(pattern) && pattern.replace(/\[[^\]]*\]|[*?]/g, '') !== '';
-
-function findRule({ args }) {
-  const roots = findRoots(args);
-  if (!args.includes('-delete')) return null;
-  if (roots.some(isUncheckedPath)) return UNSEEN_DELETE;
-  if (!roots.some(isDangerousPath)) return null;
-  const narrowed =
-    !args.some((arg) => FIND_LOGIC.has(arg)) &&
-    args.some((arg, i) => FIND_NAME_FILTERS.has(arg) && isNarrowingPattern(args[i + 1] ?? ''));
-  return narrowed ? null : DANGEROUS_DELETE;
-}
 
 function isWorldWritable(mode) {
   if (/^[0-7]{1,4}$/.test(mode)) return (parseInt(mode, 8) & 0o002) !== 0;
@@ -218,14 +170,13 @@ function rulesFor(command) {
   return programRule ? [programRule, ...COMMAND_RULES] : COMMAND_RULES;
 }
 
-function strictest(verdicts) {
-  const found = verdicts.filter(Boolean);
-  return found.find((verdict) => verdict.decision === 'deny') ?? found[0] ?? null;
-}
-
 function judgeAt(commands, depth) {
   const verdicts = commands.flatMap((command) => rulesFor(command).map((rule) => rule(command)));
-  verdicts.push(downloadPipedToInterpreter(commands), pipedScriptVerdict(commands, depth));
+  verdicts.push(
+    downloadPipedToInterpreter(commands),
+    pipedScriptVerdict(commands, depth),
+    findPipedToRm(commands),
+  );
   return strictest(verdicts);
 }
 

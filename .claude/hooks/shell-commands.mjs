@@ -1,5 +1,6 @@
 import { expandBraces } from './brace-expansion.mjs';
 import { unwrap } from './command-wrappers.mjs';
+import { readFindExpression } from './find-expression.mjs';
 import { ShellSyntaxError, tokenize } from './shell-words.mjs';
 
 const MAX_SCRIPT_DEPTH = 8;
@@ -8,7 +9,6 @@ const MAX_SCRIPT_TEXT = 64_000;
 const MAX_BRACE_WORK = 1_000_000;
 const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ksh', 'mksh', 'fish']);
 const SHELL_VALUE_OPTIONS = new Set(['-o', '+o', '-O', '+O', '--rcfile', '--init-file']);
-const FIND_EXEC = new Set(['-exec', '-execdir', '-ok', '-okdir']);
 const TOP_LEVEL = { assignments: [], wrappers: [], pipes: [] };
 
 function shellOptionsEnd(args) {
@@ -36,23 +36,10 @@ function innerScript(command) {
   return SHELLS.has(program) ? shellScript(command) : null;
 }
 
-const endsExec = (arg, segment) => arg === ';' || (arg === '+' && segment.at(-1) === '{}');
-
-function findExecSegments(args) {
-  const segments = [];
-  let segment = null;
-  for (const arg of args) {
-    if (segment === null) {
-      segment = FIND_EXEC.has(arg) ? [] : null;
-    } else if (endsExec(arg, segment)) {
-      segments.push(segment);
-      segment = null;
-    } else {
-      segment.push(arg);
-    }
-  }
-  return segment ? [...segments, segment] : segments;
-}
+const findExecSegments = (args) =>
+  readFindExpression(args)
+    .tokens.filter((token) => typeof token === 'object')
+    .map((token) => token.exec);
 
 // Brace expansion and nested scripts can multiply the text to inspect, so one budget caps the total work.
 function workBudget() {
