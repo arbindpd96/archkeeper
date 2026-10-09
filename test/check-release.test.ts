@@ -150,6 +150,13 @@ describe('check-release', () => {
     expect(result.outputs).toContain('dist-tag=latest');
   });
 
+  it('escapes package.json text in dry-run annotations, so it cannot start a workflow command', () => {
+    const root = project({ version: '0.0.0\n::error::forged 100%' }, { 'CHANGELOG.md': '' });
+    const result = checkRelease(root, ['--dry-run'], { GITHUB_ACTIONS: 'true' });
+    expect(result.stdout).toContain('0.0.0%0A::error::forged 100%25');
+    expect(result.stdout).not.toMatch(/^::error::/m);
+  });
+
   it('still enforces the npm version in a dry run', () => {
     const result = checkRelease(project(), ['--dry-run'], {}, { version: '10.9.9' });
     expect(result.status).toBe(1);

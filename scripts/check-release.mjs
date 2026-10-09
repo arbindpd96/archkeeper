@@ -115,12 +115,16 @@ function writeOutputs(manifest) {
   return outputs;
 }
 
+/** Escapes text for a GitHub workflow command, so package.json values cannot start a command of their own. */
+const workflowCommandText = (text) =>
+  text.replaceAll('%', '%25').replaceAll('\r', '%0D').replaceAll('\n', '%0A');
+
 /** Reports what a real release would refuse, without failing the dry run. */
 function warnDryRun(problems) {
   for (const problem of problems) {
     const line =
       process.env.GITHUB_ACTIONS === 'true'
-        ? `::warning title=Release dry run::${problem}`
+        ? `::warning title=Release dry run::${workflowCommandText(problem)}`
         : `check-release: a release would stop here: ${problem}`;
     process.stdout.write(`${line}\n`);
   }
