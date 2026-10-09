@@ -38,7 +38,7 @@ flowchart LR
 | `schema/`                 | Generated JSON Schemas for manifests, config and the lockfile                                                 | _planned v0.1_   |
 | `plugin/`                 | Generated Claude Code plugin, kept in the repo for the marketplace; never published to npm (ADR-0016)         | _planned v0.3_   |
 | `benchmarks/`             | With-vs-without-kit harness (not published)                                                                   | _planned v0.2_   |
-| `examples/`               | Fixture projects for tests and demo GIFs (not published)                                                      | _planned v0.0_   |
+| `examples/`               | Fixtures `ts-app`, `py-app`, `mixed` for tests and tapes; not linted, formatted, covered or published         | active           |
 | `scripts/`                | Repo checks (comments, brand, package), the license-file generator, shared helpers in `lib.mjs`               | active           |
 | `docs/`                   | This map, decisions/ADRs, roadmap, feature memories, research                                                 | active           |
 | `.claude/`                | This repo's own Claude Code setup (dogfooding)                                                                | active           |

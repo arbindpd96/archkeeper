@@ -31,9 +31,10 @@ export interface RunResult {
 /** Runs a Node script from the repo with an optional JSON payload on stdin. */
 export function runScript(
   script: string,
-  options: { payload?: unknown; args?: string[]; env?: NodeJS.ProcessEnv } = {},
+  options: { payload?: unknown; args?: string[]; env?: NodeJS.ProcessEnv; cwd?: string } = {},
 ): RunResult {
   const run = spawnSync(process.execPath, [path.join(REPO_ROOT, script), ...(options.args ?? [])], {
+    cwd: options.cwd,
     input: options.payload === undefined ? '' : JSON.stringify(options.payload),
     encoding: 'utf8',
     env: { ...process.env, ...options.env },

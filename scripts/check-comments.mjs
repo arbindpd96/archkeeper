@@ -6,7 +6,7 @@ import { exitWith, repositoryFiles } from './lib.mjs';
 const MAX_COMMENT_RATIO = 0.15;
 const MIN_CODE_LINES_FOR_RATIO = 20;
 const SOURCE_FILE = /\.[cm]?[jt]sx?$/;
-const EXCLUDED = /(^|\/)(node_modules|dist|coverage|fixtures)\/|^plugin\//;
+const EXCLUDED = /(^|\/)(node_modules|dist|coverage|fixtures)\/|^(plugin|examples)\//;
 
 const DIRECTIVE = /^\s*(eslint-|@ts-|prettier-ignore|archkeeper:|global\s|c8\s|v8\s|istanbul\s|<reference\s)/;
 const CODE_PUNCTUATION = /[;{}()=]/;

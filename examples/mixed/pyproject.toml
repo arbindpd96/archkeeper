@@ -1,0 +1,13 @@
+[project]
+name = "mixed-api"
+version = "1.0.0"
+requires-python = ">=3.10"
+
+[dependency-groups]
+dev = ["pytest>=8.3", "ruff>=0.9"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["api"]
