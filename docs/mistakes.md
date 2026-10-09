@@ -4,6 +4,7 @@ Record approaches that failed, so no session repeats them. Newest first.
 
 Format: `- YYYY-MM-DD — <what we tried> → <what went wrong> → <what to do instead>`
 
+- 2026-10-10 — Matching private names after an `@` with `toLowerCase()` alone → macOS folds the long s (U+017F) onto `s`, so `@.claude/ſettings.local.json` loaded the personal settings file → refuse non-ASCII names after an `@`; kit paths are ASCII anyway.
 - 2026-10-10 — Testing only the last name of an `@` word for a private file → Claude Code cuts the path at `#`, a trailing escaped space or the end of inline markdown, so `@.env#x`, `@.env/` and `*@.env*` loaded `.env`, and HTML comments could join split names → look for a private name anywhere after the first `@`, and check the text again without comments.
 - 2026-10-10 — Checking template values for `@` imports only after a space or at the start, and only for outside paths → Claude Code also imports right after inline markdown (`` `a`@~/x ``) and loads project files such as `@.env` with no prompt and no Read deny rule → check every `@` in each word for outside and private paths, and check rendered markdown again.
 - 2026-10-10 — Splitting MCP flag names only at `-` and `_` → `--accessToken`, `--clientSecret`, `--env=API_KEY=…` and `Authorization: Bearer …` passed with literal values → split at camelCase too, check a pair's value as a pair, and treat `Name: value` and Bearer/Basic values as credentials.
