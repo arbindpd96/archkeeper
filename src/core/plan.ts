@@ -2,7 +2,7 @@ import { BRAND, type Brand } from './brand.js';
 import { planBlocks } from './blocks-plan.js';
 import { PathSafetyError, RenderError } from './errors.js';
 import { planFile } from './file-plan.js';
-import { contentHash } from './hash.js';
+import { contentHash, exactHash } from './hash.js';
 import { planJson } from './json-plan.js';
 import {
   type BlockEntry,
@@ -15,7 +15,7 @@ import {
 } from './lock.js';
 import { assertSafePath } from './path-safety.js';
 import { foldedPath } from './paths.js';
-import type { Ownable, PathOutcome, PlanOp, Snapshot } from './plan-types.js';
+import type { Ownable, PathOutcome, PathState, PlanOp, Snapshot } from './plan-types.js';
 import type { RenderedEntry, RenderTree, Strategy } from './render-tree.js';
 import { sidecarPath } from './sidecar.js';
 import { compareText } from './text.js';
@@ -43,6 +43,16 @@ export interface Plan {
   readonly lockText: string;
   /** The LF content of every base and pending blob the new lock references and this run can provide, by hash. */
   readonly blobs: ReadonlyMap<string, string>;
+  /**
+   * What each path in `writes` held when planned: the sha256 of its exact bytes, or null when it was absent. The
+   * apply refuses to write when a path no longer matches, so an edit made after planning is never overwritten.
+   */
+  readonly expected: ReadonlyMap<string, string | null>;
+}
+
+function stateHash(state: PathState | undefined): string | null {
+  if (state === undefined) return null;
+  return state.kind === 'file' ? exactHash(state.content) : state.kind;
 }
 
 /** The kit's own `.gitattributes` block, which marks the base blobs as binary and generated (ADR-0014). */
@@ -186,7 +196,7 @@ function assemble(
   previous: Lock,
   context: PlanContext,
   brand: Brand,
-): Omit<Plan, 'blobs'> {
+): Omit<Plan, 'blobs' | 'expected'> {
   const writes = new Map<string, string | null>();
   const files = new Map<string, FileEntry>();
   const blocks = new Map<string, ReadonlyMap<string, BlockEntry>>();
@@ -241,5 +251,6 @@ export function planInstall(
   };
   const paths = [...new Set([...full.keys(), ...lockPaths(previous)])].sort(compareText);
   const plan = assemble(planPaths(input, paths), previous, context, brand);
-  return { ...plan, blobs: blobContents(full, plan.lock) };
+  const expected = new Map([...plan.writes.keys()].map((path) => [path, stateHash(snapshot.get(path))]));
+  return { ...plan, blobs: blobContents(full, plan.lock), expected };
 }

@@ -2,8 +2,9 @@ import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { applyPlan } from '../src/cli/apply.js';
 import { install, planProject } from '../src/cli/install.js';
-import { LockError } from '../src/core/errors.js';
+import { ApplyError, LockError } from '../src/core/errors.js';
 import { readLock } from '../src/core/lock.js';
 import { tempDir, writeFiles } from './helpers.js';
 import { filesUnder, fixtureTree, OPTIONS, projectText } from './install-helpers.js';
@@ -186,6 +187,28 @@ describe('the state folder', () => {
     const left = filesUnder(path.join(dir, STATE, 'base'));
     expect(left).toHaveLength(blobs.length - 1);
     expect(filesUnder(dir)).not.toContain('.claude/skills/why/SKILL.md');
+  });
+});
+
+describe('a plan applied after the project changed', () => {
+  it('refuses to overwrite a file edited since planning, and writes nothing', () => {
+    const dir = tempDir();
+    writeFiles(dir, { 'AGENTS.md': '# Agents\n' });
+    const plan = planProject(dir, fixtureTree(), OPTIONS);
+    writeFileSync(path.join(dir, 'AGENTS.md'), '# Agents, edited while the plan waited\n');
+    expect(() => applyPlan(dir, plan, TEST_BRAND)).toThrow(ApplyError);
+    expect(() => applyPlan(dir, plan, TEST_BRAND)).toThrow('AGENTS.md: changed after the plan was made');
+    expect(readFileSync(path.join(dir, 'AGENTS.md'), 'utf8')).toBe(
+      '# Agents, edited while the plan waited\n',
+    );
+    expect(filesUnder(dir).filter((file) => !file.startsWith(`${STATE}/local/`))).toEqual(['AGENTS.md']);
+  });
+
+  it('refuses to replace a file created where the plan found none', () => {
+    const dir = tempDir();
+    const plan = planProject(dir, fixtureTree(), OPTIONS);
+    writeFiles(dir, { 'CLAUDE.md': '# Mine, written while the plan waited\n' });
+    expect(() => applyPlan(dir, plan, TEST_BRAND)).toThrow('CLAUDE.md: changed after the plan was made');
   });
 });
 
