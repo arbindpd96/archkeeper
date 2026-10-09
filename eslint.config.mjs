@@ -51,6 +51,8 @@ const CORE_IS_PURE =
 const CORE_HAS_NO_IO =
   'src/core is pure (ADR-0011): take file contents and settings as parameters; src/cli owns the file system and the process.';
 const IO_MODULES = ['node:process', 'process', 'node:fs', 'fs', 'node:fs/promises', 'fs/promises'];
+const CORE_HAS_NO_COMPRESSION =
+  'src/core is pure (ADR-0011): it hashes content; src/cli compresses and decompresses the blobs (ADR-0014).';
 const HOOKS_ARE_STANDALONE =
   'Hooks are self-contained bundles (ADR-0011): import only node: built-ins and ./runtime/.';
 const RUNTIME_HAS_NO_PACKAGES = 'The hook runtime imports no npm package (ADR-0011): use node: built-ins.';
@@ -65,6 +67,7 @@ const layerBoundaries = [
         {
           paths: [
             ...IO_MODULES.map((name) => ({ name, message: CORE_HAS_NO_IO })),
+            ...['node:zlib', 'zlib'].map((name) => ({ name, message: CORE_HAS_NO_COMPRESSION })),
             { name: 'node:console', message: CORE_IS_PURE },
             { name: 'console', message: CORE_IS_PURE },
           ],
