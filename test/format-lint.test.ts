@@ -1,7 +1,7 @@
 import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it, onTestFinished } from 'vitest';
-import { REPO_ROOT, runScript, tempDir, tempRepo } from './helpers.js';
+import { REPO_ROOT, canSymlink, runScript, tempDir, tempRepo } from './helpers.js';
 
 const LINT_ERROR_SOURCE = 'export const answer = 42; // trailing comment\n';
 
@@ -38,7 +38,7 @@ describe('format-lint', () => {
     expect(readFileSync(outside, 'utf8')).toBe(LINT_ERROR_SOURCE);
   });
 
-  it.skipIf(process.platform === 'win32')('ignores a symlink that points outside the project', () => {
+  it.skipIf(!canSymlink())('ignores a symlink that points outside the project', () => {
     const outside = path.join(tempDir(), 'target.mjs');
     writeFileSync(outside, LINT_ERROR_SOURCE);
     const link = path.join(REPO_ROOT, 'tmp', 'format-lint-tests', 'link.mjs');
