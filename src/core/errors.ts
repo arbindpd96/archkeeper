@@ -55,3 +55,23 @@ export class ResolveError extends ArchkeeperError {
 export class RenderError extends ArchkeeperError {
   override readonly name = 'RenderError';
 }
+
+/** A file the kit cannot merge into without risking a user byte, such as broken markers or malformed JSON (#22). */
+export class MergeError extends ArchkeeperError {
+  override readonly name = 'MergeError';
+}
+
+/** A write or delete target the kit refuses: outside the project, inside `.git`, or unsafe on some OS (#23). */
+export class PathSafetyError extends ArchkeeperError {
+  override readonly name = 'PathSafetyError';
+}
+
+/** A lock the kit cannot use: invalid, or written by a newer lockfile version or kit (#24). */
+export class LockError extends ArchkeeperError {
+  override readonly name = 'LockError';
+}
+
+/** A file operation that failed while applying a plan, after every touched path was restored (#24). */
+export class ApplyError extends ArchkeeperError {
+  override readonly name = 'ApplyError';
+}
