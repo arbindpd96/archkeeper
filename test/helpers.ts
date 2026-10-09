@@ -37,14 +37,40 @@ export interface RunResult {
   stderr: string;
 }
 
+// Git exports these to hooks and `git rebase --exec` commands. A child git that inherits them works on the
+// caller's repository, so a test's `git init` in a temp folder re-initialised this repo and set core.bare.
+const CALLER_GIT_ENV = new Set(
+  [
+    'GIT_DIR',
+    'GIT_WORK_TREE',
+    'GIT_INDEX_FILE',
+    'GIT_COMMON_DIR',
+    'GIT_OBJECT_DIRECTORY',
+    'GIT_ALTERNATE_OBJECT_DIRECTORIES',
+    'GIT_PREFIX',
+    'GIT_CONFIG_PARAMETERS',
+    'GIT_CONFIG_COUNT',
+  ].map((name) => name.toLowerCase()),
+);
+const CALLER_GIT_CONFIG_PAIR = /^git_config_(?:key|value)_\d+$/;
+
+/** Tells whether a variable carries the calling git's repository or config into a child process. */
+export function isCallerGitEnv(name: string): boolean {
+  const lower = name.toLowerCase();
+  return CALLER_GIT_ENV.has(lower) || CALLER_GIT_CONFIG_PAIR.test(lower);
+}
+
 /**
- * `process.env` with `overrides` applied. An override also drops every name that differs from it only in
- * case: on Windows, vitest gives its workers an uppercase copy of every variable, and Node passes a child
- * only the lexicographically first of such names, so `NPM_EXECPATH` would beat an `npm_execpath` override.
+ * `process.env` with `overrides` applied, minus the calling git's repository and config variables, so no child
+ * git can reach this repository. An override also drops every name that differs from it only in case: on
+ * Windows, vitest gives its workers an uppercase copy of every variable, and Node passes a child only the
+ * lexicographically first of such names, so `NPM_EXECPATH` would beat an `npm_execpath` override.
  */
 export function withEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   const overridden = new Set(Object.keys(overrides).map((name) => name.toLowerCase()));
-  const kept = Object.entries(process.env).filter(([name]) => !overridden.has(name.toLowerCase()));
+  const kept = Object.entries(process.env).filter(
+    ([name]) => !overridden.has(name.toLowerCase()) && !isCallerGitEnv(name),
+  );
   return { ...Object.fromEntries(kept), ...overrides };
 }
 
@@ -130,7 +156,7 @@ export function git(dir: string, ...args: string[]): string {
     cwd: dir,
     encoding: 'utf8',
     timeout: SCRIPT_TIMEOUT_MS,
-    env: { ...process.env, ...ISOLATED_GIT_ENV },
+    env: withEnv(ISOLATED_GIT_ENV),
   });
 }
 
@@ -169,7 +195,7 @@ export function writeFiles(dir: string, files: Record<string, string>): void {
 /** A fixture project copied out of `examples/`, with the environment to run tools in it. */
 export interface FixtureCopy {
   dir: string;
-  /** `process.env` with HOME and the global git config moved into the temp dir. */
+  /** {@link withEnv} with HOME and the global git config moved into the temp dir. */
   env: NodeJS.ProcessEnv;
 }
 
@@ -193,14 +219,13 @@ export function fixtureCopy(name: string): FixtureCopy {
   const home = path.join(root, 'home');
   cpSync(source, dir, { recursive: true });
   writeFiles(home, { '.gitconfig': FIXTURE_GIT_CONFIG });
-  const env = {
-    ...process.env,
+  const env = withEnv({
     HOME: home,
     USERPROFILE: home,
     XDG_CONFIG_HOME: path.join(home, '.config'),
     GIT_CONFIG_GLOBAL: path.join(home, '.gitconfig'),
     GIT_CONFIG_NOSYSTEM: '1',
-  };
+  });
   return { dir, env };
 }
 
