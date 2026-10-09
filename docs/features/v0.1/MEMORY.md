@@ -15,20 +15,24 @@ This repo itself runs on that setup (dogfooding).
 - 2026-10-09: Generated hooks are dependency-free Node `.mjs` in exec form. Why: cross-platform, and paths with spaces need no quoting.
 - 2026-10-09: The plugin name must not start with `claude-` because Claude Code rejects it. The plugin name is still to be chosen.
 - 2026-10-09: Commits are authored by the maintainer only, with `attribution` disabled in settings and a guard hook.
+- 2026-10-09: Toolchain is ESLint + Prettier + TS 6 + Vitest, with a comment-policy checker (ADR-0009). Why: only ESLint can enforce the JSDoc and comment rules.
+- 2026-10-09: Contributor Node floor is `^22.22.2 || ^24.15.0 || >=26`. Why: the dev toolchain's own engine minimums.
+- 2026-10-09: Guards judge parsed commands and ask when they cannot load or parse. Why: the regex guard was bypassable and could time out, which fails open.
 
 ## Done
 
 - [x] Repo created (github.com/arbindpd96/claude-codekit), MIT, community files, Dependabot, secret scanning
 - [x] ADR-0001…0008 and decision log
 - [x] Claude Code setup for this repo: hooks, settings, rules, skills, agents, AGENTS.md/CLAUDE.md, architecture map
-- [ ] Toolchain + CI/CD gates (lint, format, types, comment policy, tests, commitlint, CodeQL) + branch ruleset
+- [x] Toolchain + CI/CD gates (lint, format, types, comment policy, tests, commitlint, CodeQL, dependency review) and hook hardening (PR #1)
+- [ ] Branch ruleset on `main` after PR #1 merges
 - [ ] Research reference committed (docs/research/claude-code-reference.md)
 - [ ] ROADMAP.md with phases; GitHub milestones and v0.1 issues
 - [ ] Owner approves v0.1 task list, then scaffold `packages/core`
 
 ## Next step
 
-Finish the toolchain and CI milestone (root package.json, ESLint/Prettier/Vitest, comment checker, workflows), then publish the ROADMAP and milestones.
+Merge PR #1, enable the `main` ruleset, then merge the rename (#2) and roadmap (#64) PRs.
 
 ## Gotchas / don't try again
 
