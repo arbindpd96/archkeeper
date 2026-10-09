@@ -18,7 +18,7 @@ This repo itself runs on that setup (dogfooding).
 - 2026-10-09: Toolchain is ESLint + Prettier + TS 6 + Vitest, with a comment-policy checker (ADR-0009). Why: only ESLint can enforce the JSDoc and comment rules.
 - 2026-10-09: Contributor Node floor is `^22.22.2 || ^24.15.0 || >=26`. Why: the dev toolchain's own engine minimums.
 - 2026-10-09: Guards judge parsed commands and ask when they cannot load or parse. Why: the regex guard was bypassable and could time out, which fails open.
-- 2026-10-09: guard-bash denies, not asks, when a download reaches code through a variable or function downloader, a captured `$(curl …)` or a file the same command downloaded (#65). Why: each is `curl | sh` in another form.
+- 2026-10-09: guard-bash denies when a literal curl or wget (any case) reaches code through a pipe, a captured `$(curl …)` or a file the same command downloaded, and asks when the producer is a program named by a variable or a function (#65). Why: a literal download is `curl | sh` in another form, but a variable or function may be anything, so the user decides.
 - 2026-10-09: Inline code fed by a download asks unless it is an allowlisted read-and-print idiom; code that can run its input is denied (#65). Why: the code is visible, but what it does with the download is not.
 - 2026-10-09: `find . -name '*' -delete` and `find ~ -exec rm -rf {} +` stay denied, though the #65 review expected ask. Why: each deletes as much as a bare `find <root> -delete`.
 
