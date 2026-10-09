@@ -109,6 +109,7 @@ The maintainer versions releases locally with [changesets](https://github.com/ch
 - CI fails a PR that changes `src/` or `modules/` without a changeset. If the change needs no release, the maintainer labels the PR `no-release` and re-runs the failed `Changeset` job.
 - Before tagging, the maintainer runs `npm run version-packages`, which applies the changesets to `package.json` and `CHANGELOG.md`.
 - Release candidates use pre mode: `npx changeset pre enter rc` first, and `npx changeset pre exit` before the final release.
+- Tagging, the staged publish and its 2FA approval are in the maintainer runbook, [docs/releasing.md](docs/releasing.md).
 
 ## Working with AI agents
 
