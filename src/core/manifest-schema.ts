@@ -16,7 +16,7 @@ export const HOOK_EVENTS = ['SessionStart', 'PreToolUse', 'PostToolUse', 'PreCom
 const TOOL_EVENTS = ['PreToolUse', 'PostToolUse'] as const;
 const MATCHED_EVENTS = ['SessionStart', 'PreCompact'] as const;
 
-/** The co-owned files the kit builds from manifest data rather than from a template (ADR-0014). */
+/** The settings file the kit builds from hooks and permissions (ADR-0014). */
 export const SETTINGS_FILE = '.claude/settings.json';
 /** The project MCP config, built from `mcpServers` (ADR-0007). */
 export const MCP_FILE = '.mcp.json';
