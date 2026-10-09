@@ -38,6 +38,8 @@ interface Context {
   readonly catalog: Catalog;
   readonly config: string;
   readonly origins: Map<string, Origin>;
+  /** Requirements that `modules.remove` drops; an error only if the module that needs one is kept. */
+  readonly removedRequirements: Failure[];
 }
 
 interface Failure {
@@ -137,14 +139,14 @@ function requireModule(context: Context, kit: KitModule, index: number): string 
   }
   const removed = (request.remove ?? []).indexOf(id);
   if (removed !== -1) {
-    const hint = `keep ${id}, or also remove ${kit.manifest.id}`;
-    fail({
+    context.removedRequirements.push({
       file: config,
       location: `modules.remove[${String(removed)}]`,
       chain,
       problem: `removes "${id}", which is required`,
-      hint,
+      hint: `keep ${id}, or also remove ${kit.manifest.id}`,
     });
+    return undefined;
   }
   if (origins.has(id)) return undefined;
   origins.set(id, { requiredBy: kit.manifest.id });
@@ -208,6 +210,12 @@ function dropOrphans({ catalog, origins }: Context, dropped: Map<string, string>
   }
 }
 
+// A removed requirement matters only for a module that is still installed after the when filtering.
+function checkRemovedRequirements(context: Context, kept: ReadonlyMap<string, KitModule>): void {
+  const needed = context.removedRequirements.find((failure) => kept.has(failure.chain.at(-2) ?? ''));
+  if (needed !== undefined) fail(needed);
+}
+
 function checkConflicts({ config, origins }: Context, kept: ReadonlyMap<string, KitModule>): void {
   for (const [id, kit] of kept) {
     const index = kit.manifest.conflicts.findIndex((other) => kept.has(other));
@@ -231,7 +239,13 @@ function checkConflicts({ config, origins }: Context, kept: ReadonlyMap<string, 
  * broken by id. A missing dependency, a cycle or a conflict throws ResolveError that shows the chain and a fix.
  */
 export function resolveModules(request: ResolveRequest, catalog: Catalog, brand: Brand = BRAND): Resolution {
-  const context: Context = { request, catalog, config: configPath(brand), origins: new Map() };
+  const context: Context = {
+    request,
+    catalog,
+    config: configPath(brand),
+    origins: new Map(),
+    removedRequirements: [],
+  };
   const preset = findPreset(context);
   checkRequestedIds(context);
   seed(context, preset);
@@ -247,6 +261,7 @@ export function resolveModules(request: ResolveRequest, catalog: Catalog, brand:
         return kit === undefined ? [] : [[id, kit] as const];
       }),
   );
+  checkRemovedRequirements(context, kept);
   checkConflicts(context, kept);
   const reasons = [...dropped]
     .sort(([left], [right]) => compareText(left, right))
