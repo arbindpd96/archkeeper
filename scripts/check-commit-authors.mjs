@@ -21,24 +21,20 @@ const AI_IDENTITIES = [
 ];
 const CO_AUTHOR = /^co-authored-by:\s*(.*?)\s*<([^>]*)>\s*$/gim;
 const FIELD = '\x1f';
-const RECORD = '\x1e';
 
 /** Reads every commit in `base..head` with its author and full message. */
 function commits(base, head) {
-  const output = git(
-    ['log', `--format=%H${FIELD}%an${FIELD}%ae${FIELD}%B${RECORD}`, `${base}..${head}`, '--'],
-    {
-      action: `list the commits in ${base}..${head}`,
-      nextStep: 'Fetch the full history (actions/checkout fetch-depth: 0) and pass two existing commits.',
-    },
-  );
+  // -z ends each commit with NUL, which a message cannot hold; the message is everything after the third field.
+  const output = git(['log', '-z', `--format=%H${FIELD}%an${FIELD}%ae${FIELD}%B`, `${base}..${head}`, '--'], {
+    action: `list the commits in ${base}..${head}`,
+    nextStep: 'Fetch the full history (actions/checkout fetch-depth: 0) and pass two existing commits.',
+  });
   return output
-    .split(RECORD)
-    .map((record) => record.replace(/^\n/, ''))
+    .split('\0')
     .filter(Boolean)
     .map((record) => {
-      const [sha = '', name = '', email = '', message = ''] = record.split(FIELD);
-      return { sha, name, email, message };
+      const [sha = '', name = '', email = '', ...message] = record.split(FIELD);
+      return { sha, name, email, message: message.join(FIELD) };
     });
 }
 
