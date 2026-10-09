@@ -14,7 +14,7 @@ import {
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { exitWith, npm } from './lib.mjs';
+import { exitWith, git, npm } from './lib.mjs';
 import {
   fillPlaceholders,
   SETTINGS,
@@ -78,6 +78,30 @@ function selectTapes(root, options) {
     process.stdout.write(`render-tapes: skipping ${tape.feature}, marked # live (record it with --live).\n`);
   }
   return tapes.filter((tape) => !tape.live);
+}
+
+/** Exits unless every commit to a live tape, the settings or its fixture is the maintainer's (repo-local email). */
+function requireMaintainerAuthored(root, tape) {
+  const maintainer = git(['config', '--local', 'user.email'], {
+    cwd: root,
+    action: 'read the repo-local user.email',
+    nextStep: 'Set your identity in this repository first: git config user.email <you@example.com>.',
+  }).trim();
+  const paths = [`${TAPES}/${tape.feature}.tape`, `${TAPES}/${SETTINGS}`, `examples/${tape.fixture}`];
+  const log = git(['log', '--format=%ae', '--', ...paths], {
+    cwd: root,
+    action: `list who changed ${paths.join(', ')}`,
+    nextStep: 'Run it from the repository root.',
+  });
+  const others = [...new Set(log.split('\n').filter((email) => email !== '' && email !== maintainer))];
+  if (others.length > 0) {
+    exitWith(
+      `render-tapes: --live runs ${tape.feature}.tape in your own shell, but ${others.join(', ')} ` +
+        `committed to ${paths.join(', ')}, not you (${maintainer}). Record live only tapes and fixtures ` +
+        'that you alone committed, after reviewing them.',
+      1,
+    );
+  }
 }
 
 /** Exits unless the vhs on PATH is the version CI pins, so local and CI GIFs match. */
@@ -169,6 +193,7 @@ if (tapes.length === 0) {
   process.exit(0);
 }
 
+if (options.live !== undefined) requireMaintainerAuthored(root, tapes[0]);
 requireVhs();
 const work = mkdtempSync(path.join(tmpdir(), 'render-tapes-'));
 process.on('exit', () => rmSync(work, { recursive: true, force: true }));

