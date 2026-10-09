@@ -2,14 +2,9 @@ import { copyFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { REPO_ROOT, runScript, tempDir } from './helpers.js';
+import { REPO_ROOT, hookDecision, permissionDecision, tempDir } from './helpers.js';
 
-function decision(toolInput: unknown): string {
-  const { stdout } = runScript('.claude/hooks/guard-secrets.mjs', { payload: { tool_input: toolInput } });
-  if (!stdout) return 'allow';
-  const output = JSON.parse(stdout) as { hookSpecificOutput?: { permissionDecision?: string } };
-  return output.hookSpecificOutput?.permissionDecision ?? 'allow';
-}
+const decision = (toolInput: unknown) => hookDecision('guard-secrets.mjs', toolInput);
 
 const write = (content: string) => ({ file_path: 'src/config.ts', content });
 
@@ -64,8 +59,7 @@ describe('guard-secrets fail-closed loading', () => {
       input: JSON.stringify({ tool_input: { file_path: 'a.ts', content: 'x' } }),
       encoding: 'utf8',
     });
-    const output = JSON.parse(run.stdout) as { hookSpecificOutput: { permissionDecision: string } };
-    expect(output.hookSpecificOutput.permissionDecision).toBe('ask');
+    expect(permissionDecision(run.stdout)).toBe('ask');
   });
 
   it.each(['/p/.env~', '/p/.env.backup'])('asks before editing %s', (file) => {
