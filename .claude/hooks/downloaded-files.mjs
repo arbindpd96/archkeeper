@@ -21,6 +21,11 @@ const DOWNLOADERS = new Map([
   ['wget', WGET],
 ]);
 
+/** Tells whether a program is a downloader (curl or wget). */
+export function isDownloader(program) {
+  return DOWNLOADERS.has(program);
+}
+
 const baseName = (path) => path.slice(path.lastIndexOf('/') + 1).toLowerCase();
 const urlName = (url) => baseName(url.split(/[?#]/)[0]);
 
@@ -39,7 +44,7 @@ function savedNames({ args, redirects }, downloader) {
 export function downloadedFiles(commands) {
   const names = new Set(
     commands
-      .filter((command) => DOWNLOADERS.has(command.program))
+      .filter((command) => isDownloader(command.program))
       .flatMap((command) => savedNames(command, DOWNLOADERS.get(command.program)))
       .filter((name) => name !== '' && name !== '-'),
   );

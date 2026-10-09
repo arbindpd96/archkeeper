@@ -189,6 +189,7 @@ function summarize(found, spec, { expands, wrappers }) {
   return {
     stdin: found.stdin || fromXargs || literalScripts.some((script) => isStdinPath(script.text)),
     unknownScript: found.scripts.some((script) => expanding(script) || !/[./]/.test(script.text)),
+    expandedScript: found.scripts.some(expanding),
     scripts: literalScripts.map((script) => script.text),
     kinds,
   };
@@ -197,11 +198,14 @@ function summarize(found, spec, { expands, wrappers }) {
 /**
  * Reads an interpreter's arguments in order with its option spec. Returns null for other programs, else
  * `stdin` (it runs code read from stdin), `unknownScript` (an expansion or bare word names its script),
- * `scripts` (literal script paths) and `kinds` (each inline code or module, classified by inline-code.mjs).
- * A program name built from an expansion could be any interpreter, so it counts as reading stdin.
+ * `expandedScript` (an expansion names it), `scripts` (literal script paths) and `kinds` (each inline code or
+ * module, classified by inline-code.mjs). A program named by an expansion could be any interpreter, so it
+ * counts as reading stdin.
  */
 export function readInterpreter(command) {
-  if (command.dynamicProgram) return { stdin: true, unknownScript: false, scripts: [], kinds: [] };
+  if (command.dynamicProgram) {
+    return { stdin: true, unknownScript: false, expandedScript: false, scripts: [], kinds: [] };
+  }
   const spec = SPECS.find(([pattern]) => pattern.test(command.program))?.[1];
   return spec ? summarize(readArguments(command.args, spec), spec, command) : null;
 }
