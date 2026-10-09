@@ -148,11 +148,26 @@ describe('guard-secrets allow pragma', () => {
     expect(decideIn(`${line}\n`, toolInput)).toBe('deny');
   });
 
+  it('allows a write that keeps a marked line already in the file', () => {
+    const line = fixtureLine('a');
+    expect(decideIn(`${line}\r\nconst x = 1;\r\n`, { content: `${line}\nconst x = 2;\n` })).toBe('allow');
+  });
+
+  it('asks before a notebook cell gets a new marked line', () => {
+    const verdict = verdictIn('{}', { notebook_path: 'n.ipynb', new_source: fixtureLine('a') });
+    expect(verdict.reason).toMatch(askedForPragma);
+  });
+
+  it('asks when replace_all is not a boolean, because the replay could differ from the edit', () => {
+    const toolInput = { old_string: 'a'.repeat(36), new_string: 'b'.repeat(36), replace_all: 'true' };
+    expect(verdictIn(`${fixtureLine('a')}\n`, toolInput).reason).toContain('could not replay this edit');
+  });
+
   it('allows a pragma mention that marks no secret', () => {
     expect(decideIn('', { content: `Use ${pragma} only in tests.` })).toBe('allow');
   });
 
-  it.skipIf(!canSymlink())('does not trust a marked line behind a symlink', () => {
+  it.skipIf(!canSymlink())('does not trust a marked line behind a symlink to a file outside', () => {
     const dir = tempDir();
     const outside = tempDir();
     writeFiles(outside, { 'real.ts': `${fixtureLine('a')}\n` });
@@ -167,6 +182,11 @@ describe('guard-secrets allow pragma', () => {
     expect(decideIn(`${line}\n${'x'.repeat(1_000_001)}\n`, { content: line })).toBe('ask');
   });
 
+  it('names the size cap when it asks about an edit to a large file', () => {
+    const toolInput = { old_string: 'x', new_string: 'y' };
+    expect(verdictIn('x'.repeat(1_000_001), toolInput).reason).toContain('because it is over 1 MB');
+  });
+
   it('does not trust a marked line in a file outside the project', () => {
     const outside = tempDir();
     writeFiles(outside, { 'a.test.ts': `${fixtureLine('a')}\n` });
@@ -174,11 +194,47 @@ describe('guard-secrets allow pragma', () => {
     expect(hookDecision('guard-secrets.mjs', toolInput, { CLAUDE_PROJECT_DIR: tempDir() })).toBe('ask');
   });
 
-  it.skipIf(process.platform === 'win32')('asks without waiting when the target is a FIFO', () => {
+  it.skipIf(process.platform === 'win32')('refuses to read a FIFO target and asks', () => {
     const dir = tempDir();
     const fifo = path.join(dir, 'f.ts');
     execFileSync('mkfifo', [fifo]);
-    const toolInput = { file_path: fifo, content: fixtureLine('a') };
-    expect(hookDecision('guard-secrets.mjs', toolInput, { CLAUDE_PROJECT_DIR: dir })).toBe('ask');
+    const toolInput = { file_path: fifo, old_string: 'a', new_string: 'b' };
+    const verdict = hookVerdict('guard-secrets.mjs', toolInput, { CLAUDE_PROJECT_DIR: dir });
+    expect(verdict.reason).toContain('because it is not a regular file');
+  });
+});
+
+describe('guard-secrets edit targets', () => {
+  const harmlessEdit = { old_string: 'x = 1', new_string: 'x = 2' };
+
+  it('allows a harmless edit to a file outside the project', () => {
+    const outside = tempDir();
+    writeFiles(outside, { 'memory/notes.md': 'x = 1\n' });
+    const toolInput = { file_path: path.join(outside, 'memory', 'notes.md'), ...harmlessEdit };
+    expect(hookDecision('guard-secrets.mjs', toolInput, { CLAUDE_PROJECT_DIR: tempDir() })).toBe('allow');
+  });
+
+  it('still denies a secret written into a file outside the project', () => {
+    const outside = tempDir();
+    writeFiles(outside, { 'a.ts': 'x = 1\n' });
+    const toolInput = {
+      file_path: path.join(outside, 'a.ts'),
+      old_string: 'x = 1',
+      new_string: `x = 'ghp_${'e'.repeat(36)}'`,
+    };
+    expect(hookDecision('guard-secrets.mjs', toolInput, { CLAUDE_PROJECT_DIR: tempDir() })).toBe('deny');
+  });
+
+  it.skipIf(!canSymlink())('replays an edit through a symlink to a file inside the project', () => {
+    const dir = tempDir();
+    writeFiles(dir, { 'AGENTS.md': `const token = 'ghp_' + suffix;\n` });
+    symlinkSync(path.join(dir, 'AGENTS.md'), path.join(dir, 'CLAUDE.md'));
+    const env = { CLAUDE_PROJECT_DIR: dir };
+    const file_path = path.join(dir, 'CLAUDE.md');
+    expect(hookDecision('guard-secrets.mjs', { file_path, ...harmlessEdit, old_string: 'token' }, env)).toBe(
+      'allow',
+    );
+    const completes = { file_path, old_string: "' + suffix", new_string: `${'d'.repeat(36)}'` };
+    expect(hookVerdict('guard-secrets.mjs', completes, env).reason).toContain('possible GitHub token');
   });
 });

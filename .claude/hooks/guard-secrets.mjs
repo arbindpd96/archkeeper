@@ -1,10 +1,9 @@
-import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync } from 'node:fs';
+import { lstatSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 
 const ALLOW_PRAGMA = 'archkeeper:allow-secret';
-const MAX_ON_DISK_BYTES = 1_000_000;
-// Windows has neither flag; there the lstat check before the open refuses a symlink.
-const READ_FLAGS = constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0);
+const MAX_CHECKED_BYTES = 1_000_000;
+const OUTSIDE = Symbol('outside the project');
 
 const SECRET_PATTERNS = [
   { name: 'AWS access key', pattern: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/ },
@@ -25,7 +24,7 @@ const SECRET_PATTERNS = [
   },
 ];
 
-const NEW_PRAGMA_LINE = `a new line marks a likely secret with ${ALLOW_PRAGMA}. Confirm with the user that it is a fixture.`;
+const NEW_PRAGMA_REASON = `a new line marks a likely secret with ${ALLOW_PRAGMA}. Confirm with the user that it is a fixture.`;
 
 /** Collects every string the tool call would write into the file. */
 function writtenText(toolInput) {
@@ -66,36 +65,39 @@ function linesOf(text) {
   return text.split('\n').map((line) => line.replace(/\r$/, ''));
 }
 
-/** Reads a regular file of at most MAX_ON_DISK_BYTES through one descriptor; null for anything else. */
-function readRegularFile(file) {
-  const fd = openSync(file, READ_FLAGS);
-  try {
-    const stat = fstatSync(fd);
-    return stat.isFile() && stat.size <= MAX_ON_DISK_BYTES ? readFileSync(fd, 'utf8') : null;
-  } finally {
-    closeSync(fd);
-  }
+/** Reads the real file behind a project path, or names why it cannot. */
+function readRealFile(real, readRegularFile) {
+  const stat = lstatSync(real);
+  if (!stat.isFile()) return { cause: 'it is not a regular file' };
+  if (stat.size > MAX_CHECKED_BYTES) return { cause: 'it is over 1 MB' };
+  const text = readRegularFile(real, MAX_CHECKED_BYTES);
+  return text === null ? { cause: 'it changed while being read' } : { text };
 }
 
-/** Returns the target's text, '' when it does not exist, or null when it is not a small regular project file. */
-function textOnDisk(target, { projectDir, isProjectFile }) {
-  if (typeof target !== 'string') return null;
+/**
+ * Returns `{ text }` for the file a write targets ('' when it does not exist yet), OUTSIDE when its real path
+ * is outside the project, or `{ cause }` naming why it cannot be read. A symlink is followed only to a file
+ * inside the project, read through its real path.
+ */
+function readTarget(target, { projectDir, isProjectFile, readRegularFile }) {
+  if (typeof target !== 'string') return { cause: 'the call names no file' };
   const file = path.resolve(projectDir, target);
   try {
-    const stat = lstatSync(file, { throwIfNoEntry: false });
-    if (stat === undefined) return '';
-    return stat.isFile() && isProjectFile(file) ? readRegularFile(file) : null;
+    if (lstatSync(file, { throwIfNoEntry: false }) === undefined) return { text: '' };
+    const real = realpathSync(file);
+    return isProjectFile(real) ? readRealFile(real, readRegularFile) : OUTSIDE;
   } catch {
-    return null;
+    return { cause: 'it could not be read' };
   }
 }
 
-/** Asks when the written text marks a likely secret on a line that is not already in the file. */
-function judgeMarkedLines(target, lines, helpers) {
+/** Asks when the written lines mark a likely secret on a line that is not already in the file `read` returns. */
+function judgeMarkedLines(lines, read) {
   const marked = lines.filter((line) => line.includes(ALLOW_PRAGMA) && secretsIn(line).length > 0);
   if (marked.length === 0) return null;
-  const onDisk = new Set(linesOf(textOnDisk(target, helpers) ?? ''));
-  return marked.every((line) => onDisk.has(line)) ? null : decide('ask', NEW_PRAGMA_LINE);
+  const found = read();
+  const onDisk = new Set(found.text === undefined ? [] : linesOf(found.text));
+  return marked.every((line) => onDisk.has(line)) ? null : decide('ask', NEW_PRAGMA_REASON);
 }
 
 /** Returns the edits of an Edit or MultiEdit call, or null for a call that writes whole text. */
@@ -108,6 +110,7 @@ function editsOf(toolInput) {
 /** Applies one edit as the Edit tool does; null when it is malformed or its old_string is not in the text. */
 function applyEdit(text, edit) {
   if (typeof edit?.old_string !== 'string' || typeof edit.new_string !== 'string') return null;
+  if (!['undefined', 'boolean'].includes(typeof edit.replace_all)) return null;
   const search = edit.old_string.replaceAll('\r\n', '\n');
   const replacement = edit.new_string.replaceAll('\r\n', '\n');
   if (search === '') return text === '' ? replacement : null;
@@ -127,21 +130,23 @@ function editedText(text, edits) {
 }
 
 /**
- * Replays the edits on the file and asks about every new line that holds a likely secret. An edit to part of
- * a line, such as the token on a marked line, never shows that line in its new_string.
+ * Replays the edits on a project file and asks about every new line that holds a likely secret. An edit to
+ * part of a line, such as the token on a marked line, never shows that line in its new_string. A file outside
+ * the project is judged by the written text alone.
  */
-function judgeEdits(target, edits, helpers) {
-  const text = textOnDisk(target, helpers);
-  if (text === null) {
-    return decide('ask', 'could not read the file to check this edit. Confirm with the user.');
+function judgeEdits(target, edits, lines, helpers) {
+  const found = readTarget(target, helpers);
+  if (found === OUTSIDE) return judgeMarkedLines(lines, () => OUTSIDE);
+  if (found.cause) {
+    return decide('ask', `could not check this edit because ${found.cause}. Confirm with the user.`);
   }
-  const before = text.replaceAll('\r\n', '\n');
+  const before = found.text.replaceAll('\r\n', '\n');
   const after = editedText(before, edits);
   if (after === null) return decide('ask', 'could not replay this edit on the file. Confirm with the user.');
   const original = new Set(linesOf(before));
   const added = linesOf(after).filter((line) => !original.has(line) && secretsIn(line).length > 0);
   if (added.length === 0) return null;
-  if (added.some((line) => line.includes(ALLOW_PRAGMA))) return decide('ask', NEW_PRAGMA_LINE);
+  if (added.some((line) => line.includes(ALLOW_PRAGMA))) return decide('ask', NEW_PRAGMA_REASON);
   return decide(
     'ask',
     `this edit leaves a new line with a possible ${secretNames(added)}. Confirm with the user.`,
@@ -155,22 +160,23 @@ function evaluate(toolInput, helpers) {
   if (helpers.isEnvFileName(fileName)) {
     return decide('ask', `${fileName} holds secrets. Confirm with the user before editing it.`);
   }
-  const lines = linesOf(writtenText(toolInput));
+  const text = writtenText(toolInput);
+  const lines = linesOf(text);
   const unmarked = lines.filter((line) => !line.includes(ALLOW_PRAGMA));
   if (unmarked.some((line) => secretsIn(line).length > 0)) {
     return decide('deny', `possible ${secretNames(unmarked)} in written content. Use an env var instead.`);
   }
   // An agent could add the pragma to its own secret, so only a line already in the file keeps its exemption.
   const edits = editsOf(toolInput);
-  return edits === null ? judgeMarkedLines(target, lines, helpers) : judgeEdits(target, edits, helpers);
+  if (edits !== null) return judgeEdits(target, edits, lines, helpers);
+  return judgeMarkedLines(lines, () => readTarget(target, helpers));
 }
 
 try {
-  const [{ readInput, respond, projectDir, isProjectFile }, { isEnvFileName }] = await Promise.all([
-    import('./lib.mjs'),
-    import('./env-files.mjs'),
-  ]);
-  const response = evaluate(readInput().tool_input ?? {}, { isEnvFileName, isProjectFile, projectDir });
+  const [lib, { isEnvFileName }] = await Promise.all([import('./lib.mjs'), import('./env-files.mjs')]);
+  const { readInput, respond, projectDir, isProjectFile, readRegularFile } = lib;
+  const helpers = { isEnvFileName, isProjectFile, projectDir, readRegularFile };
+  const response = evaluate(readInput().tool_input ?? {}, helpers);
   if (response) respond(response);
 } catch {
   // Fail closed: if the hook cannot load or crashes, the write must not go through unchecked.

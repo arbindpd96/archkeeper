@@ -3,6 +3,7 @@ import {
   closeSync,
   constants,
   existsSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
   openSync,
@@ -18,6 +19,7 @@ export const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const FEATURES_DIR = path.join(projectDir, 'docs', 'features');
 const STATE_DIR = path.join(projectDir, '.claude', 'state');
 const NO_FOLLOW = constants.O_NOFOLLOW ?? 0;
+const READ_FLAGS = constants.O_RDONLY | NO_FOLLOW | (constants.O_NONBLOCK ?? 0);
 
 /** Reads the hook payload Claude Code sends on stdin; returns {} when absent or malformed. */
 export function readInput() {
@@ -94,15 +96,24 @@ function statePath(name) {
   return file;
 }
 
+/**
+ * Reads a regular file of at most `maxBytes` through one descriptor that follows no symlink and never waits on
+ * a FIFO; null for anything else. Windows has neither flag, so callers there `lstat` the path first.
+ */
+export function readRegularFile(file, maxBytes = Infinity) {
+  const fd = openSync(file, READ_FLAGS);
+  try {
+    const stat = fstatSync(fd);
+    return stat.isFile() && stat.size <= maxBytes ? readFileSync(fd, 'utf8') : null;
+  } finally {
+    closeSync(fd);
+  }
+}
+
 /** Reads a text file from `.claude/state/`, returning null when missing, unreadable or a symlink. */
 export function readStateText(name) {
   try {
-    const fd = openSync(statePath(name), constants.O_RDONLY | NO_FOLLOW);
-    try {
-      return readFileSync(fd, 'utf8');
-    } finally {
-      closeSync(fd);
-    }
+    return readRegularFile(statePath(name));
   } catch {
     return null;
   }
