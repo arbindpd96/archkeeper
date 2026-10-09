@@ -41,7 +41,8 @@ R1 already reflects this split. ADR-0011 keeps `plugin/` in the repo but out of 
 
 - `plugin/` is generated from the module sources by `npm run build:plugin`. Nothing in it is hand-maintained.
 - It is committed only in release PRs, where CI asserts that it matches the build. This is how ADR-0002's "plugin output is up to date" check is met, and it means `main` always serves the last released plugin.
-- The plugin version is bumped in the same release commit as the package ([ADR-0013](0013-release-process.md)).
+- CI enforces that: it fails any PR that changes `plugin/` or `.claude-plugin/` without the `chore(release): vX.Y.Z` version bump ([ADR-0013](0013-release-process.md)), and `.github/CODEOWNERS` names the owner for both paths explicitly. Both land in v0.3 M1 with the first `.claude-plugin/marketplace.json`, so no marketplace exists without them.
+- The plugin version is bumped in the same release commit as the package (ADR-0013).
 - CI runs `claude plugin validate --strict` with a pinned Claude Code CLI, falling back to a zod mirror of the validator's rules. The name rules already exist as a test oracle in `test/brand.test.ts`.
 
 ADR-0002's status line now notes "Decision 2 partly superseded by ADR-0016".

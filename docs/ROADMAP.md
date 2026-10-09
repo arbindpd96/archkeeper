@@ -490,6 +490,7 @@ Figma's native DTCG export means design tokens can ship without waiting on unver
 
 - [ ] chore(build): generate `plugin/` from module sources, with skills and agents only and **no hooks**
   - `plugin/` is committed only in release PRs, and CI asserts there that it matches the build.
+  - CI fails any other PR that changes `plugin/` or `.claude-plugin/`, and CODEOWNERS names both paths (ADR-0016).
   - A root `.claude-plugin/marketplace.json` points at `./plugin`.
 - [ ] ci: validate the plugin and marketplace with a pinned Claude Code CLI (`claude plugin validate --strict`, with a zod mirror as fallback)
 - [ ] feat(cli): skill delivery `--skills local|plugin`, plus a doctor check for duplicate copies
