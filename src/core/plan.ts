@@ -15,7 +15,7 @@ import {
 } from './lock.js';
 import { assertSafePath } from './path-safety.js';
 import type { Ownable, PathOutcome, PlanOp, Snapshot } from './plan-types.js';
-import type { RenderedEntry, RenderTree } from './render-tree.js';
+import type { RenderedEntry, RenderTree, Strategy } from './render-tree.js';
 import { sidecarPath } from './sidecar.js';
 import { compareText } from './text.js';
 
@@ -90,14 +90,23 @@ interface Planning {
   readonly brand: Brand;
   readonly ownable: Ownable;
   readonly removed: ReadonlySet<string>;
+  /** Whether the next lock gives a hook script a base, known once the owned files are planned. */
+  readonly kitScript: (path: string) => boolean;
+}
+
+function strategyOf({ tree, lock }: Planning, path: string): Strategy {
+  return (
+    tree.get(path)?.[0]?.strategy ??
+    lock.files.get(path)?.strategy ??
+    (lock.blocks.has(path) ? 'blocks' : 'json')
+  );
 }
 
 function planPath(input: Planning, path: string): PathOutcome {
   const { tree, snapshot, lock, brand, ownable, removed } = input;
   assertSafePath(path, tree.has(path) ? 'rendered by the kit' : 'listed in the lock');
   const entries = tree.get(path) ?? [];
-  const strategy =
-    entries[0]?.strategy ?? lock.files.get(path)?.strategy ?? (lock.blocks.has(path) ? 'blocks' : 'json');
+  const strategy = strategyOf(input, path);
   const state = snapshot.get(path);
   const sidecar = snapshot.get(sidecarPath(path, brand));
   if (strategy === 'blocks') {
@@ -115,10 +124,22 @@ function planPath(input: Planning, path: string): PathOutcome {
   }
   if (strategy === 'json') {
     const isRemoved = (key: string): boolean => removed.has(removalKey(path, '', key));
-    return planJson({ path, entries, state, sidecar, lock: lock.json.get(path), isRemoved, ownable, brand });
+    const json = { path, entries, state, sidecar, lock: lock.json.get(path), isRemoved, ownable, brand };
+    return planJson({ ...json, kitScript: input.kitScript });
   }
   const job = { path, entry: entries[0], state, sidecar, lock: lock.files.get(path), brand };
   return planFile({ ...job, removed: removed.has(removalKey(path)), ownable: ownable(path) });
+}
+
+// JSON files go last: a hook is registered only when its script has a base, which planning the script decides.
+function planPaths(input: Planning, paths: readonly string[]): [string, PathOutcome][] {
+  const files = paths.filter((path) => strategyOf(input, path) !== 'json');
+  const planned = new Map(files.map((path) => [path, planPath(input, path)]));
+  const kitScript = (path: string): boolean => (planned.get(path)?.file?.base ?? null) !== null;
+  for (const path of paths) {
+    if (!planned.has(path)) planned.set(path, planPath({ ...input, kitScript }, path));
+  }
+  return paths.map((path) => [path, planned.get(path) ?? { ops: [], removed: [] }]);
 }
 
 function uniqueRemovals(removals: readonly Removal[]): Removal[] {
@@ -200,14 +221,10 @@ export function planInstall(
     lock: previous,
     brand,
     ownable: context.ownable ?? (() => false),
+    kitScript: () => false,
     removed,
   };
   const paths = [...new Set([...full.keys(), ...lockPaths(previous)])].sort(compareText);
-  const plan = assemble(
-    paths.map((path) => [path, planPath(input, path)] as const),
-    previous,
-    context,
-    brand,
-  );
+  const plan = assemble(planPaths(input, paths), previous, context, brand);
   return { ...plan, blobs: blobContents(full, plan.lock) };
 }

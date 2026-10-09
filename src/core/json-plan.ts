@@ -35,6 +35,8 @@ export interface JsonJob {
   readonly lock: ReadonlyMap<string, string> | undefined;
   readonly isRemoved: (key: string) => boolean;
   readonly ownable: Ownable;
+  /** Whether the kit wrote or adopted the hook script at a path; only such a script is registered (ADR-0014). */
+  readonly kitScript: (path: string) => boolean;
   readonly brand: Brand;
 }
 
@@ -143,7 +145,17 @@ function mergeEntry(merge: Merge, entry: KitEntry): void {
     record(merge, 'respectRemoval', key, 'the user deleted it earlier; the kit never adds it back');
     return;
   }
-  const found = findEntry(parseDocument(job.path, merge.text), entryKey(key));
+  const target = entryKey(key);
+  if (target.match === 'hook' && !job.kitScript(target.id)) {
+    record(
+      merge,
+      'skip',
+      key,
+      'its script is not one the kit wrote or adopted, so the kit does not register it',
+    );
+    return;
+  }
+  const found = findEntry(parseDocument(job.path, merge.text), target);
   const step = decideEntry(
     entry.hash,
     job.lock?.get(key),
