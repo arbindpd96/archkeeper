@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const HEADING = /^(#{1,6})\s+(.*?)\s*#*\s*$/;
+const FENCE = /^ {0,3}(`{3,}|~{3,})/;
 
 /** Reads the module manifests under `modules`, each as `{ id, file, manifest }` or `{ id, file, error }`. */
 function readManifests(modules) {
@@ -20,18 +21,30 @@ function readManifests(modules) {
     });
 }
 
+/** Returns each line's heading match, or null for plain lines and every line inside a fenced code block. */
+function headings(lines) {
+  let fence;
+  return lines.map((line) => {
+    const marker = FENCE.exec(line)?.[1];
+    if (marker !== undefined && (fence === undefined || marker.startsWith(fence))) {
+      fence = fence === undefined ? marker : undefined;
+      return null;
+    }
+    return fence === undefined ? HEADING.exec(line) : null;
+  });
+}
+
 /** Returns the lines of the README section under the heading `title`, or undefined when there is none. */
 function sectionOf(readme, title) {
   const lines = readme.split('\n');
-  const start = lines.findIndex((line) => HEADING.exec(line)?.[2] === title);
+  const matches = headings(lines);
+  const start = matches.findIndex((heading) => heading?.[2] === title);
   if (start === -1) return undefined;
-  const level = HEADING.exec(lines[start])[1].length;
-  const rest = lines.slice(start + 1);
-  const end = rest.findIndex((line) => {
-    const heading = HEADING.exec(line);
-    return heading !== null && heading[1].length <= level;
-  });
-  return (end === -1 ? rest : rest.slice(0, end)).join('\n');
+  const level = matches[start][1].length;
+  const end = matches.findIndex(
+    (heading, index) => index > start && heading !== null && heading[1].length <= level,
+  );
+  return lines.slice(start + 1, end === -1 ? undefined : end).join('\n');
 }
 
 /** Lists what a declared demo is missing: its tape, its GIF, or a README section that shows the GIF. */
