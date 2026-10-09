@@ -108,6 +108,7 @@ Every generated file declares one strategy in its module manifest (#18):
 - **The lock is untrusted.** It is committed, and lockfile changes are often approved unread, so a crafted lock must not turn `update` or `uninstall` into a way to delete files or widen access:
   - The kit deletes, replaces or migrates only paths that the current kit's manifests could own, including files they list as retired from an earlier version and their `legacySlugs` equivalents. It removes or changes only JSON keys a manifest could have written. Other lock entries are reported and ignored.
   - `update` and `uninstall` always list every deny or ask rule they remove or narrow and every allow rule they add. They never change permissions silently.
+  - `removed[]` comes from the committed lock, so one PR could drop the safety module's deny rules or guard registrations and list them as removed, and every teammate's `update` would respect that. `doctor`, and `update` on every run, therefore warn about each safety-module deny rule or guard registration that is missing or listed in `removed[]`, naming it, so protections never go off for a whole team without a warning.
 - **Symlinks are left alone.** A write target that is itself a symlink, even one inside the project such as `CLAUDE.md -> AGENTS.md`, is never written through or replaced. It is left alone and reported, and the kit's content goes to a sidecar.
 - **Transactional.**
   - Every touched path is backed up first. The backup manifest records whether each path was a file, a symlink (with its target) or absent.
