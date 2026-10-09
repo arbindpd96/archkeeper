@@ -8,11 +8,15 @@ export type JsonResult =
 const BYTE_ORDER_MARK = String.fromCodePoint(0xfeff);
 const STRICT = { disallowComments: true, allowTrailingComma: false, allowEmptyContent: false };
 
-function words(code: string): string {
-  return code.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
+/** A jsonc-parser error code in words, such as `property name expected`. */
+export function parseErrorWords(error: ParseError['error']): string {
+  return printParseErrorCode(error)
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .toLowerCase();
 }
 
-function lineAndColumn(text: string, offset: number): string {
+/** The 1-based line and column of `offset` in `text`, as `line 3, column 7`. */
+export function lineAndColumn(text: string, offset: number): string {
   const before = text.slice(0, offset);
   const line = before.split('\n').length;
   return `line ${String(line)}, column ${String(offset - before.lastIndexOf('\n'))}`;
@@ -30,7 +34,7 @@ function syntaxFinding(text: string, fallback: string): Finding {
   }
   return {
     location: lineAndColumn(text, first.offset),
-    problem: `is not valid JSON (${words(printParseErrorCode(first.error))})`,
+    problem: `is not valid JSON (${parseErrorWords(first.error)})`,
     hint: 'fix the JSON at that spot; JSON allows no comments and no trailing commas',
   };
 }

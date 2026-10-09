@@ -1,5 +1,7 @@
 import type { Brand } from '../src/core/brand.js';
 import type { ReadKitFile } from '../src/core/loader.js';
+import type { RenderedEntry } from '../src/core/render-tree.js';
+import { compareText } from '../src/core/text.js';
 
 /** A module manifest as plain JSON data, for tests to change before loading. */
 export type ManifestData = Record<string, unknown>;
@@ -126,3 +128,24 @@ export const TEST_BRAND: Brand = Object.freeze({
   disclaimer: 'Acme Kit is a test brand.',
   legacySlugs: Object.freeze(['oldkit']),
 });
+
+/** An owned or create-only file entry. */
+export function fileEntry(
+  content: string,
+  strategy: 'owned' | 'create-only' = 'owned',
+  module = 'm',
+): RenderedEntry {
+  return { strategy, module, content };
+}
+
+/** A managed block entry. */
+export function blockEntry(blockId: string, content: string, module = 'm'): RenderedEntry {
+  return { strategy: 'blocks', module, blockId, content };
+}
+
+/** A settings.json entry of one module with deny rules, as `render` builds it. */
+export function denyEntry(rules: readonly string[], module = 'm'): RenderedEntry {
+  const content = `${JSON.stringify({ permissions: { deny: rules } }, null, 2)}\n`;
+  const keys = rules.map((rule) => `permissions.deny ${rule}`).sort(compareText);
+  return { strategy: 'json', module, content, keys };
+}

@@ -24,6 +24,11 @@ export function hookScriptPath(script: string, brand: Brand): string {
   return `${brand.hookDir}/${script.slice(script.lastIndexOf('/') + 1)}`;
 }
 
+/** The exec-form argument that runs an installed hook script, which also identifies the hook's entry (ADR-0014). */
+export function hookArgument(installedPath: string): string {
+  return `${PROJECT_DIR}/${installedPath}`;
+}
+
 /** Serialises a JSON value with two-space indentation and a trailing newline. */
 export function toJson(value: JsonValue): string {
   return `${JSON.stringify(value, null, 2)}\n`;
@@ -46,7 +51,7 @@ function hookGroup(hook: Hook, brand: Brand): JsonValue {
   const handler = withoutUndefined({
     type: 'command',
     command: 'node',
-    args: [`${PROJECT_DIR}/${hookScriptPath(hook.script, brand)}`],
+    args: [hookArgument(hookScriptPath(hook.script, brand))],
     timeout: hook.timeout,
     if: hook.if,
   });
