@@ -22,6 +22,7 @@ This repo itself runs on that setup (dogfooding).
 - 2026-10-09: Inline code fed by a download asks unless it is an allowlisted read-and-print idiom; code that can run its input is denied (#65). Why: the code is visible, but what it does with the download is not.
 - 2026-10-09: `find . -name '*' -delete` and `find ~ -exec rm -rf {} +` stay denied, though the #65 review expected ask. Why: each deletes as much as a bare `find <root> -delete`.
 - 2026-10-09: A script named by a variable (`bash "$f"`, `python3 "$SCRIPT"`) is allowed when no download is in the command; inline code from a variable (`python3 -c "$c"`) asks (#65). Why: a variable script is a file like any named script, which the guard already lets run, while variable code is as open as `eval`. With a download in the command, both are denied.
+- 2026-10-09: Reserved the npm name with a notice-only `archkeeper@0.0.1` (staged publish, owner-approved with 2FA). Why: the README shows `npx archkeeper`, so an unclaimed name was a squatting risk (PR #69 security review).
 
 ## Done
 

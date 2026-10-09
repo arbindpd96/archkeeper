@@ -930,7 +930,7 @@ The README also gets a provenance badge if trusted publishing is live, and a lin
 - **Why it was a gate:** Anthropic's legal page forbids "Claude Code" inside product names without written permission,
   and the plugin validator rejects names starting with `claude-` (reference §10, §4.1).
 - **Remaining checklist:** the slug lives only in `brand.ts` (v0.0 R1); `claude plugin validate --strict` passes for
-  `archkeeper` (v0.3 M1); the npm name is claimed by the first real publish (v0.1 M9). No placeholder packages.
+  `archkeeper` (v0.3 M1). The npm name was reserved on 2026-10-09 with a notice-only `archkeeper@0.0.1` (no install scripts, no dependencies), published by the maintainer through staged publishing with 2FA. This was done to stop squatting, because the README already shows `npx archkeeper`. The first real release is `0.1.0`.
 - **After close:** if a rename ever happens later, `BRAND.legacySlugs` lets `update` migrate markers and the state dir.
 
 ### G2: Publishing path (npm/cli#9969)
