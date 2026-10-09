@@ -45,7 +45,7 @@ const RULES = [
   {
     decision: 'ask',
     pattern:
-      /\bgit\s+(reset\s+--hard|clean\s+-[a-z]*f|checkout\s+--\s+\.|restore\s+\.|branch\s+-D|stash\s+(drop|clear))\b/,
+      /\bgit\s+(reset\s+--hard|clean\s+-[a-z]*f[a-z]*|checkout\s+--\s+\.|restore\s+\.|branch\s+-D|stash\s+(drop|clear))\b/,
     reason: 'This discards work irreversibly. Confirm with the user.',
   },
   {
