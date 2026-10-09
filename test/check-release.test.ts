@@ -34,7 +34,7 @@ function fakeNpm({ version = '11.17.0', latest }: FakeNpm = {}): NodeJS.ProcessE
     'const args = process.argv.slice(2);',
     `if (args[0] === '--version') { process.stdout.write('${version}\\n'); process.exit(0); }`,
     `const latest = ${JSON.stringify(latest ?? 'E404')};`,
-    "if (latest.startsWith('E')) { process.stderr.write(`npm error code ${latest}\\n`); process.exit(1); }",
+    "if (latest.startsWith('E')) { process.stderr.write('npm error code ' + latest + '\\n'); process.exit(1); }",
     "process.stdout.write(latest + '\\n');",
   ];
   writeFiles(dir, { 'npm-cli.js': `${script.join('\n')}\n` });
