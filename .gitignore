@@ -24,3 +24,6 @@ CLAUDE.local.md
 # test scratch
 tmp/
 .tmp/
+
+# Claude Code agent worktrees
+.claude/worktrees/

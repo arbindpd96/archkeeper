@@ -8,3 +8,4 @@ docs/media/
 .claude/state/
 plugin/
 CHANGELOG.md
+.claude/worktrees/

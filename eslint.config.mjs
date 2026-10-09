@@ -47,7 +47,17 @@ const commentPolicy = {
 };
 
 export default defineConfig(
-  { ignores: ['**/node_modules/', '**/dist/', '**/coverage/', 'plugin/', '**/fixtures/', '.claude/state/'] },
+  {
+    ignores: [
+      '**/node_modules/',
+      '**/dist/',
+      '**/coverage/',
+      'plugin/',
+      '**/fixtures/',
+      '.claude/state/',
+      '.claude/worktrees/',
+    ],
+  },
   js.configs.recommended,
   tseslint.configs.strictTypeChecked,
   tseslint.configs.stylisticTypeChecked,
