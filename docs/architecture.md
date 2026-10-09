@@ -89,7 +89,7 @@ Add a row whenever something is created. Keep one line per item.
 | `scripts/third-party-licenses.mjs`                                                                          | Writes `dist/THIRD_PARTY_LICENSES.md` from the `node_modules` paths in the bundles' `//#region` markers                    |
 | `scripts/check-package.mjs`                                                                                 | Package gates: publint, pack-list snapshot, runtime dependencies, install scripts, size budgets, bin smoke                 |
 | `scripts/check-brand.mjs`                                                                                   | Brand check: no slug literal outside `src/core/brand.ts` and the allowlist; `package.json` `name` and `bin` match `BRAND`  |
-| `test/helpers.ts`                                                                                           | `runScript`, `hookVerdict`, `hookDecision`, `permissionDecision`, `tempDir`, `tempRepo`, `writeFiles` for hook tests       |
+| `test/helpers.ts`                                                                                           | `runScript`, hook verdict helpers, `tempDir`, `tempRepo`, `writeFiles`; `fixtureCopy` (spaced non-ASCII path, own HOME)    |
 
 ## This repo's Claude Code setup
 

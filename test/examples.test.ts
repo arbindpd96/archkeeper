@@ -1,9 +1,11 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import { ESLint } from 'eslint';
 import { getFileInfo } from 'prettier';
 import { describe, expect, it } from 'vitest';
-import { REPO_ROOT, runScript, tempRepo } from './helpers.js';
+import { REPO_ROOT, fixtureCopy, runScript, tempRepo } from './helpers.js';
 
 const EXAMPLES = path.join(REPO_ROOT, 'examples');
 const TS_FILES = [
@@ -70,5 +72,29 @@ describe('examples', () => {
     expect(runScript('scripts/check-comments.mjs', { cwd: repo }).status).toBe(0);
     writeFileSync(path.join(repo, 'index.ts'), '// export const old = 1;\nexport const a = 1;\n');
     expect(runScript('scripts/check-comments.mjs', { cwd: repo }).stderr).toContain('commented-out code');
+  });
+});
+
+describe('fixtureCopy', () => {
+  it('copies a fixture under a path with a space and non-ASCII characters', () => {
+    const { dir } = fixtureCopy('ts-app');
+    expect(dir).toContain(' ');
+    expect(dir).toMatch(/[^ -~]/u);
+    expect(readFileSync(path.join(dir, 'package.json'), 'utf8')).toBe(read('ts-app', 'package.json'));
+    writeFileSync(path.join(dir, 'package.json'), '{}\n');
+    expect(read('ts-app', 'package.json')).not.toBe('{}\n');
+  });
+
+  it('isolates HOME and the git identity from the developer machine', () => {
+    const { dir, env } = fixtureCopy('py-app');
+    expect(env.HOME).not.toBe(homedir());
+    expect(env.HOME?.startsWith(path.dirname(path.dirname(dir)))).toBe(true);
+    execFileSync('git', ['init', '-q'], { cwd: dir, env });
+    const email = execFileSync('git', ['config', 'user.email'], { cwd: dir, env, encoding: 'utf8' });
+    expect(email.trim()).toBe('test@example.com');
+  });
+
+  it('names the examples folder when the fixture does not exist', () => {
+    expect(() => fixtureCopy('missing')).toThrow('No fixture examples/missing');
   });
 });
