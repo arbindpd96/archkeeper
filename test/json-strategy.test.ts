@@ -52,7 +52,7 @@ function plan(
     lock: lock === undefined ? undefined : new Map(Object.entries(lock)),
     isRemoved: (key) => removed.includes(key),
     ownable: () => false,
-    kitScript: () => true,
+    script: () => 'kit',
     brand: TEST_BRAND,
     ...rest,
   });
@@ -133,7 +133,7 @@ describe('the json strategy', () => {
   });
 
   it('does not register a hook whose script the kit neither wrote nor adopted', () => {
-    const outcome = plan({ kitScript: (script) => script !== GUARD });
+    const outcome = plan({ script: (script) => (script === GUARD ? 'other' : 'kit') });
     expect(outcome.ops.find((op) => op.entry === HOOK_KEY)).toMatchObject({ kind: 'skip' });
     expect(written(outcome)).not.toContain('hooks');
     expect(outcome.json?.has(HOOK_KEY)).toBe(false);

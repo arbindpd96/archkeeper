@@ -25,6 +25,27 @@ const TREE = treeOf(
   ['docs/notes.md', fileEntry('# Notes\n', 'create-only')],
 );
 
+const SETTINGS = '.claude/settings.json';
+const SCRIPT = '.claude/hooks/acmekit/guard.mjs';
+const HOOK_KEY = `hooks.Stop ${SCRIPT}`;
+const KIT_SCRIPT = 'export {};\n';
+const USER_SCRIPT = '// not the kit script\n';
+const HOOK_GROUP = {
+  hooks: [{ type: 'command', command: 'node', args: [`\${CLAUDE_PROJECT_DIR}/${SCRIPT}`] }],
+};
+const HOOK_TREE = treeOf(
+  [SCRIPT, fileEntry(KIT_SCRIPT)],
+  [
+    SETTINGS,
+    {
+      strategy: 'json',
+      module: 'm',
+      content: `${JSON.stringify({ hooks: { Stop: [HOOK_GROUP] } })}\n`,
+      keys: [HOOK_KEY],
+    },
+  ],
+);
+
 describe('planInstall', () => {
   it('returns ordered operations, each with a reason, for a fresh project', () => {
     const plan = planInstall(TREE, snapshotOf(), undefined, CONTEXT);
@@ -97,24 +118,32 @@ describe('planInstall', () => {
   });
 
   it('registers a hook only when the kit wrote or adopted its script', () => {
-    const script = '.claude/hooks/acmekit/guard.mjs';
-    const group = {
-      hooks: [{ type: 'command', command: 'node', args: [`\${CLAUDE_PROJECT_DIR}/${script}`] }],
+    const theirs = planInstall(HOOK_TREE, snapshotOf({ [SCRIPT]: USER_SCRIPT }), undefined, CONTEXT);
+    expect(theirs.writes.get(SETTINGS) ?? '').not.toContain('hooks');
+    expect(theirs.ops.find((op) => op.entry === HOOK_KEY)?.reason).toContain('does not register it');
+    const ours = planInstall(HOOK_TREE, snapshotOf(), undefined, CONTEXT);
+    expect(ours.writes.get(SETTINGS)).toContain(SCRIPT);
+  });
+
+  it('never registers a user script whose sidecar the user deleted', () => {
+    const first = planInstall(HOOK_TREE, snapshotOf({ [SCRIPT]: USER_SCRIPT }), undefined, CONTEXT);
+    const state = applied(snapshotOf({ [SCRIPT]: USER_SCRIPT }), first);
+    state.delete(`${SCRIPT}.acmekit-new`);
+    const second = planInstall(HOOK_TREE, state, first.lock, CONTEXT);
+    expect(second.lock.files.get(SCRIPT)?.base).toBe(contentHash(KIT_SCRIPT));
+    expect(second.writes.get(SETTINGS) ?? '').not.toContain('hooks');
+    expect(second.lock.json.get(SETTINGS)?.has(HOOK_KEY) ?? false).toBe(false);
+  });
+
+  it('never registers a planted script, whatever base the untrusted lock gives it', () => {
+    const lock: Lock = {
+      ...emptyLock(TEST_KIT),
+      files: new Map([[SCRIPT, { module: 'm', strategy: 'owned', base: 'a'.repeat(64) }]]),
     };
-    const settings = {
-      strategy: 'json',
-      module: 'm',
-      content: `${JSON.stringify({ hooks: { Stop: [group] } })}\n`,
-      keys: [`hooks.Stop ${script}`],
-    } as const;
-    const tree = treeOf([script, fileEntry('export {};\n')], ['.claude/settings.json', settings]);
-    const theirs = planInstall(tree, snapshotOf({ [script]: '// not the kit script\n' }), undefined, CONTEXT);
-    expect(theirs.writes.get('.claude/settings.json')).not.toContain('hooks');
-    expect(theirs.ops.find((op) => op.entry === `hooks.Stop ${script}`)?.reason).toContain(
-      'does not register it',
-    );
-    const ours = planInstall(tree, snapshotOf(), undefined, CONTEXT);
-    expect(ours.writes.get('.claude/settings.json')).toContain(script);
+    const plan = planInstall(HOOK_TREE, snapshotOf({ [SCRIPT]: USER_SCRIPT }), lock, CONTEXT);
+    expect(plan.writes.get(SETTINGS) ?? '').not.toContain('hooks');
+    expect(plan.writes.has(SCRIPT)).toBe(false);
+    expect(plan.ops.find((op) => op.entry === HOOK_KEY)).toMatchObject({ kind: 'skip' });
   });
 
   it('checks every path the lock names, since the lock is untrusted', () => {
