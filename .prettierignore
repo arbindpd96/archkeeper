@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+package-lock.json
+docs/HANDOFF.md
+docs/research/
+docs/media/
+.claude/state/
+plugin/
+CHANGELOG.md
