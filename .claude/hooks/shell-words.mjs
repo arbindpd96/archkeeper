@@ -84,13 +84,15 @@ class Parser extends WordReader {
       // The words before `)` in a case statement are patterns, not a command.
       seq.cmd = newCommand();
     } else {
-      if (operator === '(' && seq.cmd.argv.length === 1 && this.closesAt()) seq.cmd.definesFunction = true;
+      const definesFunction = operator === '(' && seq.cmd.argv.length === 1 && this.emptyParensFollow();
+      if (definesFunction) seq.cmd.definesFunction = true;
       this.finishCommand(seq);
       this.afterCommand(seq, operator, adjacentToWord);
     }
   }
 
-  closesAt() {
+  // Called just after a `(`: `name()` and `name ( )` define a function.
+  emptyParensFollow() {
     EMPTY_PARENS_END.lastIndex = this.pos;
     return EMPTY_PARENS_END.test(this.src);
   }
@@ -103,9 +105,8 @@ class Parser extends WordReader {
   }
 
   group(seq, adjacentToWord) {
-    const functionDefinition = this.src[this.pos] === ')';
     // zsh glob qualifiers such as *(e:'cmd':) run code that bash would reject, so refuse to guess.
-    if (adjacentToWord && !functionDefinition && this.src[this.pos - 2] !== '=') {
+    if (adjacentToWord && !this.emptyParensFollow() && this.src[this.pos - 2] !== '=') {
       this.fail('a glob qualifier or extglob: a word directly followed by "("');
     }
     this.nested(seq, null, () => this.parseSequence(')'));
