@@ -36,7 +36,7 @@ Everything the kit keeps lives in `.archkeeper/` (`BRAND.stateDir`):
 | `.archkeeper/base/<sha256>` | yes       | The last kit-written content of each owned file and block         |
 | `.archkeeper/local/`        | no        | Active-feature pointer, snapshots, caches, hook state and backups |
 
-**`config.json`** is the only kit file a user edits by hand. It holds `$schema`, `preset`, `modules {add, remove}`, an optional `stack` override, per-module `options` (for example `blockAiAttribution`, `blockNoVerify` and `checks.stop`), and the Superpowers and Spec Kit choices. `update` re-renders from it. It is validated with zod and exported to `schema/config.schema.json`; unknown keys warn, and invalid values fail with a hint (#19). The setup answers live here, not in the lock as reference §7.2 proposed.
+**`config.json`** is the only kit file a user edits by hand. It holds `version` (1; a config without it is read as version 1), `$schema`, `preset`, `modules {add, remove}`, an optional `stack` override, per-module `options` (for example `blockAiAttribution`, `blockNoVerify` and `checks.stop`), and the Superpowers and Spec Kit choices. `update` re-renders from it. It is validated with zod and exported to `schema/config.schema.json`; unknown keys warn, and invalid values fail with a hint (#19). The setup answers live here, not in the lock as reference §7.2 proposed.
 
 **`lock.json`** is written only by the kit:
 
@@ -97,7 +97,7 @@ Every generated file declares one strategy in its module manifest (#18):
 - **User deletions are respected.** A kit file, block or JSON entry the user deleted is recorded in `removed[]` and never recreated. A kit-owned JSON entry missing from its file counts as a user deletion, so a deny rule the user removed is never added back.
 - **Path-checked.** Every write and delete target is refused when it is absolute or contains `..`, resolves (via realpath) through a symlink outside the project root, lies inside `.git/`, or uses a Windows reserved name (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`) or a name ending in a dot or space. Deletes never follow symlinks (#23).
 - **Transactional.** Every touched file is backed up first. Each write goes to a temp sibling and is renamed into place, retrying with backoff on Windows `EPERM` and `EBUSY`. Any failure restores every file byte-identical. The lock is written last, so an interrupted run leaves the previous lock and the next run plans again.
-- **Versions.** A lock with a newer `lockfileVersion` fails with "upgrade archkeeper", and a kit older than `lock.kit.version` refuses to run, so a downgrade cannot rewrite a newer install.
+- **Versions.** A lock with a newer `lockfileVersion`, or a config with a newer `version`, fails with "upgrade archkeeper", and a kit older than `lock.kit.version` refuses to run, so a downgrade cannot rewrite a newer install.
 
 ### Updates
 
@@ -138,7 +138,7 @@ The command-line contract (#40):
 
 **v0.2 adds 3-way merges.** node-diff3 merges owned Markdown and managed blocks against the bases v0.1 already records. Conflicts are written diff3-style with the base inline (labels: yours / base / `archkeeper@<version>`), or as `.rej` files with `--conflict rej`. `.mjs` files keep sidecars, and JSON never gets markers. Because the base is inline, no skill needs to read `.archkeeper/base/`.
 
-**Schema changes.** Until 0.1.0 is published, the shapes may change together with this ADR. After that, any change to the lock or config schema bumps its version (`lockfileVersion` for the lock) and ships a migration; the migration chain lands in v0.2 M1. v1.0 freezes the schemas.
+**Schema changes.** Until 0.1.0 is published, the shapes may change together with this ADR. After that, any change to the lock or config schema bumps its version (`lockfileVersion` for the lock, `version` for the config) and ships a migration; the migration chain lands in v0.2 M1. v1.0 freezes the schemas.
 
 ## Consequences
 
