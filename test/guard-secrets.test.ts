@@ -60,7 +60,7 @@ describe('guard-secrets env files and robustness', () => {
       edits: [null, { new_string: 'ok' }],
     });
     expect(verdict.decision).toBe('ask');
-    expect(verdict.reason).toContain('could not replay this edit');
+    expect(verdict.reason).toContain('because an edit has no old_string or new_string');
   });
 
   it('allows a multi-edit payload whose edits are not a list', () => {
@@ -139,7 +139,9 @@ describe('guard-secrets allow pragma', () => {
 
   it('asks when the old_string of an edit is not in the file', () => {
     const toolInput = { old_string: 'not there', new_string: 'x' };
-    expect(verdictIn(`${fixtureLine('a')}\n`, toolInput).reason).toContain('could not replay this edit');
+    expect(verdictIn(`${fixtureLine('a')}\n`, toolInput).reason).toContain(
+      'because an old_string is not in the file',
+    );
   });
 
   it('still denies an unmarked secret next to a marked line already in the file', () => {
@@ -164,7 +166,9 @@ describe('guard-secrets allow pragma', () => {
 
   it('asks when replace_all is not a boolean, because the replay could differ from the edit', () => {
     const toolInput = { old_string: 'a'.repeat(36), new_string: 'b'.repeat(36), replace_all: 'true' };
-    expect(verdictIn(`${fixtureLine('a')}\n`, toolInput).reason).toContain('could not replay this edit');
+    expect(verdictIn(`${fixtureLine('a')}\n`, toolInput).reason).toContain(
+      'because replace_all is not true or false',
+    );
   });
 
   it('allows a pragma mention that marks no secret', () => {
@@ -183,12 +187,18 @@ describe('guard-secrets allow pragma', () => {
 
   it('does not trust a marked line in a file over the size cap', () => {
     const line = fixtureLine('a');
-    expect(decideIn(`${line}\n${'x'.repeat(1_000_001)}\n`, { content: line })).toBe('ask');
+    const verdict = verdictIn(`${line}\n${'x'.repeat(1_000_001)}\n`, { content: line });
+    expect(verdict.reason).toContain('could not check the marked line because it is over 1 MB');
   });
 
   it('names the size cap when it asks about an edit to a large file', () => {
     const toolInput = { old_string: 'x', new_string: 'y' };
     expect(verdictIn('x'.repeat(1_000_001), toolInput).reason).toContain('because it is over 1 MB');
+  });
+
+  it('asks about an edit that would grow a file past the size cap', () => {
+    const toolInput = { old_string: 'x', new_string: 'y'.repeat(20) };
+    expect(verdictIn('x'.repeat(999_990), toolInput).reason).toContain('the edited file would be over 1 MB');
   });
 
   it('does not trust a marked line in a file outside the project', () => {

@@ -2,8 +2,7 @@ import { lstatSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 
 const ALLOW_PRAGMA = 'archkeeper:allow-secret';
-const MAX_CHECKED_BYTES = 1_000_000;
-const OUTSIDE = Symbol('outside the project');
+const MAX_CHECKED_SIZE = 1_000_000;
 
 const SECRET_PATTERNS = [
   { name: 'AWS access key', pattern: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/ },
@@ -74,15 +73,15 @@ function linesOf(text) {
 function readRealFile(real, readRegularFile) {
   const stat = lstatSync(real);
   if (!stat.isFile()) return { cause: 'it is not a regular file' };
-  if (stat.size > MAX_CHECKED_BYTES) return { cause: 'it is over 1 MB' };
-  const text = readRegularFile(real, MAX_CHECKED_BYTES);
+  if (stat.size > MAX_CHECKED_SIZE) return { cause: 'it is over 1 MB' };
+  const text = readRegularFile(real, MAX_CHECKED_SIZE);
   return text === null ? { cause: 'it changed while being read' } : { text };
 }
 
 /**
- * Returns `{ text }` for the file a write targets ('' when it does not exist yet), OUTSIDE when its real path
- * is outside the project, or `{ cause }` naming why it cannot be read. A symlink is followed only to a file
- * inside the project, read through its real path.
+ * Returns `{ text }` for the file a write targets ('' when it does not exist yet), `{ outside: true }` when its
+ * real path is outside the project, or `{ cause }` naming why it cannot be read. A symlink is followed only to
+ * a file inside the project, read through its real path.
  */
 function readTarget(target, { projectDir, isProjectFile, readRegularFile }) {
   if (typeof target !== 'string') return { cause: 'the call names no file' };
@@ -90,7 +89,7 @@ function readTarget(target, { projectDir, isProjectFile, readRegularFile }) {
   try {
     if (lstatSync(file, { throwIfNoEntry: false }) === undefined) return { text: '' };
     const real = realpathSync(file);
-    return isProjectFile(real) ? readRealFile(real, readRegularFile) : OUTSIDE;
+    return isProjectFile(real) ? readRealFile(real, readRegularFile) : { outside: true };
   } catch {
     return { cause: 'it could not be read' };
   }
@@ -101,7 +100,10 @@ function judgeMarkedLines(lines, read) {
   const marked = lines.filter((line) => line.includes(ALLOW_PRAGMA) && secretsIn(line).length > 0);
   if (marked.length === 0) return null;
   const found = read();
-  const onDisk = new Set(found.text === undefined ? [] : linesOf(found.text));
+  if (found.cause) {
+    return decide('ask', `could not check the marked line because ${found.cause}. Confirm with the user.`);
+  }
+  const onDisk = new Set(found.outside ? [] : linesOf(found.text));
   return marked.every((line) => onDisk.has(line)) ? null : decide('ask', NEW_PRAGMA_REASON);
 }
 
@@ -112,26 +114,36 @@ function editsOf(toolInput) {
   return isEdit ? [toolInput] : null;
 }
 
-/** Applies one edit as the Edit tool does; null when it is malformed or its old_string is not in the text. */
+/** Applies one edit as the Edit tool does: `{ text }` with the result, or `{ cause }` naming why it cannot. */
 function applyEdit(text, edit) {
-  if (typeof edit?.old_string !== 'string' || typeof edit.new_string !== 'string') return null;
-  if (!['undefined', 'boolean'].includes(typeof edit.replace_all)) return null;
+  if (typeof edit?.old_string !== 'string' || typeof edit.new_string !== 'string') {
+    return { cause: 'an edit has no old_string or new_string' };
+  }
+  if (!['undefined', 'boolean'].includes(typeof edit.replace_all)) {
+    return { cause: 'replace_all is not true or false' };
+  }
   const search = edit.old_string.replaceAll('\r\n', '\n');
   const replacement = edit.new_string.replaceAll('\r\n', '\n');
-  if (search === '') return text === '' ? replacement : null;
-  if (!text.includes(search)) return null;
-  if (edit.replace_all === true) return text.split(search).join(replacement);
-  return text.replace(search, () => replacement);
+  if (search === '') return text === '' ? { text: replacement } : { cause: 'an old_string is empty' };
+  if (!text.includes(search)) return { cause: 'an old_string is not in the file' };
+  if (edit.replace_all === true) return { text: text.split(search).join(replacement) };
+  return { text: text.replace(search, () => replacement) };
 }
 
-/** Returns the text the edits leave behind, null when one cannot be applied, or as soon as it is over the cap. */
+/** Returns `{ text }` that the edits leave behind, or `{ cause }`, early once the text is over the cap. */
 function editedText(text, edits) {
-  let result = text;
+  let result = { text };
   for (const edit of edits) {
-    result = applyEdit(result, edit);
-    if (result === null || result.length > MAX_CHECKED_BYTES) return result;
+    result = applyEdit(result.text, edit);
+    if (result.cause) return result;
+    if (result.text.length > MAX_CHECKED_SIZE) return { cause: 'the edited file would be over 1 MB' };
   }
   return result;
+}
+
+/** Asks about an edit the guard could not check, naming the cause. */
+function cannotCheckEdit(cause) {
+  return decide('ask', `could not check this edit because ${cause}. Confirm with the user.`);
 }
 
 /**
@@ -141,18 +153,13 @@ function editedText(text, edits) {
  */
 function judgeEdits(target, edits, lines, helpers) {
   const found = readTarget(target, helpers);
-  if (found === OUTSIDE) return judgeMarkedLines(lines, () => OUTSIDE);
-  if (found.cause) {
-    return decide('ask', `could not check this edit because ${found.cause}. Confirm with the user.`);
-  }
+  if (found.outside) return judgeMarkedLines(lines, () => found);
+  if (found.cause) return cannotCheckEdit(found.cause);
   const before = found.text.replaceAll('\r\n', '\n');
   const after = editedText(before, edits);
-  if (after === null) return decide('ask', 'could not replay this edit on the file. Confirm with the user.');
-  if (after.length > MAX_CHECKED_BYTES) {
-    return decide('ask', 'the edited file would be over 1 MB. Confirm with the user.');
-  }
+  if (after.cause) return cannotCheckEdit(after.cause);
   const original = new Set(linesOf(before));
-  const added = linesOf(after).filter((line) => !original.has(line) && secretsIn(line).length > 0);
+  const added = linesOf(after.text).filter((line) => !original.has(line) && secretsIn(line).length > 0);
   if (added.length === 0) return null;
   if (added.some((line) => line.includes(ALLOW_PRAGMA))) return decide('ask', NEW_PRAGMA_REASON);
   return decide(
@@ -169,7 +176,7 @@ function evaluate(toolInput, helpers) {
     return decide('ask', `${fileName} holds secrets. Confirm with the user before editing it.`);
   }
   const text = writtenText(toolInput);
-  if (text.length > MAX_CHECKED_BYTES) {
+  if (text.length > MAX_CHECKED_SIZE) {
     return decide('ask', 'the written text is over 1 MB. Confirm with the user.');
   }
   const lines = linesOf(text);
