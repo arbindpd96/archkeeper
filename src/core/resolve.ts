@@ -112,8 +112,9 @@ function checkRequestedIds({ request, catalog, config }: Context): void {
 function seed(context: Context, preset: Preset): void {
   const removed = new Set(context.request.remove ?? []);
   for (const [id, kit] of context.catalog.modules) {
-    if (kit.manifest.presets.includes(preset.name) && !removed.has(id))
+    if (kit.manifest.presets.includes(preset.name) && !removed.has(id)) {
       context.origins.set(id, { label: `preset ${preset.name}` });
+    }
   }
   for (const id of context.request.add ?? []) {
     if (!context.origins.has(id)) context.origins.set(id, { label: 'modules.add' });
@@ -190,6 +191,23 @@ function dropUnmatched(context: Context): Map<string, string> {
   return dropped;
 }
 
+// A module added only because a left-out module required it is not needed any more.
+function dropOrphans({ catalog, origins }: Context, dropped: Map<string, string>): void {
+  const needed = new Set<string>();
+  const visit = (id: string): void => {
+    if (needed.has(id) || dropped.has(id)) return;
+    needed.add(id);
+    for (const required of catalog.modules.get(id)?.manifest.requires ?? []) visit(required);
+  };
+  for (const [id, origin] of origins) {
+    if ('label' in origin) visit(id);
+  }
+  for (const [id, origin] of origins) {
+    if (needed.has(id) || dropped.has(id) || !('requiredBy' in origin)) continue;
+    dropped.set(id, `only left-out modules need it, such as ${origin.requiredBy}`);
+  }
+}
+
 function checkConflicts({ config, origins }: Context, kept: ReadonlyMap<string, KitModule>): void {
   for (const [id, kit] of kept) {
     const index = kit.manifest.conflicts.findIndex((other) => kept.has(other));
@@ -219,6 +237,7 @@ export function resolveModules(request: ResolveRequest, catalog: Catalog, brand:
   seed(context, preset);
   addRequirements(context);
   const dropped = dropUnmatched(context);
+  dropOrphans(context, dropped);
   const kept = new Map(
     [...context.origins.keys()]
       .filter((id) => !dropped.has(id))

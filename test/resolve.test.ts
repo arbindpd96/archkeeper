@@ -76,6 +76,24 @@ describe('resolveModules', () => {
     ]);
   });
 
+  it('leaves out a module that only a left-out module required', () => {
+    const catalog = catalogOf([
+      plainManifest('base', { presets: ALL }),
+      plainManifest('python-only', {
+        presets: ALL,
+        requires: ['python-helper'],
+        when: { stack: ['python'] },
+      }),
+      plainManifest('python-helper', { requires: ['base'] }),
+    ]);
+    const resolution = resolveModules({ preset: 'small', stack: ['ts'] }, catalog);
+    expect(resolution.modules.map((kit) => kit.manifest.id)).toEqual(['base']);
+    expect(resolution.dropped).toEqual([
+      { id: 'python-helper', reason: 'only left-out modules need it, such as python-only' },
+      { id: 'python-only', reason: 'needs the python stack, and the project stack is ts' },
+    ]);
+  });
+
   it('honours modules.remove and returns the preset it resolved', () => {
     const resolution = resolveModules({ preset: 'small', stack: [], remove: ['safety'] }, CATALOG);
     expect(resolution.modules.map((kit) => kit.manifest.id)).toEqual(['base', 'alpha']);
