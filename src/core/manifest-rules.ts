@@ -181,6 +181,13 @@ function whenOptionFinding(
         `declare it in options (declared: ${known})`,
       );
     }
+    if (spec.type === 'string-list') {
+      return finding(
+        location,
+        'is a string-list option',
+        'compare a boolean or string option: a when can compare only those',
+      );
+    }
     if (spec.type !== typeof value) {
       return finding(
         location,
