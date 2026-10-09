@@ -72,9 +72,10 @@ function judgeFind({ args, splitArgs }, deletesOutput) {
   const { roots, tokens } = readFindExpression(args);
   const actionAt = tokens.findIndex(isDeleteAction);
   const deletes = actionAt !== -1 || deletesOutput;
-  if (!roots.some(isDangerousPath)) return deletes && roots.some(isUncheckedPath) ? UNSEEN_DELETE : null;
-  const verdict = deletes ? deleteVerdict(tokens, actionAt === -1 ? tokens.length : actionAt) : null;
   // An unquoted expansion such as `find ~ $OP` may add -delete or -o at run time.
+  const mayDelete = deletes || splitArgs;
+  if (!roots.some(isDangerousPath)) return mayDelete && roots.some(isUncheckedPath) ? UNSEEN_DELETE : null;
+  const verdict = deletes ? deleteVerdict(tokens, actionAt === -1 ? tokens.length : actionAt) : null;
   return verdict ?? (splitArgs ? UNSEEN_DELETE : null);
 }
 
