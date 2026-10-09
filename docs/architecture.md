@@ -21,7 +21,7 @@ flowchart LR
 - **One package, zero runtime dependencies** (ADR-0011). Every library is a devDependency that tsdown inlines. The published `files` are `dist`, `modules`, `packs` and `schema`.
 - **Core is pure.** It does module resolution, rendering, merge planning and the lockfile. The CLI owns prompts, output and exit codes.
 - **Layers are lint-enforced** (ESLint `no-restricted-*` rules in `eslint.config.mjs`; each is proven by a fixture in `test/fixtures/layers/`):
-  - `src/core` never imports `src/cli`, commander or @clack/prompts, and never uses `process.exit` or `console`, whether as a global, through `globalThis`, or imported from `process`, `console` or their `node:` forms.
+  - `src/core` never imports `src/cli`, commander or @clack/prompts. It never uses `process` or `console`, whether as a global, through `globalThis`, or imported from `process`, `console` or their `node:` forms, and never imports `fs` or `fs/promises`: callers pass file contents in through an injected reader.
   - `src/hooks` imports only `node:` built-ins and `src/hooks/runtime`.
   - `src/hooks/runtime` imports no npm package.
 

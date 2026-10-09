@@ -48,6 +48,9 @@ const commentPolicy = {
 
 const CORE_IS_PURE =
   'src/core is pure (ADR-0011): return data or throw, and let src/cli own prompts, output and exit codes.';
+const CORE_HAS_NO_IO =
+  'src/core is pure (ADR-0011): take file contents and settings as parameters; src/cli owns the file system and the process.';
+const IO_MODULES = ['node:process', 'process', 'node:fs', 'fs', 'node:fs/promises', 'fs/promises'];
 const HOOKS_ARE_STANDALONE =
   'Hooks are self-contained bundles (ADR-0011): import only node: built-ins and ./runtime/.';
 const RUNTIME_HAS_NO_PACKAGES = 'The hook runtime imports no npm package (ADR-0011): use node: built-ins.';
@@ -61,8 +64,7 @@ const layerBoundaries = [
         'error',
         {
           paths: [
-            { name: 'node:process', importNames: ['exit'], message: CORE_IS_PURE },
-            { name: 'process', importNames: ['exit'], message: CORE_IS_PURE },
+            ...IO_MODULES.map((name) => ({ name, message: CORE_HAS_NO_IO })),
             { name: 'node:console', message: CORE_IS_PURE },
             { name: 'console', message: CORE_IS_PURE },
           ],
@@ -76,6 +78,7 @@ const layerBoundaries = [
         'error',
         { object: 'process', property: 'exit', message: CORE_IS_PURE },
         { object: 'globalThis', property: 'console', message: CORE_IS_PURE },
+        { object: 'globalThis', property: 'process', message: CORE_HAS_NO_IO },
       ],
       'no-restricted-syntax': [
         'error',
@@ -84,7 +87,11 @@ const layerBoundaries = [
           message: CORE_IS_PURE,
         },
       ],
-      'no-restricted-globals': ['error', { name: 'console', message: CORE_IS_PURE }],
+      'no-restricted-globals': [
+        'error',
+        { name: 'console', message: CORE_IS_PURE },
+        { name: 'process', message: CORE_HAS_NO_IO },
+      ],
     },
   },
   {
