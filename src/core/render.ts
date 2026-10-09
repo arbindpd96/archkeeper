@@ -7,6 +7,7 @@ import { relativePathProblem } from './paths.js';
 import { hookScriptPath, type JsonPart, mcpPart, settingsPart, toJson } from './render-json.js';
 import { collectEntries, type Draft, type RenderTree } from './render-tree.js';
 import type { Stack } from './schema-parts.js';
+import { reservedTarget } from './targets.js';
 import { brandScope, renderTemplate, type TemplateScope } from './template.js';
 import { asLfText } from './text.js';
 import { whenMismatch } from './when.js';
@@ -53,6 +54,15 @@ function renderedPath(job: ModuleRender, file: ManifestFile, index: number): str
       location,
       problem: `renders to "${path}", which ${problem}`,
       hint: 'fix the path or the brand value it uses',
+    });
+  }
+  const reserved = file.strategy === 'json' ? undefined : reservedTarget(path, job.brand);
+  if (reserved !== undefined) {
+    throw new RenderError({
+      file: job.kit.file,
+      location,
+      problem: `renders to "${path}", which ${reserved.problem}`,
+      hint: reserved.hint,
     });
   }
   return path;

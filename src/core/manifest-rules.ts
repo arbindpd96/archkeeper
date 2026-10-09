@@ -1,10 +1,14 @@
+import { BRAND } from './brand.js';
 import type { Finding } from './errors.js';
 import { jsonPath } from './issues.js';
 import { GITIGNORE_FILE, MCP_FILE, type ModuleManifest, SETTINGS_FILE } from './manifest-schema.js';
+import { type KitFolders, reservedTarget } from './targets.js';
 
 type Rule = (manifest: ModuleManifest) => Finding | undefined;
 
 const PLUGIN_FOLDERS = ['.claude/skills/', '.claude/agents/'];
+// A target can name a kit folder through a brand variable; render checks the folders of the brand it is given.
+const TEMPLATED_FOLDERS: KitFolders = { stateDir: '{{brand.stateDir}}', hookDir: '{{brand.hookDir}}' };
 
 function finding(path: readonly PropertyKey[], problem: string, hint: string): Finding {
   return { location: jsonPath(path), problem, hint };
@@ -77,6 +81,15 @@ const pluginTargets: Rule = ({ files }) => {
     'is plugin for a file outside .claude/skills/ and .claude/agents/',
     'use project: the plugin carries only skills and agents (ADR-0016)',
   );
+};
+
+const reservedTargets: Rule = ({ files }) => {
+  for (const [index, entry] of files.entries()) {
+    if (entry.strategy === 'json') continue;
+    const reserved = reservedTarget(entry.to, BRAND) ?? reservedTarget(entry.to, TEMPLATED_FOLDERS);
+    if (reserved !== undefined) return finding(['files', index, 'to'], reserved.problem, reserved.hint);
+  }
+  return undefined;
 };
 
 function declares(manifest: ModuleManifest, strategy: 'blocks' | 'json', to: string): boolean {
@@ -179,6 +192,7 @@ const whenOptions: Rule = (manifest) => {
 
 const RULES: readonly Rule[] = [
   demoOrInternal,
+  reservedTargets,
   uniqueLists,
   noSelfReference,
   pluginTargets,

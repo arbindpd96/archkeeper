@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BRAND } from '../src/core/brand.js';
 import { ManifestError } from '../src/core/errors.js';
 import { loadCatalog, loadModule } from '../src/core/loader.js';
 import {
@@ -118,6 +119,38 @@ describe('loadModule cross-field rules', () => {
     expect(error.location).toBe(location);
     expect(error.hint).toContain(fix);
   });
+
+  it.each<[string, string, string]>([
+    ['settings.json as an owned template', '.claude/settings.json', 'strategy json'],
+    ['.mcp.json as a create-only template', '.mcp.json', 'strategy json'],
+    ['settings.json spelled in another case', '.Claude/Settings.JSON', 'strategy json'],
+    ['the personal settings file', '.claude/settings.local.json', 'never writes personal settings'],
+    ['a git hook', '.git/hooks/pre-commit', 'never writes into .git'],
+    ['a nested .git folder', 'packages/app/.GIT/config', 'never writes into .git'],
+    ['a file in the state folder', `${BRAND.stateDir}/config.json`, 'another folder'],
+    ['a file in the state folder by brand variable', '{{brand.stateDir}}/local/x', 'another folder'],
+    ['a file in the hook folder', `${BRAND.hookDir}/guard.mjs`, 'another folder'],
+    ['a file in the hook folder by brand variable', '{{brand.hookDir}}/guard.mjs', 'another folder'],
+  ])('rejects %s as the target of a file written from a template', (_name, to, fix) => {
+    const error = loadRich((m) => (entry(m, 'files', 1).to = to));
+    expect(error.location).toBe('files[1].to');
+    expect(error.hint).toContain(fix);
+  });
+
+  it('rejects a reserved target for an owned and a blocks file too', () => {
+    expect(loadRich((m) => (entry(m, 'files', 0).to = '.git/x')).location).toBe('files[0].to');
+    expect(loadRich((m) => (entry(m, 'files', 2).to = '.mcp.json')).location).toBe('files[2].to');
+  });
+
+  it.each(['.github/notes.md', '.claude/settings.md', `${BRAND.stateDir}-notes/x.md`, 'docs/.gitkeep'])(
+    'accepts %s, which only looks like a reserved target',
+    (to) => {
+      const manifest = richManifest();
+      entry(manifest, 'files', 1).to = to;
+      const read = memoryReader({ 'modules/rich/module.json': JSON.stringify(manifest), ...richSources() });
+      expect(loadModule('rich', read).manifest.files[1]?.to).toBe(to);
+    },
+  );
 
   it.each([
     ['a template', 'modules/rich/files/notes.md', 'files[1].from'],
