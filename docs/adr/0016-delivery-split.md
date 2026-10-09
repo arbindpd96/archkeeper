@@ -32,7 +32,7 @@ R1 already reflects this split. ADR-0011 keeps `plugin/` in the repo but out of 
   - These removals follow the config, not a user deletion, so they are not recorded in `removed[]`. Switching back to `local` therefore writes the removed copies again, and treats a kept copy like any other user-modified owned file.
 - The plugin's contents are the same for every user, so nothing stops a user with local skills from also installing the plugin, for its agents for example. They then have each skill twice, as `/<skill>` and `/archkeeper:<skill>`. `doctor` flags every duplicate and names the fix; that is the guarantee. v0.3 M1 decides whether the skills move into a separate opt-in plugin so the agents can be installed alone.
 - The plugin carries only skills and agents. It never ships hooks, settings, MCP servers or instruction files.
-- Its skills and agents follow the same frontmatter allowlist as the project's ([ADR-0015](0015-hook-runtime.md)): no `hooks` or `mcpServers`, `permissionMode` only as `default` or `plan`, a skill's `allowed-tools` limited to `Read`, `Grep`, `Glob` and literal `Bash(<command>)` entries, and no load-time `` !`cmd` ``. Claude Code already ignores `hooks`, `mcpServers` and `permissionMode` on plugin agents (reference §3.2), but the kit does not rely on that: the static test also runs on the built `plugin/`.
+- Its skills and agents follow the same allowlist of frontmatter keys and values as the project's ([ADR-0015](0015-hook-runtime.md)), and no load-time `` !`cmd` ``. Claude Code already ignores `hooks`, `mcpServers` and `permissionMode` on plugin agents (reference §3.2), but the kit does not rely on that: the static test also runs on the built `plugin/`.
 
 **Distribution.**
 
