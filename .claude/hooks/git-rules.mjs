@@ -13,6 +13,7 @@ const FORCE_MAIN = deny('Force-pushing main/master is blocked.');
 const REMOTE_DELETE = deny('Deleting or mirroring remote branches is blocked.');
 const DISCARDS_WORK = ask('This discards work irreversibly. Confirm with the user.');
 const OUTSIDE_REPO = ask('This git command can write files or read outside the repo. Confirm with the user.');
+const RUNS_PAGER = ask('git grep -O runs the program it names on the matches. Confirm with the user.');
 const GIT_ALIAS = ask('A git alias can hide what a command runs. Confirm with the user.');
 const UNCHECKED = ask(
   'A variable or command output decides what this git command does. Confirm with the user.',
@@ -35,6 +36,7 @@ const CHECKOUT_VALUES = { short: 'bB', long: ['--orphan'] };
 const RESTORE_VALUES = { short: 's', long: ['--source'] };
 const SWITCH_VALUES = { short: 'cC', long: ['--create', '--force-create', '--orphan'] };
 const BRANCH_VALUES = { short: 'u', long: ['--set-upstream-to'] };
+const GREP_VALUES = { short: 'efABCm', long: ['--max-count', '--threads', '--context', '--max-depth'] };
 const CONFIG_VALUES = {
   short: 'f',
   long: ['--file', '--blob', '--type', '--default', '--comment', '--value'],
@@ -106,6 +108,9 @@ const judgeStash = ({ operands }) => (['drop', 'clear'].includes(operands[0]) ? 
 const judgeOutput = (options) =>
   options.long.has('--output') || options.long.has('--no-index') ? OUTSIDE_REPO : null;
 
+const judgeGrep = (options) =>
+  options.short.has('O') || hasLong(options, '--open-files-in-pager', 4) ? RUNS_PAGER : null;
+
 const isExistingPath = (operand) => !hasExpansion(operand) && existsSync(operand);
 
 // `git checkout <file>` or `git checkout <rev> <file>` overwrites uncommitted edits with no prompt.
@@ -155,6 +160,7 @@ const SUBCOMMANDS = new Map([
   ['diff', { judge: judgeOutput }],
   ['log', { judge: judgeOutput }],
   ['show', { judge: judgeOutput }],
+  ['grep', { judge: judgeGrep, values: GREP_VALUES }],
   ['config', { judge: judgeConfig, values: CONFIG_VALUES }],
   ['rm', { judge: judgeRm }],
   ['worktree', { judge: judgeWorktree }],
