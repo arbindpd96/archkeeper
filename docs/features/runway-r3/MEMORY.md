@@ -4,7 +4,7 @@ Status: in progress (ready for PR) | Branch: docs/runway-r3
 
 ## Goal
 
-v0.0 Runway milestone R3 (issues #14, #15): ADR-0012, 0014, 0015, 0016 and 0018 accepted and reconciled with what R1 and R2 built, ADR-0002's status line updated, rows in `docs/decisions.md`, links from `docs/architecture.md`, and the R3 items ticked in `docs/ROADMAP.md`. Docs only.
+v0.0 Runway milestone R3 (issues #14, #15): ADR-0012, 0014, 0015, 0016 and 0018 accepted and reconciled with what R1 and R2 built, ADR-0002's status line updated, rows in `docs/decisions.md`, links from `docs/architecture.md`, and the R3 items ticked in `docs/ROADMAP.md`. Docs only, except four `fix(hooks)` commits to this repo's reference hooks that the reviews found (bb4ca25, 35365da, f3569b2, 45f7268); the PR body names them.
 
 ## Decisions (never undo without asking)
 
@@ -43,24 +43,30 @@ v0.0 Runway milestone R3 (issues #14, #15): ADR-0012, 0014, 0015, 0016 and 0018 
 - [x] Rebased onto `main` after R2 (PR #75) merged; every relative link resolves.
 - [x] Review fixes, ADR-0014 (e5c9e50–f49f58b): edits judged against `base`, sidecars keep `base`, deleted JSON entries, in-place `--restore`, uninstall keeps user files and its backup, config `version`, symlinks, path rules, untrusted lock, conflicted lock.
 - [x] Review fixes, the rest (c3c6eed–f611b47): blocks sidecars and hook registration (0014); native `rm -rf`, pragma, `.env` shell access, state-file `lstat`, frontmatter allowlist, opt-in stop check (0015); duplicates and release-only plugin paths (0016); rename list (0012); `doctor --online` hosts (0018); reference §3.1–§3.2; roadmap and map fixes; two `.claude/hooks/` fixes with tests. `npm run check` green before every commit.
+- [x] Second review pass (f3569b2–8e71ba6): guard-secrets replays edits and reads through one no-follow, non-blocking descriptor, with tests; `rm -rf` wording and reference §1.7; replay and `O_NOFOLLOW` in ADR-0015; `allowed-tools` allowlist (0015, 0016, rules); `doctor --online` origin (0018); user JSON entries on first contact, committed sidecars, hook render check, uninstall's state exception, `local/.gitignore` (0014); `--skills` switch (0016). `npm run check` green before every commit.
 
 ## Next step
 
-Coordinator: run `security-reviewer` on the two `.claude/hooks/` fixes (bb4ca25, 35365da), then open the R3 PR (closes #14 and #15) with the deviation list under Open questions in its body. Before or with the merge, edit the issue texts listed there. Then start v0.1 M1 (#18–#20).
+Coordinator: run `security-reviewer` on the four `.claude/hooks/` fixes (bb4ca25, 35365da, f3569b2, 45f7268), then open the R3 PR (closes #14 and #15). Its body carries, from Open questions, the deviation list, the issue texts to align and the four hook fixes, and asks the owner to confirm each of the five ADRs explicitly (#15's acceptance criterion). Before or with the merge, edit those issue texts. Then start v0.1 M1 (#18–#20).
 
 ## Gotchas / don't try again
 
 - R2 rewrote the `docs/decisions.md` table, and Prettier re-pads every row when a cell grows, so any branch that adds a row conflicts with any other that does. Resolve by keeping every row from both sides, then run Prettier.
 - This repo's `.claude/settings.json` denies `Bash(git push --force *)`; the safety module will emit the `:*` form (reference §1.9). After the M8 migration (#45) the old entries stay as user entries; drop them then.
 - Tests other than `test/guards.test.ts` must build the pragma from `BRAND.markerPrefix`: `check-brand` rejects the literal anywhere else under `test/`.
+- guard-secrets now asks before every Edit or MultiEdit it cannot replay: a target outside the project, a symlink, a file over 1 MB or not a regular file, or an `old_string` it cannot find. Expect that prompt when Claude edits such a file.
 
 ## Open questions
 
-- Owner: confirm the five ADRs on the PR. Its body lists these deviations from the #15 drafts, so the merge is an informed acceptance: guard-bash fails closed; gzip blobs; `--restore` covers `removed[]`; migrations from 0.1.0 and a config `version` key; sidecars keep `base` until deleted; uninstall deletes only unmodified kit content and keeps its backup; the committed lock is untrusted; new pragma lines ask; `Bash(rm -rf:*)` denies every `rm -rf`; the stop check is off until confirmed; `doctor --online` contacts unasked only the origin the running kit's manifest names for a kit-owned server, and any other host only once the user confirms it.
+- Owner: confirm each of the five ADRs explicitly on the PR. Its body lists these deviations from the #15 drafts, so the merge is an informed acceptance: guard-bash fails closed; gzip blobs; `--restore` covers `removed[]`; migrations from 0.1.0 and a config `version` key; sidecars keep `base` until deleted; uninstall deletes only unmodified kit content and keeps its backup; the committed lock is untrusted; new pragma lines ask; `Bash(rm -rf:*)` denies every `rm -rf`; the stop check is off until confirmed; a skill's `allowed-tools` is a positive allowlist; a user's JSON entry under a kit key stays the user's; sidecars are committed with the lock; switching `--skills` removes only unmodified copies, outside `removed[]`; `doctor --online` contacts unasked only the origin the running kit's manifest names for a kit-owned server, and any other host only once the user confirms it.
 - Issue texts to align with the ADRs (not edited from this branch):
-  - #19: the `version` key. #23: ADR-0014's Windows, case-insensitive and lock-path cases. #24: `local/.gitignore`, `0600` backups, the hash pattern, `maxOutputLength`, link types in the backup manifest, `wx` temp files.
+  - #19: the `version` key. #23: ADR-0014's Windows, case-insensitive and lock-path cases.
+  - #22: permission rules are keyed by list and exact string, and `ownedKeys` maps each key to the hash of the entry the kit wrote, not by exact string alone; a user's entry under a kit key stays the user's.
+  - #24: the lock shape is ADR-0014's `files {module, strategy, base, pending?}` and `blocks {blockId: {base, pending?}}`, not `files {module, strategy, hash, base}` and `blocks {blockId: base}`; `local/.gitignore`, also written by whatever recreates `local/`; `0600` backups, the hash pattern, `maxOutputLength`, link types in the backup manifest, `wx` temp files; sidecars are committed.
   - #31: unparseable input asks; ask on shell access to `.env` files; "safe look-alikes pass" holds for the guard alone, since `Bash(rm -rf:*)` denies every `rm -rf`. #33: the AGENTS.md block and README say so.
-  - #32: the pragma exempts only lines already on disk. #38: `checks.stop` is unset until the user confirms it.
-  - #40: sidecars keep `base`, one sidecar per blocks file, deleted JSON entries in `removed[]`, in-place `--restore`, untrusted and conflicted locks, ADR-0012's rename list.
-  - #41: delete only unmodified kit content and empty kit folders; keep `local/backup/` and print its path.
-  - #42: `node` within `engines.node`, not 22.12; report a conflicted lock and any registered kit hook whose script differs from its base.
+  - #32: the pragma exempts only lines already on disk; Edit and MultiEdit are replayed on the file, and the guard asks when it cannot replay one. #38: `checks.stop` is unset until the user confirms it.
+  - #36: no dynamic `` !`git ls-files | head -400` `` context line, which ADR-0015 forbids in skill bodies; the skill tells Claude to run the command instead. Its `allowed-tools` drops `Edit`.
+  - #40: sidecars keep `base` and are committed with the lock, one sidecar per blocks file, deleted JSON entries in `removed[]`, in-place `--restore`, untrusted and conflicted locks, ADR-0012's rename list.
+  - #41: delete only unmodified kit content and empty kit folders, never a user's JSON entry under a kit key; keep `local/backup/` and print its path.
+  - #42: `node` within `engines.node`, not 22.12; report a conflicted lock, any registered kit hook whose script differs from its base, and one that matches its base but not the running kit's render.
+  - #48: hooks need `node` within `engines.node`, not 22.12 or later.
