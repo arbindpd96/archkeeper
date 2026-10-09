@@ -82,13 +82,16 @@ export function activeFeatures() {
     .filter((feature) => /^status:\s*in progress/im.test(feature.memory));
 }
 
-/** Returns a path inside `.claude/state/`, refusing symlinks anywhere on the way out of the project. */
+/** Returns a path inside `.claude/state/`, refusing symlinks on the way there and at the file itself. */
 function statePath(name) {
   for (const dir of [path.dirname(STATE_DIR), STATE_DIR]) {
     if (existsSync(dir) && !isProjectFile(dir)) throw new Error(`${dir} is a symlink or outside the project`);
   }
   mkdirSync(STATE_DIR, { recursive: true });
-  return path.join(STATE_DIR, name);
+  const file = path.join(STATE_DIR, name);
+  // Windows has no O_NOFOLLOW, so the open alone would follow a planted symlink.
+  if (lstatSync(file, { throwIfNoEntry: false })?.isSymbolicLink()) throw new Error(`${file} is a symlink`);
+  return file;
 }
 
 /** Reads a text file from `.claude/state/`, returning null when missing, unreadable or a symlink. */
