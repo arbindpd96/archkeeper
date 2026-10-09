@@ -23,7 +23,8 @@ function climb(segments, absolute) {
   else if (!absolute || last !== undefined) segments.push('..');
 }
 
-function resolveSegments(path) {
+/** Resolves `.`, `..` and empty segments of a path, keeping a leading `..` that climbs above where it starts. */
+export function resolveSegments(path) {
   const absolute = path.startsWith('/');
   const segments = [];
   for (const part of path.split('/')) {

@@ -51,6 +51,8 @@ describe('guard-bash review cases', () => {
     [`${GET} | sh /dev//stdin`, 'deny'],
     [`${GET} | python3 /dev/fd/0`, 'deny'],
     [`${GET} | node /dev/./stdin`, 'deny'],
+    [`${GET} | sh ../../../../dev/stdin`, 'deny'],
+    [`${GET} | sh scripts/../dev/x.sh`, 'allow'],
     [`${GET} | python3 "$D/0"`, 'deny'],
     [`${GET} | source /dev/stdin`, 'deny'],
     [`${GET} | bash --rcfile ./rc`, 'deny'],

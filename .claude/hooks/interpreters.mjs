@@ -1,3 +1,4 @@
+import { resolveSegments } from './dangerous-paths.mjs';
 import { classifyCode, classifyModule } from './inline-code.mjs';
 import { SHELL_VALUE_OPTIONS, shellNames } from './shell-syntax.mjs';
 
@@ -190,14 +191,12 @@ function readArguments(args, spec) {
 }
 
 // Anything under /dev or /proc may be stdin: /dev/fd/0, /dev//stdin, /dev/./stdin, /proc/self/fd/0.
+// A relative path that climbs out first (../../dev/stdin) may reach the root, so it counts as anchored.
 function isStdinPath(path) {
-  const segments = [];
-  for (const part of path.split('/')) {
-    if (part === '..') segments.pop();
-    else if (part !== '' && part !== '.') segments.push(part);
-  }
-  const anchored = path.startsWith('/') || path.split('/').includes('..');
-  return anchored && ['dev', 'proc'].includes(segments[0] ?? '');
+  const segments = resolveSegments(path);
+  const anchored = path.startsWith('/') || segments[0] === '..';
+  const top = segments.find((segment) => segment !== '..') ?? '';
+  return anchored && ['dev', 'proc'].includes(top);
 }
 
 // xargs appends its input as arguments, which become the program when none is given; with -I, -J or --replace
