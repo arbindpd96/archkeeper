@@ -1,9 +1,45 @@
 const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*\+?=/;
+const UV_RUN_VALUES = [
+  '--with',
+  '--with-editable',
+  '--with-requirements',
+  '--python',
+  '--project',
+  '--directory',
+  '--env-file',
+  '--extra',
+  '--group',
+  '--only-group',
+  '--no-group',
+  '--package',
+  '--index',
+  '--default-index',
+  '--index-url',
+  '--extra-index-url',
+  '--find-links',
+  '--config-file',
+  '--cache-dir',
+  '--color',
+  '--resolution',
+  '--prerelease',
+  '--exclude-newer',
+  '--link-mode',
+  '--index-strategy',
+  '--keyring-provider',
+  '--python-platform',
+  '--allow-insecure-host',
+  '--upgrade-package',
+  '--reinstall-package',
+  '--refresh-package',
+  '--config-setting',
+];
 
 /*
  * Programs that run another command. `short`, `long` and `words` list the options that take a value; `operands`
  * counts the positionals before the command; `script` names the option whose value is a shell command
- * (`joinsRest` appends the remaining words to it); `evaluates` runs all remaining words as a shell command.
+ * (`joinsRest` appends the remaining words to it); `evaluates` runs all remaining words as a shell command;
+ * `subcommand` is the word that must follow for the program to act as a runner; `stdinProgram` is what runs
+ * when the command is `-`.
  */
 const WRAPPERS = new Map([
   ['sudo', { short: 'ugCDhprtUTR', long: ['--user', '--group', '--chdir', '--host', '--prompt', '--role'] }],
@@ -44,10 +80,22 @@ const WRAPPERS = new Map([
   ['noglob', {}],
   ['nocorrect', {}],
   ['repeat', { operands: 1 }],
+  ['busybox', {}],
+  ['uv', { subcommand: 'run', short: 'pfPC', long: UV_RUN_VALUES, stdinProgram: 'python' }],
 ]);
 
-// zsh expands `=cmd` to the command's path, so `=rm` runs rm.
-const commandName = (word) => word.slice(word.lastIndexOf('/') + 1).replace(/^=/, '');
+// zsh expands `=cmd` to the command's path, so `=rm` runs rm. macOS file systems ignore case, so `RM` runs rm too.
+const commandName = (word) =>
+  word
+    .slice(word.lastIndexOf('/') + 1)
+    .replace(/^=/, '')
+    .toLowerCase();
+
+function runnerAt(argv, index) {
+  const spec = WRAPPERS.get(commandName(argv[index] ?? ''));
+  if (!spec?.subcommand) return spec;
+  return argv[index + 1] === spec.subcommand ? spec : undefined;
+}
 
 function takeAssignments(argv, start, assignments) {
   let index = start;
@@ -103,14 +151,20 @@ function wrapperScript(argv, [start, optionsEnd], spec) {
 export function unwrap(argv) {
   const found = { assignments: [], wrappers: [], script: null };
   let index = takeAssignments(argv, 0, found.assignments);
-  let spec = WRAPPERS.get(commandName(argv[index] ?? ''));
+  let spec = runnerAt(argv, index);
+  let stdinProgram = null;
   while (spec) {
     found.wrappers.push(commandName(argv[index]));
-    const optionsEnd = skipOptions(argv, index + 1, spec);
+    const optionsEnd = skipOptions(argv, index + (spec.subcommand ? 2 : 1), spec);
     found.script = wrapperScript(argv, [index + 1, optionsEnd], spec);
     if (found.script !== null) return { ...found, programIndex: argv.length, program: '', args: [] };
     index = takeAssignments(argv, optionsEnd + (spec.operands ?? 0), found.assignments);
-    spec = WRAPPERS.get(commandName(argv[index] ?? ''));
+    stdinProgram = spec.stdinProgram ?? null;
+    spec = runnerAt(argv, index);
+  }
+  // `uv run -` runs a Python script read from stdin, so it is judged as `python -`.
+  if (stdinProgram && argv[index] === '-') {
+    return { ...found, programIndex: index - 1, program: stdinProgram, args: argv.slice(index) };
   }
   const program = commandName(argv[index] ?? '');
   return { ...found, programIndex: index, program, args: argv.slice(index + 1) };
