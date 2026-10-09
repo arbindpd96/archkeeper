@@ -177,15 +177,23 @@ function isStdinPath(path) {
   return anchored && ['dev', 'proc'].includes(segments[0] ?? '');
 }
 
-function summarize(found, spec, { expands, wrappers }) {
-  const expanding = ({ at }) => expands[at] ?? true;
+// xargs appends its input as arguments, which become the program when none is given; with -I, -J or --replace
+// the input fills in the replace string, which makes it code when the string sits inside the program.
+function programFromXargs(found, { wrappers, xargsReplace }) {
+  if (!wrappers.includes('xargs')) return false;
+  const program = [...found.codes, ...found.modules, ...found.scripts];
+  if (program.length === 0) return true;
+  return xargsReplace !== null && program.some(({ text }) => text.includes(xargsReplace));
+}
+
+function summarize(found, spec, command) {
+  const expanding = ({ at }) => command.expands[at] ?? true;
   const literalScripts = found.scripts.filter((script) => !expanding(script));
   const kinds = [
     ...found.codes.map((code) => classifyCode(spec.language, code.text, expanding(code))),
     ...found.modules.map((module) => classifyModule(module.text, expanding(module))),
   ];
-  // xargs appends words read from stdin, which become the code or the script when none is given literally.
-  const fromXargs = wrappers.includes('xargs') && found.scripts.length === 0;
+  const fromXargs = programFromXargs(found, command);
   return {
     stdin: found.stdin || fromXargs || literalScripts.some((script) => isStdinPath(script.text)),
     unknownScript: found.scripts.some((script) => expanding(script) || !/[./]/.test(script.text)),
