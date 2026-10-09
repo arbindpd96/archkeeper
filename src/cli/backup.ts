@@ -50,6 +50,7 @@ export function backupsFolder(brand: Brand): string {
  */
 export function ensureLocalFolder(rootReal: string, brand: Brand): void {
   const local = confinedPath(rootReal, `${brand.stateDir}/local`, 'the kit state folder');
+  ensureFolder(path.dirname(local), []);
   ensureFolder(local, [], PRIVATE_FOLDER);
   const ignore = confinedPath(rootReal, `${brand.stateDir}/local/.gitignore`, 'the kit state folder');
   if (lstatOrUndefined(ignore) === undefined) writeAtomically(ignore, '*\n');
