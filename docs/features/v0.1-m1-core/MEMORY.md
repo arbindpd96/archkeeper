@@ -101,6 +101,7 @@ Every module is `internal: true` until its milestone ships its README section an
 - Left as notes, not code: `holdsLiteralKey` refuses `sha256:` digests and `#<sha>` pins; exempt them when the launcher pinning check lands with the first stdio module.
 
 - [x] Final security pass (ea14002–97f9e3b): imports, nested settings, `.env` names, legacy sidecars, MCP credential names, header and Bearer args, pair-in-pair, backslash commands, inherited object names, linear `${...}` scan; tests in `test/kit-bypasses.test.ts`.
+- [x] Second security re-check (8d0d686, 19f577e): private names anywhere after an `@`, imports re-checked without HTML comments, MCP URL-query, JSON, cookie, plural and numbered credential names, linear header and pair patterns. Credential detection in MCP args stays a heuristic: generic literals that match no credential name or key shape still pass, so every stdio module is reviewed by hand until v1.0's third-party trust model.
 - For M2: the block-marker parser must accept exactly the markers `checkValues` refuses (share one regex), or a value such as `archkeeper : end` could close a block early if the parser allows spaces.
 
 ## Next step
