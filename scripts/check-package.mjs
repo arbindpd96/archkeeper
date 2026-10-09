@@ -59,6 +59,18 @@ function manifestProblems(manifest, runtime, budgets, release) {
   return problems;
 }
 
+/** Fails a release whose publish settings could come from the repository instead of the workflow. */
+function publishSettingsProblems(root, manifest) {
+  const problems = [];
+  if (manifest.publishConfig !== undefined) {
+    problems.push('publishConfig can override the registry, tag or access a release passes; remove it');
+  }
+  if (existsSync(path.join(root, '.npmrc'))) {
+    problems.push('.npmrc in the package root can redirect the registry or its auth; remove it');
+  }
+  return problems;
+}
+
 /** Compares the published file list with the committed snapshot, or rewrites it with `--update`. */
 function snapshotProblems(root, files, update) {
   const actual = `${files.join('\n')}\n`;
@@ -146,6 +158,7 @@ const { rows, problems: budgetProblems } = measure(pack, runtime, budgets);
 report(rows);
 const problems = [
   ...manifestProblems(manifest, runtime, budgets, args.includes('--release')),
+  ...(args.includes('--release') ? publishSettingsProblems(root, manifest) : []),
   ...snapshotProblems(root, files, args.includes('--update')),
   ...budgetProblems,
   ...binProblems(root, manifest),
