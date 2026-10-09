@@ -164,6 +164,61 @@ describe('render refuses reserved targets', () => {
   });
 });
 
+describe('render refuses output that holds a likely secret', () => {
+  const token = `ghp_${'a'.repeat(36)}`;
+
+  it.each<[string, () => KitModule, string, string]>([
+    [
+      'a token in stdio MCP args',
+      () =>
+        kit('m', {
+          files: [{ to: '.mcp.json', strategy: 'json', target: 'project' }],
+          mcpServers: [{ name: 'gh', type: 'stdio', command: 'gh-mcp', args: ['--token', token] }],
+        }),
+      '.mcp.json',
+      'GitHub token from m, on line 8 of its entry',
+    ],
+    [
+      'a token in a stdio MCP command',
+      () =>
+        kit('m', {
+          files: [{ to: '.mcp.json', strategy: 'json', target: 'project' }],
+          mcpServers: [{ name: 'gh', type: 'stdio', command: `gh-mcp-${token}` }],
+        }),
+      '.mcp.json',
+      'GitHub token',
+    ],
+    [
+      'a private key in an owned template',
+      () =>
+        kit(
+          'm',
+          { files: [{ from: 'a.md', to: 'docs/a.md', strategy: 'owned', target: 'project' }] },
+          { 'modules/m/files/a.md': `# Key\n${['-----BEGIN RSA PRIVATE', 'KEY-----'].join(' ')}\n` },
+        ),
+      'docs/a.md',
+      'private key from m, on line 2',
+    ],
+  ])('%s', (_name, module, file, problem) => {
+    const error = renderError([module()]);
+    expect(error.file).toBe(file);
+    expect(error.message).toContain(problem);
+    expect(error.message).not.toContain(token);
+  });
+
+  it('refuses a secret that arrives through a template value', () => {
+    const notes = owned('a', 'docs/notes.md');
+    const withValue = kit(
+      'b',
+      { files: [{ from: 'b.md', to: 'docs/b.md', strategy: 'owned', target: 'project' }] },
+      { 'modules/b/files/b.md': 'Token: {{detected.token}}\n' },
+    );
+    expect(() => render([notes, withValue], { stack: [], values: { detected: { token } } })).toThrow(
+      'docs/b.md: would get a likely GitHub token from b',
+    );
+  });
+});
+
 describe('render output', () => {
   it('turns CRLF templates into LF text and adds the trailing newline', () => {
     const crlf = kit(
