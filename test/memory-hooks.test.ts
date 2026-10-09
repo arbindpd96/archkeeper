@@ -1,7 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { runScript, tempRepo, writeFiles } from './helpers.js';
+import { runScript, tempDir, tempRepo, writeFiles } from './helpers.js';
 
 const ACTIVE_MEMORY = `# Feature: login
 Status: in progress | Branch: feat/login
@@ -56,6 +56,52 @@ describe('pre-compact', () => {
     const snapshot = path.join(dir, '.claude', 'state', 'compact-snapshot.md');
     expect(existsSync(snapshot)).toBe(true);
     expect(readFileSync(snapshot, 'utf8')).toContain('src/new-file.ts');
+  });
+
+  it('replaces the snapshot instead of appending on each run', () => {
+    const dir = tempRepo();
+    const env = { CLAUDE_PROJECT_DIR: dir };
+    runScript('.claude/hooks/pre-compact.mjs', { payload: { trigger: 'auto' }, env });
+    runScript('.claude/hooks/pre-compact.mjs', { payload: { trigger: 'auto' }, env });
+    const snapshot = readFileSync(path.join(dir, '.claude', 'state', 'compact-snapshot.md'), 'utf8');
+    expect(snapshot.match(/^Saved:/gm)).toHaveLength(1);
+  });
+});
+
+describe.skipIf(process.platform === 'win32')('hook state symlink safety', () => {
+  function repoWithStateLink(): { dir: string; outside: string } {
+    const dir = tempRepo();
+    const outside = path.join(tempDir(), 'victim.txt');
+    writeFileSync(outside, 'original secret\n');
+    mkdirSync(path.join(dir, '.claude', 'state'), { recursive: true });
+    symlinkSync(outside, path.join(dir, '.claude', 'state', 'compact-snapshot.md'));
+    return { dir, outside };
+  }
+
+  it('never writes through a committed symlink', () => {
+    const { dir, outside } = repoWithStateLink();
+    runScript('.claude/hooks/pre-compact.mjs', {
+      payload: { trigger: 'auto' },
+      env: { CLAUDE_PROJECT_DIR: dir },
+    });
+    expect(readFileSync(outside, 'utf8')).toBe('original secret\n');
+  });
+
+  it('never injects a symlinked file into the session context', () => {
+    const { dir } = repoWithStateLink();
+    expect(sessionContext(dir, 'compact')).not.toContain('original secret');
+  });
+
+  it('refuses a symlinked .claude/state directory', () => {
+    const dir = tempRepo();
+    const outsideDir = tempDir();
+    mkdirSync(path.join(dir, '.claude'), { recursive: true });
+    symlinkSync(outsideDir, path.join(dir, '.claude', 'state'));
+    runScript('.claude/hooks/pre-compact.mjs', {
+      payload: { trigger: 'auto' },
+      env: { CLAUDE_PROJECT_DIR: dir },
+    });
+    expect(existsSync(path.join(outsideDir, 'compact-snapshot.md'))).toBe(false);
   });
 });
 

@@ -1,11 +1,9 @@
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
 import {
   activeFeatures,
   changedFiles,
   git,
-  projectDir,
   readInput,
+  readStateText,
   respond,
   section,
   truncate,
@@ -34,12 +32,13 @@ lines.push(
 );
 
 if (input.source === 'compact') {
-  try {
-    const snapshot = readFileSync(path.join(projectDir, '.claude', 'state', 'compact-snapshot.md'), 'utf8');
-    lines.push('', '## Pre-compaction snapshot', truncate(snapshot, 2500));
-  } catch {
-    lines.push('', 'Context was compacted. Re-read the active MEMORY.md before continuing.');
-  }
+  const snapshot = readStateText('compact-snapshot.md');
+  lines.push(
+    '',
+    snapshot === null
+      ? 'Context was compacted. Re-read the active MEMORY.md before continuing.'
+      : `## Pre-compaction snapshot\n${truncate(snapshot, 2500)}`,
+  );
 }
 
 respond({ hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: lines.join('\n') } });
