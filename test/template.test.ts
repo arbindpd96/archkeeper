@@ -60,4 +60,11 @@ describe('toImport', () => {
   it.each(['', 'docs\\api.md', 'docs/a\nb.md'])('refuses %j, which no import can name', (path) => {
     expect(() => toImport(path)).toThrow(RenderError);
   });
+
+  it.each(['/etc/passwd', '~/.aws/credentials', '../../secret.md', 'docs/../../x.md', 'C:/x.md'])(
+    'refuses %j, which lies outside the project',
+    (path) => {
+      expect(() => toImport(path)).toThrow('pass a path inside the project');
+    },
+  );
 });

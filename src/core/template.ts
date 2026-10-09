@@ -1,6 +1,6 @@
 import type { Brand } from './brand.js';
 import { RenderError } from './errors.js';
-import { hasControlCharacter } from './paths.js';
+import { relativePathProblem } from './paths.js';
 
 /** The values a template can read, nested in plain objects: `{{brand.hookDir}}` reads `scope.brand.hookDir`. */
 export interface TemplateScope {
@@ -77,15 +77,19 @@ export function renderTemplate(template: string, scope: TemplateScope, file: str
 
 /**
  * Writes a CLAUDE.md import of a project path: `@path`, never quoted (a quoted path is not imported), with each
- * space escaped as `\ ` (reference §2.1). `toImport('Design Docs/api.md')` is `@Design\ Docs/api.md`.
+ * space escaped as `\ ` (reference §2.1). `toImport('Design Docs/api.md')` is `@Design\ Docs/api.md`. A path
+ * that leaves the project, such as `../x`, `/etc/x` or `~/x`, throws RenderError: it would pull an outside
+ * file into Claude's context.
  */
 export function toImport(path: string): string {
-  if (path === '' || path.includes('\\') || hasControlCharacter(path)) {
+  const problem =
+    relativePathProblem(path) ?? (path.startsWith('~') ? 'starts with ~, the home folder' : undefined);
+  if (problem !== undefined) {
     throw new RenderError({
-      file: path,
+      file: JSON.stringify(path),
       location: '',
-      problem: 'cannot be written as an @import',
-      hint: 'pass a non-empty path with forward slashes, on one line',
+      problem: `cannot be written as an @import: it ${problem}`,
+      hint: 'pass a path inside the project with forward slashes, such as docs/api.md',
     });
   }
   return `@${path.replaceAll(' ', '\\ ')}`;
