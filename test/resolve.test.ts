@@ -222,7 +222,7 @@ describe('resolveModules errors', () => {
       location: 'conflicts[0]',
       problem:
         'conflicts with "formatter" (modules.add → formatter), and both are selected: modules.add → linter',
-      fix: 'modules.remove',
+      fix: 'leave one of them out: drop linter from modules.add, or drop formatter from modules.add, in',
     },
   ];
 
@@ -232,6 +232,40 @@ describe('resolveModules errors', () => {
     expect(error.location).toBe(location);
     expect(error.message).toContain(problem);
     expect(error.hint).toContain(fix);
+  });
+
+  describe('a conflict hint names the change that leaves a module out', () => {
+    const conflicting = catalogOf([
+      plainManifest('base', { presets: ALL }),
+      plainManifest('linter', { presets: ALL, requires: ['base'], conflicts: ['formatter'] }),
+      plainManifest('formatter', { requires: ['base'] }),
+      plainManifest('format-pack', { requires: ['formatter'] }),
+      plainManifest('strict-a', { requires: ['base'], conflicts: ['strict-b'] }),
+      plainManifest('strict-b', { requires: ['base'] }),
+      plainManifest('strict-pair', { requires: ['strict-a', 'strict-b'] }),
+    ]);
+
+    it.each<[string, ResolveRequest, string]>([
+      [
+        'a preset member and a module something requires',
+        { preset: 'small', stack: [], add: ['format-pack'] },
+        'list linter in modules.remove, or drop format-pack, which needs formatter, from modules.add',
+      ],
+      [
+        'a preset member that is also in modules.add',
+        { preset: 'small', stack: [], add: ['linter', 'formatter'] },
+        'drop linter from modules.add and list it in modules.remove, or drop formatter from modules.add',
+      ],
+    ])('for %s', (_name, request, fix) => {
+      expect(resolveError(request, conflicting).hint).toContain(fix);
+    });
+
+    it('names the one module to drop when it needs both', () => {
+      const request = { preset: 'small', stack: [], add: ['strict-pair'] } as const;
+      expect(resolveError(request, conflicting).hint).toBe(
+        `drop strict-pair from modules.add in ${config}: it needs both strict-a and strict-b`,
+      );
+    });
   });
 
   it('keeps the chain as data for the CLI', () => {
