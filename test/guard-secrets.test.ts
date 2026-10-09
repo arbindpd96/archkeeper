@@ -1,5 +1,5 @@
 import { copyFileSync, symlinkSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
@@ -110,6 +110,26 @@ describe('guard-secrets allow pragma', () => {
     writeFiles(outside, { 'real.ts': `${fixtureLine('a')}\n` });
     symlinkSync(path.join(outside, 'real.ts'), path.join(dir, 'link.ts'));
     const toolInput = { file_path: path.join(dir, 'link.ts'), new_string: fixtureLine('a') };
+    expect(hookDecision('guard-secrets.mjs', toolInput, { CLAUDE_PROJECT_DIR: dir })).toBe('ask');
+  });
+
+  it('does not trust a marked line in a file over the size cap', () => {
+    const line = fixtureLine('a');
+    expect(decideIn(`${line}\n${'x'.repeat(1_000_001)}\n`, { content: line })).toBe('ask');
+  });
+
+  it('does not trust a marked line in a file outside the project', () => {
+    const outside = tempDir();
+    writeFiles(outside, { 'a.test.ts': `${fixtureLine('a')}\n` });
+    const toolInput = { file_path: path.join(outside, 'a.test.ts'), content: fixtureLine('a') };
+    expect(hookDecision('guard-secrets.mjs', toolInput, { CLAUDE_PROJECT_DIR: tempDir() })).toBe('ask');
+  });
+
+  it.skipIf(process.platform === 'win32')('asks without waiting when the target is a FIFO', () => {
+    const dir = tempDir();
+    const fifo = path.join(dir, 'f.ts');
+    execFileSync('mkfifo', [fifo]);
+    const toolInput = { file_path: fifo, content: fixtureLine('a') };
     expect(hookDecision('guard-secrets.mjs', toolInput, { CLAUDE_PROJECT_DIR: dir })).toBe('ask');
   });
 });
