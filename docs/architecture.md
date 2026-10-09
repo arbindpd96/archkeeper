@@ -85,12 +85,13 @@ Add a row whenever something is created. Keep one line per item.
 | `.claude/hooks/verdicts.mjs`                                                                                | `deny`/`ask` verdict builders and `strictest`, shared by the guard rule modules                                            |
 | `.claude/hooks/env-files.mjs`                                                                               | `.env` secrets-file and template matching shared by both guards                                                            |
 | `.claude/hooks/attribution.mjs`                                                                             | AI-attribution pattern shared by `guard-bash` and `commitlint.config.mjs`                                                  |
-| `scripts/lib.mjs`                                                                                           | Shared script helpers: `exitWith`, `git` (no shell; exits with a next step), `repositoryFiles`                             |
+| `scripts/lib.mjs`                                                                                           | Shared script helpers: `exitWith`, `git` (no shell; exits with a next step), `gitRevision`, `repositoryFiles`              |
 | `scripts/check-comments.mjs`                                                                                | Comment-policy checker (TypeScript AST): commented-out code, dividers, untracked TODOs, comment ratio                      |
 | `scripts/third-party-licenses.mjs`                                                                          | Writes `dist/THIRD_PARTY_LICENSES.md` from the `node_modules` paths in the bundles' `//#region` markers                    |
 | `scripts/check-package.mjs`                                                                                 | Package gates: publint, pack-list snapshot, runtime dependencies, install scripts, size budgets, bin smoke                 |
 | `scripts/check-brand.mjs`                                                                                   | Brand check: no slug literal outside `src/core/brand.ts` and the allowlist; `package.json` `name` and `bin` match `BRAND`  |
-| `test/helpers.ts`                                                                                           | `runScript`, hook verdict helpers, `tempDir`, `tempRepo`, `writeFiles`; `fixtureCopy` (spaced non-ASCII path, own HOME)    |
+| `scripts/check-changeset.mjs`                                                                               | Changeset gate: a PR that changes `src/` or `modules/` adds a `.changeset/*.md`, unless labelled `no-release`              |
+| `test/helpers.ts`                                                                                           | `runScript`, hook verdict helpers, `tempDir`, `tempRepo`, `git`, `commitFiles`, `writeFiles`, `fixtureCopy` (own HOME)     |
 
 ## This repo's Claude Code setup
 

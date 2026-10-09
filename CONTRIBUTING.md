@@ -36,6 +36,7 @@ Commits are authored by people. Do not add AI co-author trailers or "generated w
 | Install smoke  | CI only                      | The packed tarball installs under a path with a space and runs on ubuntu, macOS and Windows    |
 | Node.js gate   | CI only                      | The built bin rejects Node.js 18, 20, 22.17.0 and 23 and runs on 22.17.1                       |
 | Commits        | commitlint                   | Conventional Commits, no AI attribution trailers                                               |
+| Changeset      | CI only                      | A PR that changes `src/` or `modules/` adds a changeset, or carries the `no-release` label     |
 | PR title       | action-semantic-pull-request | Conventional Commits title (it becomes the squash message)                                     |
 | Security       | CodeQL, dependency review    | Code scanning; no new dependency with a known vulnerability of moderate severity or higher     |
 
@@ -105,6 +106,7 @@ Use it only in tests, and never on real secrets.
 The maintainer versions releases locally with [changesets](https://github.com/changesets/changesets) (ADR-0013). No bot opens version PRs or commits.
 
 - Every user-facing PR adds a changeset: run `npm run changeset`, pick the bump, and write the changelog line. Commit the generated `.changeset/*.md` with the change.
+- CI fails a PR that changes `src/` or `modules/` without a changeset. If the change needs no release, the maintainer labels the PR `no-release` and re-runs the failed `Changeset` job.
 - Before tagging, the maintainer runs `npm run version-packages`, which applies the changesets to `package.json` and `CHANGELOG.md`.
 - Release candidates use pre mode: `npx changeset pre enter rc` first, and `npx changeset pre exit` before the final release.
 
