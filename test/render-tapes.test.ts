@@ -9,8 +9,8 @@ const SETTINGS = readFileSync(path.join(REPO_ROOT, 'docs/media/tapes/_settings.t
 const DEMO_TAPE = '# fixture: app\nSet TypingSpeed 10ms\nType "{{brand.binName}} --version"\nEnter\n';
 const GIF = gifBytes([100, 200]);
 
-// A stand-in for vhs: it logs the tape it was given, what the packed CLI printed and whether a token
-// reached it, then writes a GIF.
+// A stand-in for vhs: it logs the tape it was given, what the packed CLI printed and the environment it
+// got, which VHS hands on to the tape's shell, then writes a GIF.
 const FAKE_VHS = `#!/usr/bin/env node
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -19,11 +19,11 @@ if (arg === '--version') {
   process.stdout.write(process.env.FAKE_VHS_VERSION + '\\n');
   process.exit(0);
 }
-if (process.env.FAKE_VHS_FAIL) process.exit(1);
+if (fs.existsSync(__dirname + '/fail')) process.exit(1);
 const tape = fs.readFileSync(arg, 'utf8');
 const printed = execFileSync('${BRAND.binName}', ['--version'], { encoding: 'utf8' }).trim();
-const run = { tape, cwd: process.cwd(), printed, token: process.env.GH_TOKEN ?? null };
-fs.appendFileSync(process.env.FAKE_VHS_LOG, JSON.stringify(run) + '\\n');
+const run = { tape, cwd: process.cwd(), printed, env: process.env };
+fs.appendFileSync(__dirname + '/vhs.log', JSON.stringify(run) + '\\n');
 fs.writeFileSync(JSON.parse(/^Output (.*)$/m.exec(tape)[1]), Buffer.from('${GIF.toString('base64')}', 'base64'));
 `;
 
@@ -31,8 +31,18 @@ interface VhsRun {
   tape: string;
   cwd: string;
   printed: string;
-  token: string | null;
+  env: Record<string, string>;
 }
+
+const OUTSIDE_SECRETS = {
+  GH_TOKEN: 'gh-secret',
+  ANTHROPIC_API_KEY: 'anthropic-secret',
+  OPENAI_API_KEY: 'openai-secret',
+  AWS_ACCESS_KEY_ID: 'aws-id',
+  AWS_SECRET_ACCESS_KEY: 'aws-secret',
+  SSH_AUTH_SOCK: '/tmp/agent.sock',
+  NODE_OPTIONS: '--no-deprecation',
+};
 
 /** Keeps npm's cache, logs and update check out of the real home directory. */
 function npmIsolation(): NodeJS.ProcessEnv {
@@ -77,13 +87,13 @@ function renderTapes(
 ): RunResult & { runs: VhsRun[] } {
   const bin = fakeBin('vhs', FAKE_VHS);
   const log = path.join(bin, 'vhs.log');
-  writeFiles(bin, { 'vhs.log': '' });
+  // The tape's environment is allowlisted, so the stand-in reads its controls from files beside it.
+  writeFiles(bin, { 'vhs.log': '', ...(env.FAKE_VHS_FAIL === undefined ? {} : { fail: '' }) });
   const result = runScript('scripts/render-tapes.mjs', {
     args,
     cwd: root,
     env: {
       PATH: `${bin}${path.delimiter}${process.env.PATH ?? ''}`,
-      FAKE_VHS_LOG: log,
       FAKE_VHS_VERSION: 'vhs version v0.12.1 (0123abc)',
       ...npmIsolation(),
       ...env,
@@ -121,13 +131,31 @@ describe.skipIf(process.platform === 'win32')('render-tapes', () => {
     expect(readFileSync(path.join(out, 'demo.gif'))).toEqual(GIF);
   });
 
-  it('keeps tokens out of the shell the tape runs in', () => {
+  it('passes the tape only allowlisted variables and a throwaway HOME', () => {
     const root = project({ 'demo.tape': DEMO_TAPE });
-    const result = renderTapes(root, ['--out', path.join(root, 'gifs'), '--tarball', packedCli()], {
-      GH_TOKEN: 'secret-value',
-    });
+    const args = ['--out', path.join(root, 'gifs'), '--tarball', packedCli()];
+    const result = renderTapes(root, args, { ...OUTSIDE_SECRETS, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' });
     expect(result.status).toBe(0);
-    expect(result.runs[0]?.token).toBeNull();
+    const env = result.runs[0]?.env ?? {};
+    for (const name of Object.keys(OUTSIDE_SECRETS)) expect(env[name], name).toBeUndefined();
+    expect(env.LANG).toBe('C.UTF-8');
+    expect(env.LC_ALL).toBe('C.UTF-8');
+    expect(env.HOME).toMatch(/render-tapes-[^/\\]+[/\\]home$/);
+    expect(env.HOME).not.toBe(process.env.HOME);
+    expect(env.XDG_DATA_HOME).toBeDefined();
+    expect(
+      Object.keys(env).filter((name) => name.startsWith('npm_') && name !== 'npm_config_prefix'),
+    ).toEqual([]);
+  });
+
+  it('keeps the real HOME for a live tape, which needs the Claude Code login, but no other variable', () => {
+    const root = project({ 'recorded.tape': `# live\n${DEMO_TAPE}` });
+    const home = tempDir();
+    const args = ['--live', 'recorded', '--out', path.join(root, 'gifs'), '--tarball', packedCli()];
+    const result = renderTapes(root, args, { ...OUTSIDE_SECRETS, HOME: home });
+    expect(result.status).toBe(0);
+    expect(result.runs[0]?.env.HOME).toBe(home);
+    expect(result.runs[0]?.env.ANTHROPIC_API_KEY).toBeUndefined();
   });
 
   it('records only the named live tape with --live', () => {
