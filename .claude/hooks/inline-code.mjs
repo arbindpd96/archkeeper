@@ -1,6 +1,10 @@
+const RUNNERS = [
+  ...['exec\\w*', 'eval', 'system', 'popen\\w*', 'spawn\\w*', 'child_process', 'Function', 'compile'],
+  ...['__import__', 'subprocess', 'runpy', 'instance_eval', 'class_eval', 'module_eval'],
+];
+const STDIN_SOURCES = ['/dev/', '/proc/', 'php://'];
 // Inline code that names one of these can run what it reads, as in `exec(input())` or `require('/dev/stdin')`.
-const RUNS_INPUT =
-  /\b(?:exec\w*|eval|system|popen\w*|spawn\w*|child_process|Function|compile|__import__|subprocess|runpy|instance_eval|class_eval|module_eval)\b|\/dev\/|\/proc\/|php:\/\//;
+const RUNS_INPUT = new RegExp([`\\b(?:${RUNNERS.join('|')})\\b`, ...STDIN_SOURCES].join('|'));
 
 const KEY = String.raw`(?:'[\w.-]*'|"[\w.-]*"|\d+)`;
 const NAME = String.raw`[A-Za-z_]\w*`;

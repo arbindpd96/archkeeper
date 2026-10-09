@@ -108,10 +108,12 @@ function parseScript(source, outer, depth, charge) {
 }
 
 /**
- * Parses shell source into simple commands with `program` (lower-cased basename), `args`, `expands` (whether each
- * arg holds an expansion), `assignments`, `wrappers`, `redirects`, `heredocs`, `pipes`, `subs`, and whether the
- * program or its arguments come from an unquoted expansion. Braces are expanded, and code run by `sh -c`, `eval`, `env -S`, `trap`, `alias`, `watch`, `su -c`,
- * `find -exec` or a here-document fed to a shell is parsed too, inheriting the outer assignments, wrappers and pipes.
+ * Parses shell source into simple commands with `program` (lower-cased basename), `args`, `expands` (whether
+ * each arg holds an expansion), `assignments`, `wrappers`, `xargsReplace`, `redirects`, `heredocs`, `pipes`,
+ * `subs`, `definesFunction`, and whether the program or its arguments come from an unquoted expansion.
+ * Braces are expanded, and code run by `sh -c`, `eval`, `env -S`, `trap`, `alias`, `watch`, `su -c`,
+ * `find -exec` or a here-document fed to a shell is parsed too, inheriting the outer assignments, wrappers
+ * and pipes.
  */
 export function parseCommands(source) {
   return parseScript(source, TOP_LEVEL, 0, workBudget());

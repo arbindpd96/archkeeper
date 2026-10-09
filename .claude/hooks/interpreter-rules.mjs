@@ -10,7 +10,10 @@ const DOWNLOAD_INTO_CODE = ask(
   'Downloaded data is piped into inline code that might run it. Confirm with the user.',
 );
 const MAYBE_DOWNLOAD = ask(
-  'A program named by a variable or a function feeds code to an interpreter, and it may download that code. Confirm with the user.',
+  [
+    'A program named by a variable or a function feeds code to an interpreter,',
+    'and it may download that code. Confirm with the user.',
+  ].join(' '),
 );
 const UNCHECKED_CODE = ask(
   'A variable or command output supplies the code an interpreter runs. Confirm with the user.',

@@ -10,7 +10,8 @@ export const PIPED_SCRIPT = ask(
 
 const ECHO_OPTION = /^-[neE]+$/;
 
-// A shell whose script is stdin, or a program named by an expansion (it may be a shell), runs what a pipe feeds it.
+// A shell whose script is stdin, or a program named by an expansion (it may be a shell), runs what a pipe
+// feeds it.
 function readsPipedScript(command) {
   if (!command.dynamicProgram && !isShell(command.program)) return false;
   const { stdin, unknownScript } = readInterpreter(command);
