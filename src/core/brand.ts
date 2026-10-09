@@ -23,7 +23,7 @@ export interface Brand {
   readonly legacySlugs: readonly string[];
 }
 
-/** The product's brand: the only place the slug is written (ADR-0010); `check-brand` enforces it. */
+/** The product's brand: the only place the slug is written (ADR-0012); `check-brand` enforces it. */
 export const BRAND: Brand = Object.freeze({
   npmName: SLUG,
   binName: SLUG,
