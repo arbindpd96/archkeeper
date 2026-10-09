@@ -1,11 +1,20 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { onTestFinished } from 'vitest';
 
 export const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 
-const TEST_IDENTITY = ['-c', 'user.name=test', '-c', 'user.email=test@example.com'];
+const SCRIPT_TIMEOUT_MS = 15_000;
+const TEST_GIT_CONFIG = [
+  '-c',
+  'user.name=test',
+  '-c',
+  'user.email=test@example.com',
+  '-c',
+  'commit.gpgsign=false',
+];
 
 /** Result of running a script the way Claude Code or a developer would. */
 export interface RunResult {
@@ -23,18 +32,28 @@ export function runScript(
     input: options.payload === undefined ? '' : JSON.stringify(options.payload),
     encoding: 'utf8',
     env: { ...process.env, ...options.env },
+    timeout: SCRIPT_TIMEOUT_MS,
   });
   return { status: run.status, stdout: run.stdout, stderr: run.stderr };
 }
 
+/** Creates an empty temporary directory that is deleted when the current test finishes. */
+export function tempDir(): string {
+  const dir = mkdtempSync(path.join(tmpdir(), 'codekit-test-'));
+  onTestFinished(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+  return dir;
+}
+
 /** Creates a throwaway git repository whose first commit contains the given files. */
 export function tempRepo(files: Record<string, string> = {}): string {
-  const dir = mkdtempSync(path.join(tmpdir(), 'codekit-test-'));
-  const git = (...args: string[]) => execFileSync('git', args, { cwd: dir });
+  const dir = tempDir();
+  const git = (...args: string[]) => execFileSync('git', args, { cwd: dir, timeout: SCRIPT_TIMEOUT_MS });
   writeFiles(dir, files);
   git('init', '-q', '-b', 'main');
   git('add', '-A');
-  git(...TEST_IDENTITY, 'commit', '-q', '--allow-empty', '-m', 'init');
+  git(...TEST_GIT_CONFIG, 'commit', '-q', '--allow-empty', '-m', 'init');
   return dir;
 }
 
