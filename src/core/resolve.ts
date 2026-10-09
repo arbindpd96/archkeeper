@@ -78,7 +78,7 @@ function findPreset({ request, catalog, config }: Context): Preset {
     file: config,
     location: 'preset',
     chain: [],
-    problem: `"${request.preset}" is not a preset`,
+    problem: `${JSON.stringify(request.preset)} is not a preset`,
     hint: `use one of ${names}`,
   });
 }
@@ -90,7 +90,7 @@ function checkRequestedIds({ request, catalog, config }: Context): void {
   ] as const) {
     const index = ids.findIndex((id) => !catalog.modules.has(id));
     if (index === -1) continue;
-    const problem = `"${ids[index] ?? ''}" is not a module`;
+    const problem = `${JSON.stringify(ids[index] ?? '')} is not a module`;
     fail({
       file: config,
       location: `modules.${list}[${String(index)}]`,
@@ -101,7 +101,7 @@ function checkRequestedIds({ request, catalog, config }: Context): void {
   }
   const both = (request.remove ?? []).findIndex((id) => (request.add ?? []).includes(id));
   if (both === -1) return;
-  const problem = `"${request.remove?.[both] ?? ''}" is also in modules.add`;
+  const problem = `${JSON.stringify(request.remove?.[both] ?? '')} is also in modules.add`;
   fail({
     file: config,
     location: `modules.remove[${String(both)}]`,

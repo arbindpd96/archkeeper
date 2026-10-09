@@ -4,6 +4,7 @@ import { configPath, parseConfig } from '../src/core/config.js';
 import { ConfigError } from '../src/core/errors.js';
 import { loadCatalog } from '../src/core/loader.js';
 import { resolveOptions } from '../src/core/options.js';
+import { hasControlCharacter } from '../src/core/paths.js';
 import { kitFiles, memoryReader, plainManifest, richManifest, richSources } from './kit-fixtures.js';
 
 const CONFIG = configPath();
@@ -19,6 +20,8 @@ function configError(text: string): ConfigError {
 }
 
 const json = (value: unknown): string => JSON.stringify(value);
+const ESC = String.fromCodePoint(0x1b);
+const BEL = String.fromCodePoint(0x07);
 
 describe('parseConfig', () => {
   it('reads a full config and fills the defaults of a minimal one', () => {
@@ -54,6 +57,7 @@ describe('parseConfig', () => {
   it.each<[string, unknown, string, string]>([
     ['a missing preset', {}, 'preset', 'set preset to'],
     ['an empty preset', { preset: '' }, 'preset', 'set preset to'],
+    ['a preset that is not an id', { preset: 'Medium Plus' }, 'preset', 'set preset to'],
     ['an unknown stack', { preset: 'small', stack: ['go'] }, 'stack[0]', 'use one of "ts", "python"'],
     [
       'modules.add that is not a list',
@@ -92,6 +96,11 @@ describe('parseConfig', () => {
     expect(error.file).toBe(CONFIG);
     expect(error.location).toBe(location);
     expect(error.hint).toContain(fix);
+  });
+
+  it('never prints the control characters of a preset it refuses', () => {
+    const error = configError(json({ preset: `${ESC}]0;title${BEL}${ESC}[2K` }));
+    expect(hasControlCharacter(error.message.replaceAll('\n', ' '))).toBe(false);
   });
 
   it('refuses a config written by a newer kit and says to upgrade', () => {

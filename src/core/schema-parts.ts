@@ -7,12 +7,13 @@ export const STACKS = ['ts', 'python'] as const;
 /** A stack name from {@link STACKS}. */
 export type Stack = (typeof STACKS)[number];
 
-/** A module, preset or block id: kebab-case, so it is safe in paths, markers and messages. */
-export const kebabId = z.string().check(
-  z.regex(/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/, {
-    error: 'use kebab-case: lowercase letters, digits, single hyphens',
-  }),
-);
+/** The form of a module, preset or block id: kebab-case, so it is safe in paths, markers and messages. */
+export const KEBAB_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
+
+/** A module, preset or block id in {@link KEBAB_ID} form. */
+export const kebabId = z
+  .string()
+  .check(z.regex(KEBAB_ID, { error: 'use kebab-case: lowercase letters, digits, single hyphens' }));
 
 /** A module option name, in camelCase with dots between groups, such as `checks.stop`. */
 export const optionName = z
