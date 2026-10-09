@@ -10,7 +10,10 @@ const EXCLUDED = /(^|\/)(node_modules|dist|coverage|fixtures)\/|^plugin\//;
 
 const DIRECTIVE = /^\s*(eslint-|@ts-|prettier-ignore|codekit:|global\s|c8\s|v8\s|istanbul\s|<reference\s)/;
 const CODE_PUNCTUATION = /[;{}()=]/;
-const UNTRACKED_TODO = /\b(TODO|FIXME|HACK|XXX)\b(?!\(#\d+\))/i;
+const UNTRACKED_MARKERS = [
+  /\b(?:TODO|FIXME|HACK|XXX)\b(?!\(#\d+\))/,
+  /\b(?:todo|fixme)(?=[:(])(?!\(#\d+\))/i,
+];
 const DIVIDER = /^\s*[-=*#_~/]{4,}\s*$/;
 
 const ts = await import('typescript').then((module) => module.default).catch(() => null);
@@ -89,7 +92,9 @@ function commentBody(raw) {
 function commentProblems(body, isJsDoc) {
   const prose = body.join('\n');
   const problems = [];
-  if (UNTRACKED_TODO.test(prose)) problems.push('TODO/FIXME must reference an issue, e.g. TODO(#12)');
+  if (UNTRACKED_MARKERS.some((marker) => marker.test(prose))) {
+    problems.push('TODO/FIXME must reference an issue, e.g. TODO(#12)');
+  }
   if (DIRECTIVE.test(prose)) return problems;
   if (body.some((line) => DIVIDER.test(line))) problems.push('decorative divider comment');
   if (!isJsDoc && body.some(looksLikeCode)) problems.push('commented-out code');

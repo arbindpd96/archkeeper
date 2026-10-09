@@ -29,6 +29,8 @@ describe('check-comments', () => {
     '// if the file exists (e.g. on reruns) skip it',
     '// return early: callers expect undefined = "not found"',
     '// Claude Code sends a payload shaped like { tool_input }',
+    '// Windows needs this hack because paths differ.',
+    '// Renders the todo list in order.',
   ])('accepts prose that merely contains code punctuation: %s', (comment) => {
     expect(check(`${comment}\nexport const a = 1;\n`).status).toBe(0);
   });
@@ -55,7 +57,7 @@ describe('check-comments', () => {
 
   it('rejects TODOs without an issue reference, in any case', () => {
     expect(check('// TODO: tidy this\nexport const a = 1;\n').stderr).toContain('must reference an issue');
-    expect(check('// fixme later\nexport const a = 1;\n').stderr).toContain('must reference an issue');
+    expect(check('// fixme: later\nexport const a = 1;\n').stderr).toContain('must reference an issue');
     expect(check('// TODO(#12): tidy this\nexport const a = 1;\n').status).toBe(0);
   });
 
