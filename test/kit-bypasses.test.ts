@@ -160,6 +160,7 @@ describe('@ imports the kit never writes', () => {
     '@.envrc/',
     '@.claude//settings.local.json',
     '<!---->@.<!---->env',
+    '@.env.example.local',
   ])('finds an import of a private file in %j', (text) => {
     expect(importProblem(text)).toContain('secrets or personal file');
   });
@@ -173,6 +174,11 @@ describe('@ imports the kit never writes', () => {
     '@docs/environment.md',
   ])('allows %j', (text) => {
     expect(importProblem(text)).toBeUndefined();
+  });
+
+  it('refuses an @ import with a non-ASCII name, which macOS can fold onto a private file', () => {
+    expect(importProblem('@.claude/\u017Fettings.local.json')).toContain('non-ASCII');
+    expect(() => toImport('.claude/\u017Fettings.local.json')).toThrow(RenderError);
   });
 
   it('finds an outside import that an HTML comment splits', () => {

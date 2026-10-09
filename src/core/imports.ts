@@ -1,7 +1,10 @@
 const OUTSIDE_START = /@(?:[~/\\]|[A-Za-z]:)/;
 const PARENT_SEGMENT = /(?:^|[/\\@])\.\.(?=[/\\@]|$)/;
 const ENV_NAME = /\.env(?:rc)?(?![a-z0-9])/g;
-const ENV_TEMPLATE = /^\.env\.(?:example|sample|template)(?![a-z0-9])/;
+const ENV_TEMPLATE = /^\.env\.(?:example|sample|template)(?=$|[/\\#])/;
+// macOS and Windows fold names such as the long s (U+017F) onto ASCII letters, so ſettings.local.json opens
+// settings.local.json. Kit paths are ASCII, so a non-ASCII name after an @ is refused rather than folded.
+const NON_ASCII = /[^\x20-\x7E]/;
 const PERSONAL_NAMES = ['settings.local.json', 'claude.local.md'];
 
 // Claude Code cuts an import path at #, at a trailing escaped space, or where inline markdown ends, so a private
@@ -21,6 +24,7 @@ function wordProblem(word: string): string | undefined {
   if (OUTSIDE_START.test(word) || PARENT_SEGMENT.test(imported)) {
     return 'holds an @ import of a file outside the project';
   }
+  if (NON_ASCII.test(imported)) return 'holds an @ import with a non-ASCII name';
   return namesPrivateFile(imported.toLowerCase())
     ? 'holds an @ import of a secrets or personal file'
     : undefined;
