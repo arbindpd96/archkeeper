@@ -219,10 +219,10 @@ Only the README skeleton changes in this phase. It gets:
 
 The first contact with existing user files loses nothing.
 
-- [ ] feat(core): pure install planner
-- [ ] feat(core): ownership strategies for blocks, json, owned and create-only files
-- [ ] feat(core): path safety for every write and delete
-- [ ] feat(core): transactional apply with lockfile v1, base blobs and rollback
+- [x] feat(core): pure install planner
+- [x] feat(core): ownership strategies for blocks, json, owned and create-only files
+- [x] feat(core): path safety for every write and delete
+- [x] feat(core): transactional apply with lockfile v1, base blobs and rollback
 
 **M3: Stack detection and `init` with the base module.** `init` works end to end. It detects the stack, shows the plan, writes CLAUDE.md and AGENTS.md without touching user content, and runs non-interactively in CI.
 
