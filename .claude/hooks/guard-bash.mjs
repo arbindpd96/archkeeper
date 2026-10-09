@@ -1,6 +1,4 @@
 const MAX_COMMAND_LENGTH = 8000;
-const AI_ATTRIBUTION =
-  /co-authored-by:[^\n]*(?:claude|noreply@anthropic\.com)|generated\s+(?:with|by)\s+\[?claude\s+code/i;
 
 const TOO_LONG = {
   decision: 'ask',
@@ -12,8 +10,9 @@ const AI_AUTHORED = {
 };
 
 async function judge() {
-  const [{ readInput }, { judgeCommands }, { parseCommands }] = await Promise.all([
+  const [{ readInput }, { AI_ATTRIBUTION }, { judgeCommands }, { parseCommands }] = await Promise.all([
     import('./lib.mjs'),
+    import('./attribution.mjs'),
     import('./bash-rules.mjs'),
     import('./shell-commands.mjs'),
   ]);

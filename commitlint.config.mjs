@@ -1,4 +1,4 @@
-const AI_ATTRIBUTION = /co-authored-by:\s*claude|generated with \[?claude code/i;
+import { AI_ATTRIBUTION } from './.claude/hooks/attribution.mjs';
 
 export default {
   extends: ['@commitlint/config-conventional'],
@@ -13,7 +13,6 @@ export default {
     },
   ],
   rules: {
-    'header-max-length': [2, 'always', 100],
     'body-max-line-length': [0],
     'footer-max-line-length': [0],
     'no-ai-attribution': [2, 'always'],
