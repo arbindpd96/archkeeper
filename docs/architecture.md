@@ -1,13 +1,13 @@
 # Architecture map
 
-> The living map of claude-codekit. Read it before creating anything new; update it (or run `/update-map`) after adding a
+> The living map of archkeeper. Read it before creating anything new; update it (or run `/update-map`) after adding a
 > package, module, pack or shared util. Status: **tooling and dogfood setup only; product code starts in v0.0 Runway** (see `docs/ROADMAP.md`). The layout below is the agreed target (handoff §8, ADR-0002/0003).
 
 ## Overview
 
 ```mermaid
 flowchart LR
-  user([Developer]) -->|npx claude-codekit init| cli[packages/cli]
+  user([Developer]) -->|npx archkeeper init| cli[packages/cli]
   cli --> core[packages/core]
   core -->|loads manifests| modules[modules/*]
   modules --> packs[packs/languages · packs/frameworks]

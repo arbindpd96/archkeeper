@@ -21,7 +21,7 @@ const readability = {
 };
 
 const commentPolicy = {
-  'no-inline-comments': ['error', { ignorePattern: 'codekit:' }],
+  'no-inline-comments': ['error', { ignorePattern: 'archkeeper:' }],
   'jsdoc/require-jsdoc': [
     'error',
     {

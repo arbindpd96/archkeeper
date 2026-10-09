@@ -6,5 +6,5 @@ In short: be respectful, assume good intent, give constructive feedback, and kee
 Harassment or discrimination of any kind is not tolerated.
 
 Report unacceptable behaviour privately to the maintainer via
-[GitHub Security Advisories](https://github.com/arbindpd96/claude-codekit/security/advisories/new)
+[GitHub Security Advisories](https://github.com/arbindpd96/archkeeper/security/advisories/new)
 or a direct message to [@arbindpd96](https://github.com/arbindpd96). All reports are kept confidential.

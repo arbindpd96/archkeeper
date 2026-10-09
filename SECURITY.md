@@ -1,12 +1,12 @@
 # Security policy
 
-claude-codekit writes files that control what an AI coding agent can do (hooks, permissions, MCP servers),
+archkeeper writes files that control what an AI coding agent can do (hooks, permissions, MCP servers),
 so we treat security reports as top priority.
 
 ## Reporting a vulnerability
 
 Please **do not open a public issue**. Report privately through
-[GitHub Security Advisories](https://github.com/arbindpd96/claude-codekit/security/advisories/new).
+[GitHub Security Advisories](https://github.com/arbindpd96/archkeeper/security/advisories/new).
 You should get a response within 72 hours.
 
 ## Supported versions

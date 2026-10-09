@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in claude-codekit does not work as documented
+description: Something in archkeeper does not work as documented
 labels: ['type:bug', 'status:triage']
 body:
   - type: textarea
@@ -14,14 +14,14 @@ body:
     attributes:
       label: Steps to reproduce
       placeholder: |
-        1. npx claude-codekit init --preset small
+        1. npx archkeeper init --preset small
         2. ...
     validations:
       required: true
   - type: input
     id: version
     attributes:
-      label: claude-codekit version
+      label: archkeeper version
       placeholder: '0.1.0'
     validations:
       required: true

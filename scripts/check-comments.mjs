@@ -8,7 +8,7 @@ const MIN_CODE_LINES_FOR_RATIO = 20;
 const SOURCE_FILE = /\.[cm]?[jt]sx?$/;
 const EXCLUDED = /(^|\/)(node_modules|dist|coverage|fixtures)\/|^plugin\//;
 
-const DIRECTIVE = /^\s*(eslint-|@ts-|prettier-ignore|codekit:|global\s|c8\s|v8\s|istanbul\s|<reference\s)/;
+const DIRECTIVE = /^\s*(eslint-|@ts-|prettier-ignore|archkeeper:|global\s|c8\s|v8\s|istanbul\s|<reference\s)/;
 const CODE_PUNCTUATION = /[;{}()=]/;
 const UNTRACKED_MARKERS = [
   /\b(?:TODO|FIXME|HACK|XXX)\b(?!\(#\d+\))/,

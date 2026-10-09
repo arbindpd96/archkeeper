@@ -43,7 +43,7 @@ export function runScript(
 
 /** Creates an empty temporary directory that is deleted when the current test finishes. */
 export function tempDir(): string {
-  const dir = mkdtempSync(path.join(tmpdir(), 'codekit-test-'));
+  const dir = mkdtempSync(path.join(tmpdir(), 'archkeeper-test-'));
   onTestFinished(() => {
     rmSync(dir, { recursive: true, force: true });
   });

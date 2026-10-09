@@ -10,8 +10,8 @@ Users need (a) per-project files scaffolded into their repo (CLAUDE.md, settings
 
 ## Decision
 
-1. **npx CLI** (`claude-codekit`): `init`, `update`, `doctor`, `uninstall`. Detects stack, asks setup questions, writes files merge-safely.
-2. **Claude Code plugin** (`claude-codekit`): bundled commands, skills, agents and hooks, published to a plugin marketplace hosted in this repo and to npm.
+1. **npx CLI** (`archkeeper`): `init`, `update`, `doctor`, `uninstall`. Detects stack, asks setup questions, writes files merge-safely.
+2. **Claude Code plugin** (`archkeeper`): bundled commands, skills, agents and hooks, published to a plugin marketplace hosted in this repo and to npm.
 3. Generate **AGENTS.md** alongside CLAUDE.md so Codex, Cursor, Gemini CLI and Copilot get the same rules.
 
 Both are built from the same `modules/` sources. Nothing is hand-maintained in two places.

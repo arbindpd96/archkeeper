@@ -1,10 +1,10 @@
-# AGENTS.md: claude-codekit
+# AGENTS.md: archkeeper
 
 Instructions for AI coding agents (Claude Code, Codex, Cursor, Gemini CLI, Copilot) working in this repository.
 
 ## Project
 
-claude-codekit is an npx CLI plus a Claude Code plugin. It scaffolds a modular, merge-safe Claude Code setup into any project.
+archkeeper is an npx CLI plus a Claude Code plugin. It scaffolds a modular, merge-safe Claude Code setup into any project.
 Status: pre-release, v0.1 in progress. Plan: `docs/ROADMAP.md`. Decisions: `docs/decisions.md`.
 
 ## Principles

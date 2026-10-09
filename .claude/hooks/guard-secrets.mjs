@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-const ALLOW_PRAGMA = 'codekit:allow-secret';
+const ALLOW_PRAGMA = 'archkeeper:allow-secret';
 
 const SECRET_PATTERNS = [
   { name: 'AWS access key', pattern: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/ },
@@ -40,7 +40,7 @@ function decide(permissionDecision, reason) {
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
       permissionDecision,
-      permissionDecisionReason: `claude-codekit guard: ${reason}`,
+      permissionDecisionReason: `archkeeper guard: ${reason}`,
     },
   };
 }

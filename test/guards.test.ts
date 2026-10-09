@@ -295,7 +295,11 @@ describe('guard-secrets', () => {
     ['AWS key in new file', { file_path: 'a.ts', content: `const key = '${fakeAwsKey}';` }, 'deny'],
     ['GitHub token in edit', { file_path: 'a.ts', new_string: `token = '${fakeGithubToken}'` }, 'deny'],
     ['private key in multi-edit', { file_path: 'k.pem', edits: [{ new_string: fakePrivateKey }] }, 'deny'],
-    ['allow pragma', { file_path: 'a.ts', content: `'${fakeGithubToken}' // codekit:allow-secret` }, 'allow'],
+    [
+      'allow pragma',
+      { file_path: 'a.ts', content: `'${fakeGithubToken}' // archkeeper:allow-secret` },
+      'allow',
+    ],
     ['regex source of a pattern', { file_path: 'a.ts', content: '/\\bAKIA[0-9A-Z]{16}\\b/' }, 'allow'],
     ['editing .env', { file_path: '/p/.env', content: 'A=1' }, 'ask'],
     ['editing .env.local', { file_path: '/p/.env.local', content: 'A=1' }, 'ask'],

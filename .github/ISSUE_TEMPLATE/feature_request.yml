@@ -13,7 +13,7 @@ body:
     id: proposal
     attributes:
       label: Proposed solution
-      description: What should claude-codekit do? Which module or preset would it belong to?
+      description: What should archkeeper do? Which module or preset would it belong to?
     validations:
       required: true
   - type: textarea

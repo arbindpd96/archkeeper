@@ -1,12 +1,12 @@
-# Contributing to claude-codekit
+# Contributing to archkeeper
 
 Thanks for helping. This guide is short on purpose: most rules are enforced by tooling, so CI will tell you when something is off.
 
 ## Setup
 
 ```bash
-git clone https://github.com/arbindpd96/claude-codekit.git
-cd claude-codekit
+git clone https://github.com/arbindpd96/archkeeper.git
+cd archkeeper
 npm install        # Node ^22.22.2 or >= 24.15; also installs the git hooks
 npm run check      # everything CI runs
 ```
@@ -56,7 +56,7 @@ We keep comments few and useful. The rules:
 2. **Inside code, comment only a non-obvious _why_**: a constraint, a workaround, a surprising decision. Never the _what_.
 3. **Not allowed** (CI fails):
    - JSDoc that only restates the symbol's name (`jsdoc/informative-docs`); plain `//` comments that restate code are caught in review
-   - trailing inline comments (`no-inline-comments`), except tool pragmas such as `// codekit:allow-secret`
+   - trailing inline comments (`no-inline-comments`), except tool pragmas such as `// archkeeper:allow-secret`
    - commented-out code
    - decorative divider lines
    - `TODO` / `FIXME` without an issue: write `TODO(#123): ...`
@@ -80,7 +80,7 @@ export function resolveModules(config: KitConfig): Module[] { ... }
 
 ## Pragmas
 
-`// codekit:allow-secret` on the same line tells the secret guard that a line which looks like a credential is a deliberate fixture.
+`// archkeeper:allow-secret` on the same line tells the secret guard that a line which looks like a credential is a deliberate fixture.
 Use it only in tests, and never on real secrets.
 
 ## Tests

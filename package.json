@@ -1,12 +1,12 @@
 {
-  "name": "claude-codekit-workspace",
+  "name": "archkeeper-workspace",
   "private": true,
-  "description": "Workspace root for claude-codekit: one command to give Claude Code a memory of your architecture, decisions and design system.",
+  "description": "Workspace root for archkeeper: one command to give Claude Code a memory of your architecture, decisions and design system.",
   "license": "MIT",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/arbindpd96/claude-codekit.git"
+    "url": "git+https://github.com/arbindpd96/archkeeper.git"
   },
   "engines": {
     "node": "^22.22.2 || ^24.15.0 || >=26"

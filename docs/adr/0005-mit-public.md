@@ -6,7 +6,7 @@
 
 ## Decision
 
-MIT licence. `github.com/arbindpd96/claude-codekit` is public from day one.
+MIT licence. `github.com/arbindpd96/archkeeper` is public from day one.
 
 ## Consequences
 
