@@ -102,8 +102,15 @@ export function tempDir(): string {
   return dir;
 }
 
+let symlinkSupport: boolean | undefined;
+
 /** Tells whether this process may create symlinks; Windows refuses (EPERM) without admin rights or developer mode. */
 export function canSymlink(): boolean {
+  symlinkSupport ??= probeSymlink();
+  return symlinkSupport;
+}
+
+function probeSymlink(): boolean {
   const dir = mkdtempSync(path.join(tmpdir(), `${BRAND.npmName}-symlink-`));
   try {
     writeFileSync(path.join(dir, 'target'), '');
