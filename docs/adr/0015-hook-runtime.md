@@ -95,7 +95,13 @@ The safety module is in every preset. Besides registering the guards, it writes 
 - `Bash(rm -rf:*)`
 - `Bash(git push --force:*)`, `Bash(git push -f:*)`
 
-The rules are defence in depth: they still apply when a hook cannot run. They match on prefix only, so the guards are the fine-grained layer, and the AGENTS.md block and the README say so. `Read(**/.env.*)` also blocks reading `.env.example` with the Read tool, while guard-bash lets the shell read it.
+The rules are defence in depth: they still apply when a hook cannot run.
+
+- They match on prefix only, so the guards are the fine-grained layer for everything the rules let through.
+- `Bash(rm -rf:*)` is coarser than guard-bash: it denies every command that starts with `rm -rf`, safe ones such as `rm -rf dist` included, before the guard sees it (see [Consequences](#consequences)).
+- `Read(**/.env.*)` also blocks reading `.env.example` with the Read tool, while guard-bash lets the shell read it.
+
+The AGENTS.md block and the README must say all three.
 
 ### Injected context and feedback
 
@@ -128,6 +134,7 @@ These are part of the ADR-0017 contract:
   - The README Requirements section states this, and `doctor` checks it.
 - Kit hooks merge with user hooks by `args` path (ADR-0014). User hooks on the same events keep running, because hook arrays are additive (reference §1.8).
 - The guards cost an occasional extra prompt on commands they cannot read. False-positive suites and asking rather than denying keep that rare.
+- Claude cannot run any command that starts with `rm -rf`, because the native rule denies it before guard-bash judges it. The user runs it, and other spellings such as `rm -r dist` go to guard-bash. #31's rule that safe look-alikes pass applies to guard-bash alone. A user who wants Claude to run `rm -rf` deletes the rule, and `update` never adds it back (ADR-0014).
 - Repo-specific policies are off by default; this repo turns them on.
 - SessionStart output counts toward each preset's always-on budget at its cap (ADR-0017).
 - The hooks in this repo's `.claude/hooks/` stay the reference implementation until v0.1 M8 replaces them with generated ones (#45).
@@ -142,4 +149,5 @@ These are part of the ADR-0017 contract:
 - **guard-bash failing open with a stderr note** (the earlier draft, and #31), relying on the deny rules. Prefix-only rules miss reordered flags, chains and wrappers, so a guard that cannot read a command would silently allow it.
 - **Regex guards over the raw command text.** Bypassable through quoting, wrappers and chains, and slow inputs time out, which fails open (72efe48).
 - **Root-only `Read(./.env)` rules.** Miss nested `.env` files.
+- **Exact native rules such as `Bash(rm -rf /)` instead of `Bash(rm -rf:*)`.** They miss every variant, so they would protect nothing once a hook cannot run.
 - **One global SessionStart cap of 9,000–10,000 characters.** On its own, it would exceed the small preset's whole budget.
