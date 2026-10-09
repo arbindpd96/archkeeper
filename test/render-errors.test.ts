@@ -227,11 +227,8 @@ describe('render checks each rendered gitignore line', () => {
       gitignore: ['{{local.dir}}/'],
     });
 
-  it.each([
-    ['a newline', 'tmp\n!.env'],
-    ['a leading !', '!secrets'],
-  ])('refuses a template value with %s', (_name, dir) => {
-    const run = (): unknown => render([ignores()], { stack: [], values: { local: { dir } } });
+  it('refuses a template value that renders a ! negation', () => {
+    const run = (): unknown => render([ignores()], { stack: [], values: { local: { dir: '!secrets' } } });
     expect(run).toThrow(RenderError);
     expect(run).toThrow('m/module.json: gitignore[0]: renders to');
   });
@@ -239,6 +236,34 @@ describe('render checks each rendered gitignore line', () => {
   it('writes a value that stays one pattern', () => {
     const tree = render([ignores()], { stack: [], values: { local: { dir: 'tmp' } } });
     expect(tree.get('.gitignore')?.[0]?.content).toBe('tmp/\n');
+  });
+});
+
+describe('render refuses template values that could change the file around them', () => {
+  const notes = (): KitModule =>
+    kit(
+      'm',
+      { files: [{ from: 'a.md', to: 'a.md', strategy: 'owned', target: 'project' }] },
+      { 'modules/m/files/a.md': 'Test with {{detected.test}}\n' },
+    );
+
+  it.each([
+    ['a newline that starts an import line', 'npm test\n@~/.ssh/id_rsa', 'holds a control character'],
+    ['a block marker', `<!-- ${BRAND.markerPrefix}:end base -->`, `holds ${BRAND.markerPrefix}:end`],
+    [
+      'a block marker in another case',
+      `${BRAND.markerPrefix.toUpperCase()}:BEGIN x`,
+      `holds ${BRAND.markerPrefix}:begin`,
+    ],
+  ])('refuses %s', (_name, test, problem) => {
+    const run = (): unknown => render([notes()], { stack: [], values: { detected: { test } } });
+    expect(run).toThrow(RenderError);
+    expect(run).toThrow(`template values: detected.test: ${problem}`);
+  });
+
+  it('writes a one-line value as is', () => {
+    const tree = render([notes()], { stack: [], values: { detected: { test: 'npm run test -- --run' } } });
+    expect(tree.get('a.md')?.[0]?.content).toBe('Test with npm run test -- --run\n');
   });
 });
 

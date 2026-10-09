@@ -9,7 +9,7 @@ import { collectEntries, type Draft, type RenderTree } from './render-tree.js';
 import type { Stack } from './schema-parts.js';
 import { findSecret } from './secrets.js';
 import { reservedTarget } from './targets.js';
-import { brandScope, renderTemplate, type TemplateScope } from './template.js';
+import { brandScope, renderTemplate, type TemplateScope, unsafeValue } from './template.js';
 import { asLfText } from './text.js';
 import { whenMismatch } from './when.js';
 
@@ -74,7 +74,7 @@ function template(job: ModuleRender, relative: string): string {
   return asLfText(renderTemplate(source(job.kit, file), job.scope, file));
 }
 
-// A template value can hold a newline or a leading !, so each rendered line is checked again.
+// A template value can start with ! and a brand value can hold a newline, so each rendered line is checked again.
 function ignoreLine(job: ModuleRender, line: string, index: number): string {
   const location = `gitignore[${String(index)}]`;
   const rendered = renderTemplate(line, job.scope, `${job.kit.file} ${location}`);
@@ -179,17 +179,30 @@ function refuseSecrets(tree: RenderTree): void {
   }
 }
 
+function checkValues(values: TemplateScope | undefined, brand: Brand): void {
+  const markers = [`${brand.markerPrefix}:begin`, `${brand.markerPrefix}:end`];
+  const unsafe = values === undefined ? undefined : unsafeValue(values, markers);
+  if (unsafe === undefined) return;
+  throw new RenderError({
+    file: 'template values',
+    location: unsafe.name,
+    problem: unsafe.problem,
+    hint: 'pass one line of text with no block marker: a value fills its template as is',
+  });
+}
+
 /**
  * Renders modules into a virtual tree of project paths (#20). The same modules, context and brand give the same
  * bytes on every run and OS and in any module order: output is LF, sorted, and reads no clock, path or
- * environment. JSON is built from objects. Two modules writing one owned path, block or JSON entry, or output
- * that holds a likely secret, throw RenderError.
+ * environment. JSON is built from objects. A template value with a control character or a block marker, two
+ * modules writing one owned path, block or JSON entry, or output that holds a likely secret throw RenderError.
  */
 export function render(
   modules: readonly KitModule[],
   context: RenderContext,
   brand: Brand = BRAND,
 ): RenderTree {
+  checkValues(context.values, brand);
   const scope: TemplateScope = { ...context.values, brand: brandScope(brand) };
   const drafts = modules.flatMap((kit) => moduleDrafts({ kit, context, scope, brand }));
   const tree = collectEntries(drafts);
