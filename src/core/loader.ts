@@ -161,7 +161,23 @@ function presetFinding(manifest: ModuleManifest, chain: readonly string[]): Find
   };
 }
 
-/** Loads every module in `moduleIds` and `modules/presets.json`, checking each module's presets against the chain. */
+// An unknown id in requires fails resolution with its chain; one in conflicts would silently turn the conflict off.
+function checkConflicts(modules: ReadonlyMap<string, KitModule>): void {
+  for (const kit of modules.values()) {
+    const index = kit.manifest.conflicts.findIndex((id) => !modules.has(id));
+    if (index === -1) continue;
+    fail(kit.file, {
+      location: `conflicts[${String(index)}]`,
+      problem: `"${kit.manifest.conflicts[index] ?? ''}" is not a module`,
+      hint: `use one of ${[...modules.keys()].join(', ')}`,
+    });
+  }
+}
+
+/**
+ * Loads every module in `moduleIds` and `modules/presets.json`, checking each module's presets against the chain
+ * and its conflicts against the modules.
+ */
 export function loadCatalog(moduleIds: readonly string[], read: ReadKitFile): Catalog {
   const presets = loadPresets(read);
   const chain = presets.presets.map((preset) => preset.name);
@@ -172,5 +188,6 @@ export function loadCatalog(moduleIds: readonly string[], read: ReadKitFile): Ca
     if (broken !== undefined) fail(kit.file, broken);
     modules.set(id, kit);
   }
+  checkConflicts(modules);
   return { modules, presets: presets.presets, defaultPreset: presets.default };
 }
