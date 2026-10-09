@@ -108,7 +108,7 @@ Add a row whenever something is created. Keep one line per item.
 | `dist/hooks/<name>.mjs`        | each `src/hooks/<name>.ts` | One self-contained build per hook; it may inline no npm package   |
 | `dist/THIRD_PARTY_LICENSES.md` | the bundles                | Licenses of every inlined package                                 |
 
-Every bundle may import only `node:` built-ins (tsdown `deps.onlyImport`), so the package needs no runtime dependency. `jsonc-parser` is aliased to its ESM build (reference §7.1). CI builds twice and compares sha256 sums.
+Every bundle may import only `node:` built-ins (tsdown `deps.onlyImport`), so the package needs no runtime dependency. `jsonc-parser` is aliased to its ESM build (reference §7.1). CI builds twice and compares sha256 sums, and its `node-gate` job runs `dist/cli.mjs` on Node.js 18, 20, 22.17.0 and 23 (upgrade message, exit 1) and on 22.17.1 (`--version` works).
 
 ## Package gates
 

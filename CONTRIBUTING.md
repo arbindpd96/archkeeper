@@ -34,6 +34,7 @@ Commits are authored by people. Do not add AI co-author trailers or "generated w
 | Build          | `npm run build`              | tsdown bundle in `dist/`, licenses of inlined code; CI checks that two builds are identical    |
 | Package        | `npm run package`            | publint, pack-list snapshot, zero runtime deps, no install scripts, `budgets.json` sizes       |
 | Install smoke  | CI only                      | `npm publish --dry-run`; the packed tarball installs and runs on ubuntu, macOS and Windows     |
+| Node.js gate   | CI only                      | The built bin rejects Node.js 18, 20, 22.17.0 and 23 and runs on 22.17.1                       |
 | Commits        | commitlint                   | Conventional Commits, no AI attribution trailers                                               |
 | PR title       | action-semantic-pull-request | Conventional Commits title (it becomes the squash message)                                     |
 | Security       | CodeQL, dependency review    | Code scanning; no new dependency with a known vulnerability of moderate severity or higher     |
