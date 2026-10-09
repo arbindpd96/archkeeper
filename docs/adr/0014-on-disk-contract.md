@@ -123,7 +123,7 @@ Every generated file declares one strategy in its module manifest (#18):
 | Strategy      | Unchanged since the kit wrote it          | Changed by the user                                                                                |
 | ------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `owned`       | Replaced with the new version             | Kept; the new version goes to a whole-file sidecar                                                 |
-| `blocks`      | The block is replaced in place            | The block is kept; one sidecar per file holds the whole file with every such block updated         |
+| `blocks`      | The block is replaced in place            | The block is kept; the file's one sidecar holds the whole file with every such block updated       |
 | `json`        | Kit entries are added, changed or removed | The diverged entry is kept and reported; a deleted entry goes to `removed[]` and is never re-added |
 | `create-only` | Never replaced                            | Never replaced                                                                                     |
 
@@ -133,6 +133,7 @@ What counts as a change:
 - **Nothing new, nothing written.** When the new kit content equals `base`, a user-modified file, block or entry is skipped, with no sidecar. That is why a second run writes nothing.
 - **Adoption.** When the content on disk already equals the new kit content, `base` moves to it, and only the lock is written.
 - **Sidecars keep the base.** Writing a sidecar leaves `base` at the last kit-written content and records the sidecar's content as `pending`. A sidecar that already holds the new kit content is left alone. An unedited sidecar is rewritten when the kit content changes again, and one the user edited is never overwritten; it is reported instead.
+- **One sidecar per blocks file.** Blocks are judged one by one. In a file with both kinds, the unchanged blocks are still replaced in place, and the file's single sidecar holds the file as it now is with every user-edited block swapped for its new kit version. Each of those blocks records its own `pending`.
 - **Resolving a sidecar.** The user takes what they want from the sidecar into the file, or copies it over the file, and deletes the sidecar. The next run finds `pending` with no sidecar on disk and moves `base` to `pending`. That kit version then counts as seen: it is never offered again, and the v0.2 merge starts from it. Kit changes the user never saw stay out of the base, so a merge can still bring them in.
 
 The command-line contract (#40):
