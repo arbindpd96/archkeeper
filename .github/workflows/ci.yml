@@ -180,14 +180,11 @@ jobs:
       - run: npm run build
       - name: Package checks on the stripped manifest
         run: npm run package -- --release
-      - name: Stage publish dry run
+      - name: Stage publish dry run (with the explicit dist-tag a release passes)
         env:
-          PRERELEASE: ${{ steps.guards.outputs.prerelease }}
           DIST_TAG: ${{ steps.guards.outputs.dist-tag }}
         run: |
-          tag_args=()
-          if [ "$PRERELEASE" = true ]; then tag_args=(--tag next); fi
-          npm stage publish --dry-run --access public --ignore-scripts --json "${tag_args[@]}" > "$RUNNER_TEMP/stage.json"
+          npm stage publish --dry-run --access public --ignore-scripts --json --tag "$DIST_TAG" > "$RUNNER_TEMP/stage.json"
           node scripts/stage-summary.mjs "$RUNNER_TEMP/stage.json" --dist-tag "$DIST_TAG" --dry-run
 
   install-smoke:

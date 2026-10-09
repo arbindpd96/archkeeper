@@ -34,13 +34,17 @@ function npmCli() {
   return candidates.find((file) => file !== undefined && /npm-cli\.c?js$/.test(file) && existsSync(file));
 }
 
-/** Runs npm without a shell (through Node.js when npm's entry is found, else `npm` on PATH), or exits 1. */
-export function npm(args, { cwd = process.cwd(), nextStep }) {
+/**
+ * Runs npm without a shell (through Node.js when npm's entry is found, else `npm` on PATH), or exits 1.
+ * A failure whose message matches `tolerate` (an expected one, such as E404) returns undefined instead.
+ */
+export function npm(args, { cwd = process.cwd(), nextStep, tolerate }) {
   const cli = npmCli();
   const [command, prefix] = cli === undefined ? ['npm', []] : [process.execPath, [cli]];
   try {
     return execFileSync(command, [...prefix, ...args], { cwd, ...OUTPUT });
   } catch (error) {
+    if (tolerate?.test(reasonOf(error))) return undefined;
     return exitWith(`${toolName()}: npm ${args[0]} failed: ${reasonOf(error)}\n${nextStep}`, 1);
   }
 }

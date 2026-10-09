@@ -70,15 +70,14 @@ jobs:
         run: npm run check
       - name: Package checks on the stripped manifest
         run: npm run package -- --release
+      # Always an explicit dist-tag (next for prereleases, latest otherwise): the name holds a 0.0.1
+      # placeholder on latest, and the release guards refuse any version below it.
       - name: Stage the publish (no provenance until npm/cli#9969 is fixed)
         if: steps.registry.outputs.published != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_STAGE_TOKEN }}
-          PRERELEASE: ${{ steps.guards.outputs.prerelease }}
-        run: |
-          tag_args=()
-          if [ "$PRERELEASE" = true ]; then tag_args=(--tag next); fi
-          npm stage publish --access public --ignore-scripts --json "${tag_args[@]}" > "$RUNNER_TEMP/stage.json"
+          DIST_TAG: ${{ steps.guards.outputs.dist-tag }}
+        run: npm stage publish --access public --ignore-scripts --json --tag "$DIST_TAG" > "$RUNNER_TEMP/stage.json"
       - name: Print the approve command
         if: steps.registry.outputs.published != 'true'
         env:

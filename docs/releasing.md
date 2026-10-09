@@ -20,7 +20,7 @@ The maintainer's runbook for [ADR-0013](adr/0013-release-process.md). CI never c
    git push origin vX.Y.Z
    ```
 
-4. **Approve.** The `Release` workflow checks npm 11.15+, the tag against `package.json`, the `CHANGELOG.md` section and `private`, removes the dev-only `prepare` script, runs every check, and stages the package (`--tag next` for prereleases). Its job summary prints the exact command:
+4. **Approve.** The `Release` workflow checks npm 11.15+, the tag against `package.json`, the `CHANGELOG.md` section, `private`, and that the version is not below npm's `latest`. It removes the dev-only `prepare` script, runs every check, and stages the package with an explicit dist-tag: `next` for prereleases, `latest` otherwise. Its job summary prints the exact command:
 
    ```sh
    npm stage view <id>       # optional: inspect it, or npm stage download <id> for the tarball
@@ -58,7 +58,7 @@ The first release is published from your laptop, then tagged:
 
 3. Tag the commit and push the tag. The workflow finds the version on npm, skips staging, and runs the registry smoke test and the GitHub Release.
 
-Staging a new package creates a `0.0.0-stage` placeholder version on the registry. After the first approval, check `npm view archkeeper dist-tags`.
+The name is reserved by a notice-only `0.0.1` placeholder on `latest`, so the first real version must be higher (planned: `0.1.0-rc.0`). Always pass an explicit `--tag`: without one, npm refuses any version at or below `0.0.1`. After the first approval, check `npm view archkeeper dist-tags`.
 
 ## The stage-only token
 
