@@ -1,5 +1,5 @@
 import * as z from 'zod/mini';
-import { described, kebabId, listOf, optionName, STACKS } from './schema-parts.js';
+import { described, KEBAB_ID, kebabId, listOf, optionName, STACKS } from './schema-parts.js';
 
 /** The config format this kit writes and reads (ADR-0014); a config without `version` is version 1. */
 export const CONFIG_VERSION = 1;
@@ -36,7 +36,7 @@ export const configSchema = z
       'The config format version.',
     ),
     preset: described(
-      z.string({ error: PRESET_HINT }).check(z.minLength(1, { error: PRESET_HINT })),
+      z.string({ error: PRESET_HINT }).check(z.regex(KEBAB_ID, { error: PRESET_HINT })),
       'The preset.',
     ),
     modules: described(
