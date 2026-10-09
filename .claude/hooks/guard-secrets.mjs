@@ -17,10 +17,15 @@ const SECRET_PATTERNS = [
   { name: 'Google API key', pattern: /\bAIza[0-9A-Za-z_-]{35}/ },
   { name: 'npm token', pattern: /\bnpm_[A-Za-z0-9]{36}|_authToken\s*=\s*[^\s$]{8,}/ },
   { name: 'private key', pattern: /-----BEGIN ([A-Z]+ )*PRIVATE KEY( BLOCK)?-----/ },
-  { name: 'JWT', pattern: /\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/ },
+  // The lookbehinds start each match once per run of token characters, which keeps the scan linear.
+  {
+    name: 'JWT',
+    pattern: /(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/,
+  },
   {
     name: 'credentialed URL',
-    pattern: /\b[a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:(?![$<{]|(password|pass|secret|changeme)@)[^\s@/]{3,}@/i,
+    pattern:
+      /(?<![a-z0-9+.-])[a-z][a-z0-9+.-]{0,31}:\/\/[^\s:/@]+:(?![$<{]|(password|pass|secret|changeme)@)[^\s@/]{3,}@/i,
   },
 ];
 
@@ -119,12 +124,12 @@ function applyEdit(text, edit) {
   return text.replace(search, () => replacement);
 }
 
-/** Returns the text the edits leave behind, or null when one of them cannot be applied. */
+/** Returns the text the edits leave behind, null when one cannot be applied, or as soon as it is over the cap. */
 function editedText(text, edits) {
   let result = text;
   for (const edit of edits) {
     result = applyEdit(result, edit);
-    if (result === null) return null;
+    if (result === null || result.length > MAX_CHECKED_BYTES) return result;
   }
   return result;
 }
@@ -143,6 +148,9 @@ function judgeEdits(target, edits, lines, helpers) {
   const before = found.text.replaceAll('\r\n', '\n');
   const after = editedText(before, edits);
   if (after === null) return decide('ask', 'could not replay this edit on the file. Confirm with the user.');
+  if (after.length > MAX_CHECKED_BYTES) {
+    return decide('ask', 'the edited file would be over 1 MB. Confirm with the user.');
+  }
   const original = new Set(linesOf(before));
   const added = linesOf(after).filter((line) => !original.has(line) && secretsIn(line).length > 0);
   if (added.length === 0) return null;
@@ -161,6 +169,9 @@ function evaluate(toolInput, helpers) {
     return decide('ask', `${fileName} holds secrets. Confirm with the user before editing it.`);
   }
   const text = writtenText(toolInput);
+  if (text.length > MAX_CHECKED_BYTES) {
+    return decide('ask', 'the written text is over 1 MB. Confirm with the user.');
+  }
   const lines = linesOf(text);
   const unmarked = lines.filter((line) => !line.includes(ALLOW_PRAGMA));
   if (unmarked.some((line) => secretsIn(line).length > 0)) {
