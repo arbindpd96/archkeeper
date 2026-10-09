@@ -90,8 +90,7 @@ function locate(target, baseDir) {
  * `{ cause }` naming why it cannot be read. Whether a path is inside the project is not decided here, because
  * case-insensitive file systems, firmlinks and hardlinks make a path prefix check unreliable.
  */
-function readTarget({ real, cause }, readRegularFile) {
-  if (cause) return { cause };
+function readTarget({ real }, readRegularFile) {
   if (real === null) return { text: '' };
   try {
     const stat = lstatSync(real);
@@ -187,6 +186,9 @@ function evaluate(input, helpers) {
   const baseDir =
     typeof input.cwd === 'string' && path.isAbsolute(input.cwd) ? input.cwd : helpers.projectDir;
   const location = locate(toolInput.file_path ?? toolInput.notebook_path, baseDir);
+  if (location.cause) {
+    return decide('ask', `could not check this write because ${location.cause}. Confirm with the user.`);
+  }
   const envName = [location.file, location.real]
     .filter(Boolean)
     .map((file) => path.basename(file))
