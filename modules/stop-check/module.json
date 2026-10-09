@@ -1,0 +1,9 @@
+{
+  "$schema": "../../schema/module.schema.json",
+  "schemaVersion": 1,
+  "id": "stop-check",
+  "description": "Runs the project's tests before Claude stops, once the user turns the check on.",
+  "presets": ["full"],
+  "requires": ["base"],
+  "internal": true
+}

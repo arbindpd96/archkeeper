@@ -1,0 +1,16 @@
+{
+  "$schema": "../../schema/module.schema.json",
+  "schemaVersion": 1,
+  "id": "safety",
+  "description": "Guard hooks for dangerous commands and secrets, backed by native deny rules.",
+  "presets": ["small", "medium", "full"],
+  "requires": ["base"],
+  "options": {
+    "optOut": {
+      "type": "string-list",
+      "default": [],
+      "description": "Deny rules and guard hooks removed on purpose, so doctor and update stop warning about them."
+    }
+  },
+  "internal": true
+}

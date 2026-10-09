@@ -2,6 +2,14 @@ LICENSE
 README.md
 dist/THIRD_PARTY_LICENSES.md
 dist/cli.mjs
+modules/architecture-map/module.json
+modules/base/module.json
+modules/feature-memory/module.json
+modules/format-on-edit/module.json
+modules/knowledge/module.json
+modules/presets.json
+modules/safety/module.json
+modules/stop-check/module.json
 package.json
 schema/config.schema.json
 schema/module.schema.json

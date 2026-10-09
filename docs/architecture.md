@@ -32,7 +32,7 @@ flowchart LR
 | `src/cli/`                | npx entry: Node version check, `--version`, `--help`; commands, prompts and output from v0.1                  | active           |
 | `src/core/`               | Brand, typed errors, manifest schema and loader; later the config, renderer, detection, planner and lockfile  | active           |
 | `src/hooks/`              | Hook sources (one self-contained bundle each) and the shared hook runtime in `src/hooks/runtime/`             | _planned v0.1_   |
-| `modules/<id>/`           | One switchable feature: `module.json` and `files/`                                                            | _planned v0.1_   |
+| `modules/<id>/`           | One switchable feature: `module.json` and `files/`; `modules/presets.json` holds the preset chain             | active           |
 | `packs/languages/<lang>/` | Language rules, linter configs, detection (TS/JS, Python first)                                               | _planned v0.1–2_ |
 | `packs/frameworks/<fw>/`  | Framework rules and detection                                                                                 | _planned v0.2+_  |
 | `schema/`                 | JSON Schemas generated from the zod schemas in `src/core` (`npm run schema`); published for `$schema` URLs    | active           |
@@ -76,9 +76,17 @@ Add a row whenever something is created. Keep one line per item.
 
 ### Modules
 
-| Module     | Purpose | Presets | Writes | Hooks |
-| ---------- | ------- | ------- | ------ | ----- |
-| _none yet_ |         |         |        |       |
+Every module is a manifest only, marked `internal`, until its milestone adds files and hooks. `modules/presets.json` holds the small ⊂ medium ⊂ full chain with SessionStart caps of 1,200, 3,000 and 4,000 characters.
+
+| Module             | Purpose                                                                       | Presets             | Writes | Hooks |
+| ------------------ | ----------------------------------------------------------------------------- | ------------------- | ------ | ----- |
+| `base`             | CLAUDE.md importing AGENTS.md, shared agent rules, ignore rules and settings  | small, medium, full | _M3_   | none  |
+| `safety`           | Guard hooks and native deny rules; option `optOut`                            | small, medium, full | _M4_   | _M4_  |
+| `feature-memory`   | Per-feature MEMORY.md, mistakes log, memory hooks, `/new-feature`, `/handoff` | small, medium, full | _M5_   | _M5_  |
+| `knowledge`        | Decisions, ADRs, glossary, `/why`, `/adr`                                     | medium, full        | _M5_   | none  |
+| `architecture-map` | `docs/architecture.md` and `/update-map`                                      | medium, full        | _M6_   | none  |
+| `format-on-edit`   | Formats and lints each edited file with the project's tools                   | medium, full        | _M6_   | _M6_  |
+| `stop-check`       | Runs the project's tests before Claude stops, once turned on                  | full                | _M6_   | _M6_  |
 
 ### Shared utilities
 

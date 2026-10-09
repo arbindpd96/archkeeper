@@ -1,0 +1,9 @@
+{
+  "$schema": "../../schema/module.schema.json",
+  "schemaVersion": 1,
+  "id": "knowledge",
+  "description": "Decision records, ADRs and a glossary, with the /why and /adr skills.",
+  "presets": ["medium", "full"],
+  "requires": ["base"],
+  "internal": true
+}
