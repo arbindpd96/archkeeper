@@ -47,7 +47,7 @@ Everything the kit keeps lives in `.archkeeper/` (`BRAND.stateDir`):
   files:   { <path>: { module, strategy, base, pending? } },
   blocks:  { <path>: { <blockId>: { base, pending? } } },
   json:    { <path>: <ownedKeys> },
-  removed: [kit files and blocks the user deleted] }
+  removed: [kit files, blocks and JSON entries the user deleted] }
 ```
 
 - Paths are project-relative with forward slashes.
@@ -56,7 +56,8 @@ Everything the kit keeps lives in `.archkeeper/` (`BRAND.stateDir`):
   - For owned files and blocks it also names the blob that holds that content. A create-only file keeps no blob, because nothing is ever merged into it.
   - It is `null` where the kit has never written, such as a different user file found at an owned path on first contact.
 - `pending` is the hash of kit content waiting in a sidecar. Its blob is kept like a base.
-- `ownedKeys` maps each JSON entry the kit owns to the hash of the entry as the kit wrote it, so an entry the user changed is recognised. Entries are keyed by hook `args` path, by exact permission string, and by MCP server name.
+- `ownedKeys` maps each JSON entry the kit owns to the hash of the entry as the kit wrote it, so an entry the user changed is recognised. Hook entries are keyed by event and `args` path, so one script registered on two events has two keys. Permission rules are keyed by list and exact string, so the same string in `allow` and `deny` has two keys. MCP servers are keyed by name.
+- `removed[]` entries name a path, plus a block id or an owned key for a block or a JSON entry.
 - The zod schema in `src/core`, exported to `schema/lock.schema.json`, is the exact definition.
 
 **Base blobs.** `.archkeeper/base/<sha256>` holds the last kit-written content of each owned file and block.
@@ -89,7 +90,7 @@ Every generated file declares one strategy in its module manifest (#18):
 
 - **Planned purely.** Core turns the rendered tree, a snapshot of the project and the lock into ordered operations, each with a reason: `create`, `insertBlock`, `replaceBlock`, `mergeJson`, `sidecar`, `adopt`, `skip`, `delete` and `respectRemoval` (#21). Planning against the state the previous apply left behind yields no operation but `skip`, so a second run writes nothing.
 - **First contact loses nothing.** An existing file identical to the kit output (after LF normalisation) is adopted. A different existing file at an owned path is never overwritten: it is left alone with `base: null` and reported, and the kit's version goes to a sidecar.
-- **User deletions are respected.** A kit file or block the user deleted is recorded in `removed[]` and never recreated.
+- **User deletions are respected.** A kit file, block or JSON entry the user deleted is recorded in `removed[]` and never recreated. A kit-owned JSON entry missing from its file counts as a user deletion, so a deny rule the user removed is never added back.
 - **Path-checked.** Every write and delete target is refused when it is absolute or contains `..`, resolves (via realpath) through a symlink outside the project root, lies inside `.git/`, or uses a Windows reserved name (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`) or a name ending in a dot or space. Deletes never follow symlinks (#23).
 - **Transactional.** Every touched file is backed up first. Each write goes to a temp sibling and is renamed into place, retrying with backoff on Windows `EPERM` and `EBUSY`. Any failure restores every file byte-identical. The lock is written last, so an interrupted run leaves the previous lock and the next run plans again.
 - **Versions.** A lock with a newer `lockfileVersion` fails with "upgrade archkeeper", and a kit older than `lock.kit.version` refuses to run, so a downgrade cannot rewrite a newer install.
@@ -98,12 +99,12 @@ Every generated file declares one strategy in its module manifest (#18):
 
 **v0.1 never overwrites a user edit.** `update` re-renders from `config.json` with the running kit and compares each file, block and JSON entry on disk with its `base` in the lock:
 
-| Strategy      | Unchanged since the kit wrote it          | Changed by the user                                                                        |
-| ------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `owned`       | Replaced with the new version             | Kept; the new version goes to a whole-file sidecar                                         |
-| `blocks`      | The block is replaced in place            | The block is kept; one sidecar per file holds the whole file with every such block updated |
-| `json`        | Kit entries are added, changed or removed | The diverged entry is kept and reported                                                    |
-| `create-only` | Never replaced                            | Never replaced                                                                             |
+| Strategy      | Unchanged since the kit wrote it          | Changed by the user                                                                                |
+| ------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `owned`       | Replaced with the new version             | Kept; the new version goes to a whole-file sidecar                                                 |
+| `blocks`      | The block is replaced in place            | The block is kept; one sidecar per file holds the whole file with every such block updated         |
+| `json`        | Kit entries are added, changed or removed | The diverged entry is kept and reported; a deleted entry goes to `removed[]` and is never re-added |
+| `create-only` | Never replaced                            | Never replaced                                                                                     |
 
 What counts as a change:
 
@@ -118,7 +119,10 @@ The command-line contract (#40):
 - `update --dry-run` prints a unified diff and writes nothing.
 - `update --json` emits the plan in a documented schema.
 - `update --check` exits 1 when anything would change. The dogfood self-check runs it (#46).
-- `update --restore <path>` backs up and rewrites one kit file from the current kit: a create-only doc, or a file listed in `removed[]`.
+- `update --restore <path>` backs up the path, restores the kit content there from the current kit, and drops what it restored from `removed[]`:
+  - A create-only doc, or an owned file listed in `removed[]`, is rewritten whole.
+  - In a blocks file, only the removed blocks are re-inserted, and every byte outside them stays as it is.
+  - In a json file, only the removed entries are re-added, through the same edits `update` makes.
 - `update` exits 2 when it wrote sidecars, and lists them with a hint.
 
 `uninstall` removes unmodified kit files, managed blocks, kit-owned JSON entries, the hook folder and `.archkeeper/`. It keeps and lists files the user modified (#41).
