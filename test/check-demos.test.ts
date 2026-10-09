@@ -144,6 +144,15 @@ describe('check-demos module declarations', () => {
     expect(result.stderr).toContain(message);
   });
 
+  it('ignores # lines inside fenced code blocks when it finds the README section', () => {
+    const readme =
+      '# Project\n\n```bash\n# Quick start\n```\n\n## Quick start\n\n```bash\n# install it\nnpx kit\n```\n\n' +
+      '![init](docs/media/init.gif)\n\n## Other\n';
+    const result = checkDemos({ 'init.gif': gifBytes([100]) }, { ...complete, readme });
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+  });
+
   it('fails a demo whose GIF is not committed', () => {
     const result = checkDemos({}, complete);
     expect(result.status).toBe(1);
