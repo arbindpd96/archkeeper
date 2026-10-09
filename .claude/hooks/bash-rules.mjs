@@ -1,11 +1,12 @@
 import { parseOptions } from './cli-options.mjs';
 import { findPipedToRm, findRule, rmRule } from './delete-rules.mjs';
 import { isEnvFileName, isEnvTemplateName } from './env-files.mjs';
-import { gitRule, HOOKS_PATH, HUSKY_OFF } from './git-rules.mjs';
+import { gitRule, HOOKS_PATH, HOOKS_PATH_SETTING, HUSKY_OFF } from './git-rules.mjs';
 import { globMatches } from './glob-match.mjs';
 import { interpreterVerdict } from './interpreter-rules.mjs';
 import { PIPED_SCRIPT, pipedScriptVerdict } from './piped-scripts.mjs';
 import { parseCommands } from './shell-commands.mjs';
+import { hasExpansion } from './shell-syntax.mjs';
 import { ShellSyntaxError } from './shell-words.mjs';
 import { ask, deny, strictest } from './verdicts.mjs';
 
@@ -22,9 +23,7 @@ const SUDO = ask('sudo needs explicit user approval.');
 const PUBLISH_COMMANDS = new Set(['publish', 'pub', 'unpublish', 'deprecate', 'dist-tag']);
 const PRIVILEGED = new Set(['sudo', 'doas', 'su']);
 const ENV_FILE_NAMES = ['.env', '.envrc', '.env.local', '.env.production', '.env.development'];
-const HOOKS_PATH_SETTING = /core\.hookspath/i;
-const HOOK_SETTING_VALUE = /^(?:HUSKY|GIT_CONFIG_\w+)=.*[$`]/;
-const hasExpansion = (word) => /[$`]/.test(word);
+const HOOK_SETTING = /^(?:HUSKY|GIT_CONFIG_\w+)=/;
 
 function isWorldWritable(mode) {
   if (/^[0-7]{1,4}$/.test(mode)) return (parseInt(mode, 8) & 0o002) !== 0;
@@ -58,7 +57,8 @@ function environmentRule({ args, assignments }) {
   const settings = [...args, ...assignments];
   if (settings.includes('HUSKY=0')) return HUSKY_OFF;
   if (settings.some((setting) => HOOKS_PATH_SETTING.test(setting))) return HOOKS_PATH;
-  return settings.some((setting) => HOOK_SETTING_VALUE.test(setting)) ? UNCHECKED_VALUE : null;
+  const hookSettingFromExpansion = (setting) => HOOK_SETTING.test(setting) && hasExpansion(setting);
+  return settings.some(hookSettingFromExpansion) ? UNCHECKED_VALUE : null;
 }
 
 function envGlobMatches(name) {

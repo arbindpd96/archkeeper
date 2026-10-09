@@ -1,4 +1,5 @@
-const ASSIGNMENT = /^[A-Za-z_][A-Za-z0-9_]*\+?=/;
+import { isAssignment } from './shell-syntax.mjs';
+
 const UV_RUN_VALUES = [
   '--with',
   '--with-editable',
@@ -106,7 +107,7 @@ function runnerAt(argv, index) {
 
 function takeAssignments(argv, start, assignments) {
   let index = start;
-  for (; index < argv.length && ASSIGNMENT.test(argv[index]); index += 1) assignments.push(argv[index]);
+  for (; index < argv.length && isAssignment(argv[index]); index += 1) assignments.push(argv[index]);
   return index;
 }
 

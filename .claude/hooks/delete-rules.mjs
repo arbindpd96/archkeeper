@@ -2,6 +2,7 @@ import { hasLong, parseOptions } from './cli-options.mjs';
 import { unwrap } from './command-wrappers.mjs';
 import { isDangerousPath, isUncheckedPath } from './dangerous-paths.mjs';
 import { readFindExpression } from './find-expression.mjs';
+import { hasExpansion } from './shell-syntax.mjs';
 import { ask, deny, strictest } from './verdicts.mjs';
 
 const DANGEROUS_DELETE = deny('Recursive delete of a root, home or whole-directory path is blocked.');
@@ -37,7 +38,7 @@ const isDeleteAction = (token) =>
 // A pattern narrows only with literal text other than dots; `-path` matches whole paths, so its last segment counts.
 function patternFilter(filter, pattern) {
   if (typeof pattern !== 'string') return 'none';
-  if (/[$`]/.test(pattern)) return 'unknown';
+  if (hasExpansion(pattern)) return 'unknown';
   const tail = PATH_FILTERS.has(filter) ? pattern.slice(pattern.lastIndexOf('/') + 1) : pattern;
   return /[^.]/.test(tail.replace(/\[[^\]]*\]|[*?]/g, '')) ? 'narrowed' : 'none';
 }
