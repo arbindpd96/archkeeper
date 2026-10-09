@@ -1,8 +1,9 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { BRAND } from '../core/brand.js';
+import type { Catalog } from '../core/loader.js';
+import { packageRoot, readKit } from './kit.js';
 
 /** Where the CLI writes; tests pass collectors instead of the process streams. */
 export interface CliOutput {
@@ -32,12 +33,7 @@ const OPTIONS = {
 
 /** Reads the nearest package.json above `fromUrl`, which is the package root both in src/ and in dist/. */
 export function readPackageInfo(fromUrl: string = import.meta.url): PackageInfo {
-  let directory = path.dirname(fileURLToPath(fromUrl));
-  while (!existsSync(path.join(directory, 'package.json'))) {
-    const parent = path.dirname(directory);
-    if (parent === directory) throw new Error(`No package.json found above ${fileURLToPath(fromUrl)}.`);
-    directory = parent;
-  }
+  const directory = packageRoot(fromUrl);
   const manifest: unknown = JSON.parse(readFileSync(path.join(directory, 'package.json'), 'utf8'));
   const { version, description } = (manifest ?? {}) as Partial<Record<keyof PackageInfo, unknown>>;
   if (typeof version !== 'string' || typeof description !== 'string') {
@@ -72,6 +68,7 @@ export function main(
   args: readonly string[],
   output: CliOutput = PROCESS_OUTPUT,
   readInfo: () => PackageInfo = readPackageInfo,
+  loadKit: () => Catalog = readKit,
 ): number {
   let flags: { version?: boolean; help?: boolean };
   let info: PackageInfo;
@@ -83,6 +80,8 @@ export function main(
   }
   try {
     info = readInfo();
+    // Every run validates the shipped modules, so a damaged install fails here; commands use them from v0.1 M3.
+    loadKit();
   } catch (error) {
     output.stderr(
       `${reasonOf(error)}\nThe ${BRAND.displayName} install looks damaged. Reinstall it and try again.\n`,

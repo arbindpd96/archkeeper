@@ -77,7 +77,8 @@ Add a row whenever something is created. Keep one line per item.
 | `src/core/render.ts`          | Renders modules for a stack, options and brand into a deterministic virtual tree (#20)                         | `render`, `RenderContext`                                                                   |
 | `src/cli/bin.ts`              | Bundle entry (`dist/cli.mjs`): rejects unsupported Node.js before it imports the program                       | none (entry)                                                                                |
 | `src/cli/node-version.ts`     | The supported Node.js range (equal to `engines.node`) and the upgrade message                                  | `SUPPORTED_NODE_RANGE`, `nodeVersionProblem`                                                |
-| `src/cli/main.ts`             | Argument parsing with `node:util` `parseArgs`: `--version` and `--help` until commander arrives in v0.1        | `main`, `readPackageInfo`, `CliOutput`, `PackageInfo`                                       |
+| `src/cli/main.ts`             | Argument parsing with `node:util` `parseArgs`: `--version` and `--help`; every run loads the shipped modules   | `main`, `readPackageInfo`, `CliOutput`, `PackageInfo`                                       |
+| `src/cli/kit.ts`              | The CLI's file access for core: finds the package root and loads `modules/` through `loadCatalog`              | `packageRoot`, `kitReader`, `readKit`                                                       |
 
 ### Modules
 
