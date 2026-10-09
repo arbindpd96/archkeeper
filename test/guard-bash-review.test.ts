@@ -58,6 +58,11 @@ describe('guard-bash review cases', () => {
     ['while read l; do python3 -c "$l"; done', 'ask'],
     ['bash -c "cd $DIR && npm test"', 'ask'],
     ["ls | xargs -I{} sh -c 'echo {}'", 'ask'],
+    [`${GET} | xargs -I% python3 %`, 'deny'],
+    [`${GET} | xargs --replace sh -c 'echo {}'`, 'deny'],
+    ['git ls-files -z | xargs -0 sh -c \'wc -l "$@"\' _', 'allow'],
+    ['git ls-files -z | xargs -0 bash -c \'for f; do echo "$f"; done\' _', 'allow'],
+    ['ls | xargs -I{} cp {} /tmp', 'allow'],
     ["node -e 'console.log(1)'", 'allow'],
     [`find . -name '*.ts' -exec sh -c 'wc -l "$1"' _ {} \\;`, 'allow'],
   ])('inline code fed by a download: %s → %s', (command, expected) => {

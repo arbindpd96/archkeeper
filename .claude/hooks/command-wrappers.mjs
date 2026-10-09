@@ -39,7 +39,7 @@ const UV_RUN_VALUES = [
  * counts the positionals before the command; `script` names the option whose value is a shell command
  * (`joinsRest` appends the remaining words to it); `evaluates` runs all remaining words as a shell command;
  * `subcommand` is the word that must follow for the program to act as a runner; `stdinProgram` is what runs
- * when the command is `-`.
+ * when the command is `-`; `replaces` reads xargs' replace string.
  */
 const WRAPPERS = new Map([
   ['sudo', { short: 'ugCDhprtUTR', long: ['--user', '--group', '--chdir', '--host', '--prompt', '--role'] }],
@@ -64,7 +64,14 @@ const WRAPPERS = new Map([
   ['time', { short: 'of', long: ['--output', '--format'] }],
   ['nice', { short: 'n', long: ['--adjustment'] }],
   ['timeout', { short: 'sk', long: ['--signal', '--kill-after'], operands: 1 }],
-  ['xargs', { short: 'ILnPsEdaJRS', long: ['--max-args', '--max-procs', '--delimiter', '--arg-file'] }],
+  [
+    'xargs',
+    {
+      short: 'ILnPsEdaJRS',
+      long: ['--max-args', '--max-procs', '--delimiter', '--arg-file'],
+      replaces: true,
+    },
+  ],
   ['stdbuf', { short: 'ioe', long: ['--input', '--output', '--error'] }],
   ['setsid', {}],
   ['caffeinate', { short: 'wt' }],
@@ -144,19 +151,43 @@ function wrapperScript(argv, [start, optionsEnd], spec) {
   return null;
 }
 
+function replaceOption(option, next) {
+  if (option === '--replace' || option.startsWith('--replace=')) return option.slice(10) || '{}';
+  const at = option.startsWith('--') ? -1 : option.search(/[IJi]/);
+  if (at < 1) return null;
+  const attached = option.slice(at + 1);
+  return attached || (option[at] === 'i' ? '{}' : (next ?? ''));
+}
+
+// xargs -I, -J, -i and --replace put each input item inside the command's words instead of appending it.
+function replaceString(options) {
+  for (let index = 0; index < options.length; index += 1) {
+    const replace = replaceOption(options[index], options[index + 1]);
+    if (replace !== null) return replace;
+  }
+  return null;
+}
+
+function readRunner(argv, index, spec, found) {
+  found.wrappers.push(commandName(argv[index]));
+  const optionsEnd = skipOptions(argv, index + (spec.subcommand ? 2 : 1), spec);
+  found.script = wrapperScript(argv, [index + 1, optionsEnd], spec);
+  if (spec.replaces) found.xargsReplace = replaceString(argv.slice(index + 1, optionsEnd));
+  return optionsEnd;
+}
+
 /**
  * Strips `VAR=value` prefixes and runners such as sudo, env and xargs. Returns the `program` that runs (or the
- * `script` a runner evaluates), its `args`, its index in argv, and the `assignments` and `wrappers` seen.
+ * `script` a runner evaluates), its `args`, its index in argv, the `assignments` and `wrappers` seen, and the
+ * `xargsReplace` string that xargs substitutes its input for (null when it appends the input instead).
  */
 export function unwrap(argv) {
-  const found = { assignments: [], wrappers: [], script: null };
+  const found = { assignments: [], wrappers: [], script: null, xargsReplace: null };
   let index = takeAssignments(argv, 0, found.assignments);
   let spec = runnerAt(argv, index);
   let stdinProgram = null;
   while (spec) {
-    found.wrappers.push(commandName(argv[index]));
-    const optionsEnd = skipOptions(argv, index + (spec.subcommand ? 2 : 1), spec);
-    found.script = wrapperScript(argv, [index + 1, optionsEnd], spec);
+    const optionsEnd = readRunner(argv, index, spec, found);
     if (found.script !== null) return { ...found, programIndex: argv.length, program: '', args: [] };
     index = takeAssignments(argv, optionsEnd + (spec.operands ?? 0), found.assignments);
     stdinProgram = spec.stdinProgram ?? null;
