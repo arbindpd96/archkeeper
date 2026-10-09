@@ -5,6 +5,7 @@ Record approaches that failed, so no session repeats them. Newest first.
 Format: `- YYYY-MM-DD — <what we tried> → <what went wrong> → <what to do instead>`
 
 - 2026-10-10 — Honouring the allow-secret pragma on any line a write contains → an agent can approve its own secret by adding the pragma to it → honour it only on a line already in the file on disk, and ask before every new marked line.
+- 2026-10-10 — Bounding guard-secrets' MultiEdit replay by edit count times the starting file size → a multi-edit that first grows a 1-byte file and then rescans it ran past the hook timeout, which fails open → add up the characters each edit scans as the text grows.
 - 2026-10-10 — Judging a guard-secrets edit "outside the project" by a realpath prefix check, and then checking only its written text → a case-variant path, a firmlink spelling or a hardlink to a project file looked outside, so an edit completing a token skipped the replay → replay every edit on the real path wherever it is, and never decide inside or outside by path prefix.
 - 2026-10-10 — Asking on every edit guard-secrets cannot replay, including every file outside the project → every edit to auto memory under `~/.claude/projects/` and to a symlinked `CLAUDE.md` prompted → read and replay those files through their real path too, so only new secret lines prompt.
 - 2026-10-10 — Judging an edit by its `new_string` alone → an edit to part of a marked line, such as only its token, never shows that line → replay the edit on the file and judge the lines it leaves.
