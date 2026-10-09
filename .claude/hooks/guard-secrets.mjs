@@ -3,6 +3,7 @@ import path from 'node:path';
 
 const ALLOW_PRAGMA = 'archkeeper:allow-secret';
 const MAX_CHECKED_SIZE = 1_000_000;
+const MAX_REPLAY_WORK = 200_000_000;
 
 const SECRET_PATTERNS = [
   { name: 'AWS access key', pattern: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/ },
@@ -162,6 +163,9 @@ function judgeEdits(location, edits, readRegularFile) {
   const found = readTarget(location, readRegularFile);
   if (found.cause) return cannotCheckEdit(found.cause);
   const before = found.text.replaceAll('\r\n', '\n');
+  if (edits.length * before.length > MAX_REPLAY_WORK) {
+    return cannotCheckEdit('it has too many edits to replay on a file this size');
+  }
   const after = editedText(before, edits);
   if (after.cause) return cannotCheckEdit(after.cause);
   const original = new Set(linesOf(before));

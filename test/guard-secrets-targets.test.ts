@@ -112,6 +112,14 @@ describe('guard-secrets edit replay', () => {
     expect(permissionDecision(run.stdout)).toBe('allow');
   });
 
+  it('asks when a multi-edit has too many edits to replay on a file its size', () => {
+    const dir = tempDir();
+    writeFiles(dir, { 'big.txt': 'x'.repeat(999_000) });
+    const edits = Array.from({ length: 201 }, () => ({ old_string: 'x', new_string: 'x' }));
+    const verdict = verdictFor(path.join(dir, 'big.txt'), { edits }, dir);
+    expect(verdict.reason).toContain('too many edits to replay');
+  });
+
   it('asks rather than reading a file that is not a regular file', () => {
     expect(verdictFor(tempDir(), harmlessEdit).reason).toContain('because it is not a regular file');
   });
