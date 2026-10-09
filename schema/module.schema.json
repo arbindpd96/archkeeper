@@ -90,7 +90,8 @@
                 "type": "string"
               },
               "to": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?:[\\w. /-]|\\{\\{[^{}]*\\}\\})*$"
               },
               "strategy": {
                 "type": "string",
@@ -150,7 +151,8 @@
                 "type": "string"
               },
               "to": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?:[\\w. /-]|\\{\\{[^{}]*\\}\\})*$"
               },
               "strategy": {
                 "type": "string",
@@ -207,7 +209,8 @@
                 "not": {}
               },
               "to": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^(?:[\\w. /-]|\\{\\{[^{}]*\\}\\})*$"
               },
               "strategy": {
                 "type": "string",

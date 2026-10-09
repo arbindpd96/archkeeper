@@ -1,5 +1,5 @@
 import * as z from 'zod/mini';
-import { relativePathProblem, RELATIVE_PATH_HINT } from './paths.js';
+import { relativePathProblem, RELATIVE_PATH_HINT, TARGET_PATH_HINT } from './paths.js';
 
 /** Stacks a module or the project config can name (ADR-0006). */
 export const STACKS = ['ts', 'python'] as const;
@@ -49,6 +49,14 @@ export const relativePath = z.string().check(
     const problem = relativePathProblem(value);
     return problem === undefined ? undefined : { problem, hint: RELATIVE_PATH_HINT };
   }),
+);
+
+/**
+ * A project path a module writes: a {@link relativePath} of portable names (see `targetPathProblem`), with
+ * `{{name}}` variables that render to such names.
+ */
+export const targetPath = relativePath.check(
+  z.regex(/^(?:[\w. /-]|\{\{[^{}]*\}\})*$/, { error: TARGET_PATH_HINT }),
 );
 
 /** A copy of `schema` with a description that the generated JSON Schema shows in editors. */
