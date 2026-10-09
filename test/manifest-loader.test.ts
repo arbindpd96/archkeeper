@@ -137,6 +137,7 @@ describe('loadModule cross-field rules', () => {
     ['a file in the state folder by brand variable', '{{brand.stateDir}}/local/x', 'another folder'],
     ['a file in the hook folder', `${BRAND.hookDir}/guard.mjs`, 'another folder'],
     ['a file in the hook folder by brand variable', '{{brand.hookDir}}/guard.mjs', 'another folder'],
+    ['a file in the state folder by a spaced brand variable', '{{ brand.stateDir }}/x.md', 'another folder'],
   ])('rejects %s as the target of a file written from a template', (_name, to, fix) => {
     const error = loadRich((m) => (entry(m, 'files', 1).to = to));
     expect(error.location).toBe('files[1].to');

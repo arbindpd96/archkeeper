@@ -145,10 +145,10 @@ describe('render refuses two modules writing one thing', () => {
 });
 
 describe('render refuses reserved targets', () => {
-  it('refuses a target that renders into the state folder of the brand it is given', () => {
-    const error = renderError([owned('a', '{{ brand.stateDir }}/notes.md')]);
-    expect(error.location).toBe('files[0].to');
-    expect(error.message).toContain(`renders to "${BRAND.stateDir}/notes.md", which is inside`);
+  it('refuses a target that a template value renders into the state folder', () => {
+    const values = { local: { dir: BRAND.stateDir } };
+    const run = (): unknown => render([owned('a', '{{local.dir}}/notes.md')], { stack: [], values });
+    expect(run).toThrow(`files[0].to: renders to "${BRAND.stateDir}/notes.md", which is inside`);
   });
 
   it('refuses a target that a template value renders to a name with other characters', () => {
