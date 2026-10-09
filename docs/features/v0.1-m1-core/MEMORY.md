@@ -17,6 +17,7 @@ v0.1 milestone M1 (issues #18, #19, #20, #71): modules are validated data (manif
 - 2026-10-10: Errors read `<file>: <location>: <problem>` plus a `Try: <fix>` line, with `file`, `location` and `hint` fields; the CLI (#26) prints the message as is. A fourth subclass, `ConfigError`, covers `.archkeeper/config.json`. Why: the brief asks every message to name the file, the path or line, and the fix; config problems are neither manifest nor resolution errors.
 - 2026-10-10: Manifest file model: `files[]` declares every file a module writes with its strategy and target. `owned` and `create-only` files name a template in `from`; `blocks` and `json` files take no `from` and get their content from `blocks[]` and `gitignore[]`, or from `hooks`/`permissions` (`.claude/settings.json`) and `mcpServers` (`.mcp.json`), the only two json files. Hook scripts are the exception: `hooks[].script` names a bundle under `dist/hooks/`, installed as an owned file in `BRAND.hookDir`. Why: ADR-0014 ("every generated file declares one strategy in its module manifest") and #20 (JSON is built from objects, never from text templates).
 - 2026-10-10: `target: plugin` is allowed only for owned files under `.claude/skills/` or `.claude/agents/`. Why: ADR-0016, the plugin carries only skills and agents.
+- 2026-10-10 (review): a file written from a template (owned, create-only or blocks) may not target `.claude/settings.json`, `.mcp.json`, `.claude/settings.local.json`, any path with a `.git` segment, or anything under `brand.stateDir` or `brand.hookDir`. The loader checks `to` against `BRAND` and the `{{brand.stateDir}}`/`{{brand.hookDir}}` spellings (`src/core/targets.ts`); `render()` checks the rendered path against the brand it is given. Paths compare after NFC and lower-casing, and the render tree refuses two spellings of one path that differ only that way. Why: an owned `.mcp.json` or settings template skipped every MCP and permission check in the schema (#20: JSON is built from objects), and macOS and Windows file systems would let a `.Claude/Settings.json` template replace the merged settings. #23 still adds the file-system checks (symlinks, `GIT~1`, reserved Windows names) for every write.
 - 2026-10-10: Hooks are a union on `event`: `if` only on PreToolUse and PostToolUse, `once` never, no `command`/`args`/`shell` fields (exec form is generated), a required `timeout` of 1–600 s. Why: ADR-0015 and reference §1.2.
 - 2026-10-10 (review): a Stop hook takes no `matcher`. Why: Stop has nothing to match, so Claude Code ignores the field (reference §1.2 example, §1.3); SessionStart (source) and PreCompact keep theirs.
 - 2026-10-10: MCP servers: stdio takes `command`, `args` and `env`; http and sse take `url`, `headers` and `headersHelper`. `env` and `headers` values must be exactly `${NAME}`, and URLs may not carry `user:password@`. Why: #18 asks for `${VAR}`-only env and header values (ADR-0007).
@@ -42,16 +43,16 @@ v0.1 milestone M1 (issues #18, #19, #20, #71): modules are validated data (manif
 
 | Item                            | Before M1 | After M1                | Budget |
 | ------------------------------- | --------- | ----------------------- | ------ |
-| `dist/cli.mjs`                  | 5.2 kB    | 117.4 kB (28.1 kB gzip) | none   |
+| `dist/cli.mjs`                  | 5.2 kB    | 124.3 kB (30.3 kB gzip) | none   |
 | of which zod (`zod/mini`)       | 0         | 58.8 kB                 |        |
 | of which jsonc-parser           | 0         | 24.1 kB                 |        |
-| of which `src/core` + `src/cli` | 5.2 kB    | 33.4 kB                 |        |
-| Tarball                         | 6.5 kB    | 36.4 kB                 | 300 kB |
-| Unpacked                        | 15.7 kB   | 155.1 kB                |        |
+| of which `src/core` + `src/cli` | 5.2 kB    | 40.0 kB                 |        |
+| Tarball                         | 6.5 kB    | 38.7 kB                 | 300 kB |
+| Unpacked                        | 15.7 kB   | 163.0 kB                |        |
 | Files in the package            | 5         | 15                      |        |
 | Runtime dependencies            | 0         | 0                       | 0      |
 
-Bundle parts are the unminified `//#region` sizes. `THIRD_PARTY_LICENSES.md` lists `jsonc-parser@3.3.1` and `zod@4.6.5`, in name order.
+Bundle parts are the unminified `//#region` sizes, measured again after the review fixes (the stricter manifest schema and rules and `src/core/targets.ts` added 6.6 kB; `render()` and the secret scan are not in the CLI bundle yet). `THIRD_PARTY_LICENSES.md` lists `jsonc-parser@3.3.1` and `zod@4.6.5`, in name order.
 
 ## Demo flips (ROADMAP v0.1 "README and demo")
 
@@ -80,13 +81,17 @@ Every module is `internal: true` until its milestone ships its README section an
 - [x] CLI loads the catalog, so zod is inlined and measured (74d7f33); brand JSDoc points at ADR-0012 (d1d3658)
 - [x] `docs/architecture.md`, `docs/decisions.md`, ROADMAP M1 ticked, changeset. `npm run check` green before every commit.
 - [x] Local proofs: two builds in different directories are byte-identical; the packed tarball installs under a path with a space and its bin loads `modules/`; the bundle parses as ES2022, so the Node 18 gate still runs. Plugin root-matching fix for Windows short paths (f2701b2).
-- [x] A `/code-review` pass found two low-severity bugs, both fixed with tests: `modules.remove` of a requirement whose module is left out anyway (9e30edf), and `# ` lines in README code blocks read as headings (b3cdf01). The `reviewer` and `security-reviewer` agents have not run yet.
+- [x] `reviewer` and `security-reviewer` findings answered: template targets for settings, `.mcp.json`, `.git` and kit folders refused (b7d46cd); case-only path clashes and a module writing one path twice (f7504a6); refused pattern values never echoed (8ba0fb1); remote MCP query values, credential variables and `headersHelper` narrowed (345b844); rendered output scanned for secrets (3d36fb1); broad and secret-path allow rules refused (8ee0bb3); conflict hints follow the selection chain (ca29bc7); option value forms named (9091d9b); preset must be an id, request values quoted (166fcf8); fractional config version (05e85cd); inherited option names (b36956b); no `matcher` on Stop (9c6774c); hook script paths checked (0f4cb8c); gitignore negations and rendered lines (138ba59); `toImport` outside the project (58ba89e); `compareText` everywhere (70b3fc8); `readKit` in the modules test (29abe57); one fix for a damaged install (9e7b703); docs nits (c7a5fcb).
+- [x] A `/code-review` pass found two low-severity bugs, both fixed with tests: `modules.remove` of a requirement whose module is left out anyway (9e30edf), and `# ` lines in README code blocks read as headings (b3cdf01). The `reviewer` and `security-reviewer` agents ran afterwards (see the next line).
 
 ## Next step
 
-Open the M1 PR (closes #18, #19, #20, #71), run the `reviewer` and `security-reviewer` agents on the diff and answer every finding, then watch the Windows leg of CI run the render snapshot. Then start M2 with `/new-feature v0.1-m2-...` (#21–#24); note the purity lint decision above for #24.
+Open the M1 PR (closes #18, #19, #20, #71). In the PR body, say that #18's "every CLI command in the command registry declares a demo or is internal" moves to #26 (`TODO(#26)` in `scripts/check-demos.mjs`; #26's acceptance criteria cover it). Before the PR closes #20: get the owner's confirmation of the render tree's list of entries per path and amend #20's text or comment on it, and confirm that the Windows leg of CI runs the render snapshot green. Then start M2 with `/new-feature v0.1-m2-...` (#21–#24); note the purity lint decision above for #24.
 
 ## Gotchas / don't try again
+
+- Review finding declined: `scripts/demo-rules.mjs` keeps its own demo-or-internal check rather than importing `manifest-rules.ts`. #18 places the rule in `check-demos`, which reads raw JSON with no build and no zod, reports every module at once, and will check CLI commands too (#26), which the loader never sees; the loader's copy guards every run. Sharing one implementation would make a dependency-free repo script load TypeScript and zod through a resolve hook.
+- ESLint's `no-control-regex` refuses `\x00`-style ranges in a regex; use `hasControlCharacter` from `src/core/paths.ts` (as `ignoreLineProblem` does) instead.
 
 - Probe code in a gitignored `tmp/` folder is still linted by `npm run lint` (ESLint does not read `.gitignore`); experiment in the session scratchpad instead.
 - A backslash-u escape for the byte-order mark ended up on disk as the invisible character itself, twice; write `String.fromCodePoint(0xfeff)` in code and describe it in words in docs.
@@ -98,6 +103,6 @@ Open the M1 PR (closes #18, #19, #20, #71), run the `reviewer` and `security-rev
 
 ## Open questions
 
-- Owner: confirm the decisions above that go past the issue texts, chiefly the render tree's list per path, `ConfigError`, `compose`, the purity lint's reach into M2, and jsonc-parser arriving in M1.
+- Owner: confirm the decisions above that go past the issue texts, chiefly the render tree's list per path (#20's acceptance criteria still say one `{content, strategy, module, blockId?}` per path, so #20's text needs an amendment or a comment before the PR closes it), `ConfigError`, `compose`, the purity lint's reach into M2, and jsonc-parser arriving in M1.
 - `headersHelper`'s runtime (which shell runs it, its working directory, which variables expand in it) is not in reference §1–11, so the schema takes only the narrowest form. Verify it before the first module uses the field, and widen the form only then.
 - M3 decides the exact `$schema` URL `init` writes into the config (a versioned CDN URL of the published schema is the proposal).
