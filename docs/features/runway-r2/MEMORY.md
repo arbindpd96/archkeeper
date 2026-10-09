@@ -1,6 +1,6 @@
 # Feature: runway-r2
 
-Status: in progress | Branch: feat/runway-r2
+Status: in progress (ready for PR) | Branch: feat/runway-r2
 
 ## Goal
 
@@ -8,27 +8,50 @@ v0.0 Runway milestone R2 (issues #8–#13): fixture projects, a demo-GIF pipelin
 
 ## Decisions (never undo without asking)
 
-- 2026-10-09: Dependabot PRs keep `dependabot[bot]` authorship (ROADMAP proposed default #11), so #13 ships no re-authoring step and no `deps:adopt`. Why: owner decision recorded in ROADMAP "How we work".
+- 2026-10-09: Dependabot PRs keep `dependabot[bot]` authorship (ROADMAP proposed default #11), so #13 ships no re-authoring steps and no `deps:adopt`. `check-commit-authors` allows `dependabot[bot]` with its exact address only when `PR_AUTHOR` is `dependabot[bot]`. Why: owner decision in ROADMAP "How we work"; the PR-author condition stops other PRs from borrowing the identity.
+- 2026-10-09: `release.yml` triggers on `v*` tag pushes only, with no `workflow_dispatch`. The dry run is the `release-dry-run` job in `ci.yml` (part of `CI passed`), and the post-publish smoke runs automatically: a job polls the registry for an hour, then the 3-OS smoke and the GitHub Release follow; after a late approval, re-run only that job. Why: coordinator's brief (tag push only, PR-time dry run); a staged publish is not on the registry until the maintainer approves it.
+- 2026-10-09: The release splits into a `build` job with no secret (guards, tagged commit on `main`, `npm run check`, `package --release`, `pack-release`, tarball artifact) and a `stage` job in the `npm-stage` environment that installs nothing, checks the tarball's sha512 and stages that tarball. Why: security review; dev dependencies never run beside the token, and the environment (deployment rule: `v*` tags) keeps the token from other branches' workflows.
+- 2026-10-09: `pack-release` packs only when the checkout equals the tagged commit apart from the removed `prepare` (compared as parsed JSON); the summary prints the build's shasum, `stage-summary` fails if npm staged a different one, and the runbook requires matching it in `npm stage view <id>`. After approval, the wait job requires npm to serve the same files as the build artifact (`npm pack <spec>`, extract, `diff -r`), which also covers the laptop first publish. Why: security review; 2FA approval only protects if the maintainer can compare what they approve.
+- 2026-10-09: A tagged version already on npm skips the token check and staging (the laptop first publish, or a re-run after approval); the GitHub Release step skips an existing release. Why: ADR-0013's first publish is from the laptop, and re-runs must not stage twice or fail.
+- 2026-10-09: `check-package --release` counts `prepare` as an install script; local and PR runs allow it. The release removes it with `npm pkg delete scripts.prepare`, then runs `npm run check` and `npm run package -- --release` on the stripped manifest. Why: #11 comment; keeps local `npm run check` green while the published manifest cannot carry husky's `prepare`.
+- 2026-10-09: Every stage, real or dry run, passes an explicit dist-tag: `next` for prereleases, `latest` otherwise. `check-release` refuses a version below the one npm's `latest` points at (`npm view -- <name> dist-tags.latest`; E404 means not on npm yet). Why: the owner reserved the name with a notice-only `0.0.1` on `latest`, so npm refuses an implicit `latest` at or below it (coordinator, 2026-10-09); an explicit tag turns off npm's own backwards check, which the guard replaces. The first real version is above 0.0.1 (planned `0.1.0-rc.0`).
+- 2026-10-09: The PR dry run packs the tarball and runs `npm stage publish <tgz> --dry-run`, and skips that step when the version is already on npm. Why: it exercises the exact release command (no auth needed, `private` accepted); npm refuses even a dry run of a published version, which would otherwise fail every PR after a stable release.
+- 2026-10-09: The changesets scripts are `npm run changeset` and `npm run version-packages` (`changeset version` plus a lockfile sync), not `version`. Why: an npm script named `version` also runs inside `npm version` and would bump twice. The GitHub changelog needs `GITHUB_TOKEN="$(gh auth token)"`.
+- 2026-10-09: The changeset gate covers every published folder (`src/`, `modules/`, `packs/`, `schema/`) and reads PR labels live with `gh pr view`; `ci.yml` keeps its default PR trigger types. Why: a re-run reuses the original payload; adding `labeled` triggers would re-run all of CI, and skipping jobs on label events would let `CI passed` go green without tests.
+- 2026-10-09: Jobs that run only a dependency-free script (`changeset`, `commit-authors`) install nothing. Why: the scripts import only `node:` built-ins, `scripts/lib.mjs` and `.claude/hooks/attribution.mjs`.
+- 2026-10-09: `render-tapes` installs the packed tarball globally under a temp npm prefix, puts its `bin` first on PATH and sets `npm_config_prefix`, then runs VHS in a copy of the tape's fixture with tokens, secrets and npm config removed from the environment. Why: installing into the fixture copy would also install the fixture's own devDependencies from the network; the prefix lets both `<bin>` and `npx <bin>` resolve offline; a tape is a shell script.
+- 2026-10-09: Tape directives are comment lines: `# fixture: <name>` (required), `# live`, `# hero`. render-tapes owns `Output` and `_settings.tape` and refuses `Output`, `Source`, `Env`, `Screenshot`, `Copy`, `Paste`, any `Set` but `TypingSpeed`, literal slugs and unknown placeholders. Hero GIFs get 30 s, others 20 s; every GIF is ≤ 2,000,000 bytes and needs a tape. `docs/media/_*.gif` (pipeline GIFs) are gitignored and skipped by `gifs:pull`, which accepts only a successful `demo-gifs` run of this repository (not a fork's).
+- 2026-10-09: The VHS pin lives in `VHS_VERSION` in `scripts/render-tapes.mjs` and the `vhs-action` `version` input; a test keeps them equal, and render-tapes refuses any other `vhs --version`. vhs-action downloads releases by tag, so VHS itself cannot be pinned by SHA, and it fetches ttyd's latest release; accepted because the job is unprivileged and only GIF output is at stake.
+- 2026-10-09: `npm run demos` (check-demos) runs in `npm run check` and the CI quality job on committed GIFs. Why: cheap, and it covers live GIFs now; #18 (v0.1 M1) extends it to missing tapes, GIFs and README sections.
+- 2026-10-09: lint-staged runs ESLint with `--config eslint.config.mjs`. Why: ESLint 10 looks up the config per file, so a staged fixture file would otherwise be linted with the fixture's own `eslint.config.js`.
+- 2026-10-09: Each script keeps its own small `parseArgs` wrapper. Why: their options and usage texts differ, so a shared helper would save a few lines and add a layer (code review nit, answered).
 
 ## Done
 
-- [ ] #8 fixtures
-- [ ] #10 ADR-0013
-- [ ] #12 changesets
-- [ ] #11 release workflow and runbook
-- [ ] #9 demo-GIF pipeline
-- [ ] #13 commit-author check
+- [x] #8 fixtures `examples/ts-app`, `py-app`, `mixed`, excluded from lint, Prettier, the comment check, coverage and the package; `fixtureCopy` helper
+- [x] #10 ADR-0013, ADR-0009 status line, decisions row
+- [x] #12 changesets config and scripts; `check-changeset` gate and `changeset` job
+- [x] #11 `check-release`, `check-package --release`, `pack-release`, `stage-summary`, `release.yml`, `release-dry-run` job, `docs/releasing.md`
+- [x] #9 `check-demos`, `render-tapes`, `_settings.tape`, `_smoke.tape`, `demo-gifs.yml`, `gifs:pull`, docs and the `/demo-gif` skill
+- [x] #13 `check-commit-authors` and the `commit-authors` job
+- [x] The `reviewer` and `security-reviewer` findings fixed (build/stage split, environment, tag-on-main, pack and content checks, shasum, re-run safety, dry-run skip, first-publish guards, annotation escaping, `git log -z`, published folders, tape hardening, `gifs:pull` run check, path filters, test isolation, docs) or answered here.
+- [x] Explicit dist-tags and the below-`latest` guard after the owner's `0.0.1` name reservation; PR #74's explicit-tag publish dry run mirrored.
+- Verified locally: actionlint 1.7.12 with shellcheck 0.11.0 on all workflows; the release dry-run job and a simulated `0.1.0-rc.0` stage job replayed on fresh copies; `_smoke.tape` rendered through render-tapes with a stand-in `vhs` (real pack, install and placeholders); `version-packages` on a scratch copy; check-demos on a real ffmpeg GIF; the author check over all of history; `openssl` sha512 equals npm's integrity; `npm pack <spec>` and extract against the registry.
 
 ## Next step
 
-Add the three fixture projects under `examples/` (#8) and keep them out of lint, the comment check, coverage and the package.
-
-Reuse: `scripts/lib.mjs` (`exitWith`, `repositoryFiles`), `test/helpers.ts` (`runScript`, `tempDir`, `tempRepo`, `writeFiles`), the action SHAs pinned in `.github/workflows/ci.yml`, `AI_ATTRIBUTION` in `.claude/hooks/attribution.mjs` (read-only: PR #70 owns `.claude/hooks/**`).
+Open the PR for `feat/runway-r2` (the coordinator does this). Watch the first `demo-gifs` run render `_smoke.tape` with the real VHS (not installed locally) and the first `release-dry-run`, `changeset` and `commit-authors` jobs. Owner actions are listed below. Then R3.
 
 ## Gotchas / don't try again
 
-- None yet.
+- ESLint 10 lints a file with the nearest `eslint.config.*`, so root `ignores` do not cover files passed explicitly inside a fixture that has its own config; pass `--config`/`overrideConfigFile`.
+- commitlint's parser reads a body line that starts with `word:` (or carries `# ...` text) as a footer and warns `footer-leading-blank`; reword the body.
+- macOS bash 3.2 with `set -u` fails on an empty array expansion; the workflows run bash 5 without `-u`.
+- npm (11.17) checks the registry even in `publish --dry-run`: an implicit `latest` fails at or below the highest version, and a version already published fails whatever `--tag` says (only `--force` skips it).
+- The registry holds `0.0.0-stage` (a staged-publishing stub) and the owner's `0.0.1` placeholder on `latest`. The workflows query exact versions.
 
 ## Open questions
 
-- None yet.
+- Owner actions: create the `no-release` label; create `NPM_STAGE_TOKEN` as a secret of the `npm-stage` environment, not the repository (#58 says repository secret), with the environment's deployment rule set to `v*` tags; add a `v*` tag ruleset (only the maintainer creates, no updates or deletes).
+- For the coordinator: PR #74's `npm publish --dry-run --tag ci-dry-run` (mirrored here) will fail on every PR once a stable version is published and `package.json` still holds it, and its comment "independent of what is on npm" is not quite right; `--force` (dry run only) or a skip like `release-dry-run`'s would fix it.
+- For the hooks owner (PR #70): `guard-bash`'s publish rules do not cover `npm stage approve` or `reject`; 2FA still gates approval.
