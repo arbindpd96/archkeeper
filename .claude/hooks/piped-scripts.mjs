@@ -1,5 +1,6 @@
 import { decodeEscapes } from './ansi-c-quote.mjs';
-import { isShell, readInterpreter } from './interpreters.mjs';
+import { readInterpreter } from './interpreters.mjs';
+import { isShell } from './shell-syntax.mjs';
 import { ask, strictest } from './verdicts.mjs';
 
 /** Verdict for text piped into a shell that the guard cannot read in full. */
