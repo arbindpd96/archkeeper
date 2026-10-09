@@ -110,7 +110,8 @@ Use it only in tests, and never on real secrets.
 Every user-facing feature ships a README section and a GIF recorded with [VHS](https://github.com/charmbracelet/vhs) from `docs/media/tapes/<feature>.tape`.
 
 - **Brand placeholders.** Write commands as `Type "{{brand.binName}} init"`, never with the product name. `scripts/render-tapes.mjs` fills `{{brand.*}}` from `src/core/brand.ts` into a temp copy, so a tape never runs through `vhs` directly and GIFs always show the current command.
-- **Tape header.** A `# fixture: <name>` line names the `examples/` project the tape runs in. Font, size and theme come from `docs/media/tapes/_settings.tape`, and the script adds the output path, so tapes contain no `Output` or `Source`.
+- **Tape header.** A `# fixture: <name>` line names the `examples/` project the tape runs in. Font, size and theme come from `docs/media/tapes/_settings.tape`, and the script adds the output path, so tapes contain no `Output`, `Source` or settings other than `Set TypingSpeed`.
+- **Tapes are shell scripts.** The script refuses `Env`, `Screenshot`, `Copy` and `Paste`, and keeps tokens and npm config out of the tape's shell. Still, review a tape like any script before you record it on your machine.
 - **CI tapes.** The `demo-gifs` workflow renders every tape not marked `# live` against the packed CLI and uploads the GIFs as the `demo-gifs` artifact. It never commits: the maintainer runs `npm run gifs:pull -- <run-id>` and commits the GIFs.
 - **Live tapes.** A tape marked `# live` needs a real Claude Code session, so the maintainer records it locally with `node scripts/render-tapes.mjs --live <feature>` after `npm run build`. The script refuses any VHS other than the 0.12.1 that CI pins; install JetBrains Mono too.
 - **Limits.** A GIF is at most 2 MB and 20 s, or 30 s for a tape marked `# hero`. `npm run demos` checks committed GIFs, and the workflow checks rendered ones.
