@@ -25,6 +25,12 @@ export function relativePathProblem(path: string): string | undefined {
   return undefined;
 }
 
+/** The form two paths share when they name one file on the default macOS and Windows file systems. */
+export function foldedPath(path: string): string {
+  // Those file systems ignore case and Unicode normalisation in names.
+  return path.normalize('NFC').toLowerCase();
+}
+
 /** The fix for a path that {@link relativePathProblem} refuses. */
 export const RELATIVE_PATH_HINT =
   'use a relative path with forward slashes, such as docs/notes.md, with no ".." segment, drive or ":"';

@@ -27,6 +27,16 @@ const block = (id: string, blockId: string): KitModule =>
     { [`modules/${id}/files/b.md`]: 'B\n' },
   );
 
+const blockIn = (id: string, file: string): KitModule =>
+  kit(
+    id,
+    {
+      files: [{ to: file, strategy: 'blocks', target: 'project' }],
+      blocks: [{ file, id: 'own', template: 'b.md' }],
+    },
+    { [`modules/${id}/files/b.md`]: 'B\n' },
+  );
+
 const settings = (id: string, fields: ManifestData): KitModule =>
   kit(
     id,
@@ -93,6 +103,40 @@ describe('render refuses two modules writing one thing', () => {
     const error = renderError(modules());
     expect(error.file).toBe(file);
     expect(error.message).toContain(problem);
+  });
+
+  it.each<[string, () => KitModule[], string]>([
+    ['in case', () => [owned('a', 'docs/Notes.md'), owned('b', 'docs/notes.md')], 'docs/Notes.md from a'],
+    [
+      'in Unicode normalisation',
+      () => [owned('a', 'docs/caf\u00e9.md'), owned('b', 'docs/cafe\u0301.md')],
+      'from a name one file',
+    ],
+    [
+      'for blocks with their own ids',
+      () => [block('a', 'one'), blockIn('b', 'agents.md')],
+      'AGENTS.md from a',
+    ],
+  ])('two spellings of one path that differ only %s', (_name, modules, problem) => {
+    const error = renderError(modules());
+    expect(error.message).toContain(problem);
+    expect(error.hint).toBe('spell the path the same way in every module');
+  });
+
+  it('names a module whose two targets render to one path', () => {
+    const twice = kit(
+      'm',
+      {
+        files: [
+          { from: 'a.md', to: '{{brand.rulesDir}}/a.md', strategy: 'owned', target: 'project' },
+          { from: 'a.md', to: `${BRAND.rulesDir}/a.md`, strategy: 'owned', target: 'project' },
+        ],
+      },
+      { 'modules/m/files/a.md': 'A\n' },
+    );
+    const error = renderError([twice]);
+    expect(error.message).toContain('is written by m twice');
+    expect(error.hint).toContain('list the file once in files');
   });
 
   it('lets several modules add their own blocks and JSON entries to one file', () => {

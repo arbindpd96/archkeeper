@@ -1,5 +1,6 @@
 import type { Brand } from './brand.js';
 import { MCP_FILE, SETTINGS_FILE } from './manifest-schema.js';
+import { foldedPath as folded } from './paths.js';
 
 /** The personal settings file of Claude Code, which the kit never writes. */
 export const LOCAL_SETTINGS_FILE = '.claude/settings.local.json';
@@ -11,11 +12,6 @@ export type KitFolders = Pick<Brand, 'stateDir' | 'hookDir'>;
 export interface TargetProblem {
   readonly problem: string;
   readonly hint: string;
-}
-
-// The default file systems of macOS and Windows ignore case and Unicode normalisation in names.
-function folded(path: string): string {
-  return path.normalize('NFC').toLowerCase();
 }
 
 function inside(path: string, folder: string): boolean {
