@@ -134,6 +134,7 @@ Every module is a manifest only, marked `internal`, until its milestone adds fil
 | `scripts/pull-gifs.mjs`                                                                                     | `npm run gifs:pull -- <run-id>`: copies a demo-gifs run's feature GIFs into `docs/media/` for the maintainer to commit     |
 | `test/helpers.ts`                                                                                           | Test helpers: `runScript`, hook verdicts, temp dirs and repos, `git`, `commitFiles`, `fixtureCopy`, `fakeBin`, `gifBytes`  |
 | `test/kit-fixtures.ts`                                                                                      | Core test data: an in-memory `ReadKitFile`, a manifest that uses every field, and the v0.1 preset chain                    |
+| `test/secret-samples.ts`                                                                                    | Likely secrets by kind, built at run time, shared by the core secret scan and guard-secrets tests                          |
 | `test/fixtures/render/`                                                                                     | Three fixture modules for the renderer's snapshot, property and brand tests; hook bundles live in `hook-bundles/`          |
 
 ## This repo's Claude Code setup
