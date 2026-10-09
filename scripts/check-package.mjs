@@ -4,7 +4,7 @@ import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs
 import path from 'node:path';
 import { publint } from 'publint';
 import { formatMessage } from 'publint/utils';
-import { exitWith } from './lib.mjs';
+import { exitWith, npm } from './lib.mjs';
 
 const SNAPSHOT = 'scripts/package-files.txt';
 const RUNTIME_FIELDS = ['dependencies', 'optionalDependencies', 'peerDependencies'];
@@ -18,32 +18,6 @@ const BUDGET_KEYS = [
 
 const readJson = (file) => JSON.parse(readFileSync(file, 'utf8'));
 const kB = (bytes) => `${(bytes / 1000).toFixed(1)} kB`;
-
-/** Finds npm's JS entry: the npm that launched this script, else the npm installed beside this Node.js. */
-function npmCli() {
-  const nodeDirectory = path.dirname(process.execPath);
-  const candidates = [
-    process.env.npm_execpath,
-    path.join(nodeDirectory, 'node_modules', 'npm', 'bin', 'npm-cli.js'),
-    path.join(nodeDirectory, '..', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
-  ];
-  return candidates.find((file) => file !== undefined && /npm-cli\.c?js$/.test(file) && existsSync(file));
-}
-
-/** Runs npm without a shell, through Node.js when npm's entry is found, else the `npm` on PATH. */
-function npm(args, cwd) {
-  const cli = npmCli();
-  const [command, prefix] = cli === undefined ? ['npm', []] : [process.execPath, [cli]];
-  try {
-    return execFileSync(command, [...prefix, ...args], {
-      cwd,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-  } catch (error) {
-    return exitWith(`check-package: npm ${args[0]} failed: ${error.message}\nRun it as npm run package.`, 1);
-  }
-}
 
 /** Reads budgets.json, exiting unless every expected budget is a non-negative finite number. */
 function readBudgets(root) {
@@ -160,7 +134,8 @@ if (!existsSync(path.join(root, 'dist'))) {
 }
 
 const runtime = RUNTIME_FIELDS.flatMap((field) => Object.keys(manifest[field] ?? {}));
-const [pack] = JSON.parse(npm(['pack', '--dry-run', '--json', '--ignore-scripts'], root));
+const packArgs = ['pack', '--dry-run', '--json', '--ignore-scripts'];
+const [pack] = JSON.parse(npm(packArgs, { cwd: root, nextStep: 'Run it as npm run package.' }));
 const files = pack.files.map((entry) => entry.path).sort();
 const { rows, problems: budgetProblems } = measure(pack, runtime, budgets);
 report(rows);
