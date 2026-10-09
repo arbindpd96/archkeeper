@@ -21,11 +21,12 @@ const NODE_READ = String.raw`JSON\.parse\(\s*${FS}\.readFileSync\(\s*${STDIN_ARG
 const PERL_REGEX = String.raw`[^/$@{}\\\`]*`;
 const RUBY_REGEX = String.raw`[^/$@{}#\\\`]*`;
 
-const whole = (pattern) => new RegExp(String.raw`^\s*(?:${pattern})\s*;?\s*$`);
+// Separators never let two whitespace runs compete for the same characters, which keeps matching linear.
+const whole = (pattern) => new RegExp(String.raw`^\s*(?:${pattern})\s*(?:;\s*)?$`);
 
 // Short allowlist of idioms that read piped data and only print it.
 const SAFE_CODE = new Map([
-  ['python', whole(String.raw`(?:${PY_STATEMENT})(?:\s*[;\n]\s*(?:${PY_STATEMENT}))*`)],
+  ['python', whole(String.raw`(?:${PY_STATEMENT})(?:[ \t]*[;\n]\s*(?:${PY_STATEMENT}))*`)],
   ['node', whole(String.raw`${NODE_READ}|console\.log\(\s*${NODE_READ}\s*\)`)],
   [
     'perl',
