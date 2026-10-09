@@ -12,6 +12,7 @@ const TEMPLATED_FOLDERS: KitFolders = {
   stateDir: '{{brand.stateDir}}',
   hookDir: '{{brand.hookDir}}',
   sidecarSuffix: '{{brand.sidecarSuffix}}',
+  legacySlugs: [],
 };
 
 function finding(path: readonly PropertyKey[], problem: string, hint: string): Finding {
