@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "The JSON Schema for this file, for editors.",
+      "type": "string"
+    },
+    "version": {
+      "description": "The config format version.",
+      "type": "number",
+      "const": 1
+    },
+    "preset": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The preset."
+    },
+    "modules": {
+      "default": {
+        "add": [],
+        "remove": []
+      },
+      "description": "Modules to add to or remove from the preset.",
+      "type": "object",
+      "properties": {
+        "add": {
+          "default": [],
+          "description": "Modules to enable on top of the preset.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+          }
+        },
+        "remove": {
+          "default": [],
+          "description": "Modules of the preset to leave out.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+          }
+        }
+      }
+    },
+    "stack": {
+      "description": "The project stack, overriding detection; an empty list means none.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "ts",
+          "python"
+        ]
+      }
+    },
+    "options": {
+      "default": {},
+      "description": "Module options by module id; each module declares its options and their defaults.",
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "pattern": "^[a-z][A-Za-z0-9]*(?:\\.[a-z][A-Za-z0-9]*)*$"
+        },
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "compose": {
+      "default": {
+        "superpowers": false,
+        "specKit": false
+      },
+      "description": "Tools init offered to compose with (ADR-0008); v0.1 prints their install commands only.",
+      "type": "object",
+      "properties": {
+        "superpowers": {
+          "default": false,
+          "description": "Whether to use obra/superpowers alongside the kit.",
+          "type": "boolean"
+        },
+        "specKit": {
+          "default": false,
+          "description": "Whether to use github/spec-kit alongside the kit.",
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "required": [
+    "preset"
+  ],
+  "title": "Project config",
+  "description": "The project config: which preset and modules to install, and their options (ADR-0014)."
+}

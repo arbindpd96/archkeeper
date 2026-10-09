@@ -22,9 +22,13 @@ registerHooks({
 
 const z = await import('zod/mini');
 const { moduleManifestSchema } = await import('../src/core/manifest-schema.ts');
+const { configSchema } = await import('../src/core/config-schema.ts');
 
 /** The generated files and the zod schemas they come from. */
-const SCHEMAS = { 'schema/module.schema.json': moduleManifestSchema };
+const SCHEMAS = {
+  'schema/config.schema.json': configSchema,
+  'schema/module.schema.json': moduleManifestSchema,
+};
 
 /** Renders one schema as JSON Schema draft 7, which editors support best, describing the input a user writes. */
 function render(schema) {
