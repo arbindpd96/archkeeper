@@ -34,6 +34,7 @@ v0.0 Runway milestone R3 (issues #14, #15): ADR-0012, 0014, 0015, 0016 and 0018 
 - 2026-10-09: `doctor --online` contacts a kit-owned server unasked only when its URL has the origin the running kit's manifest renders for it (ADR-0018). Why: ownership comes from the committed lock, which ADR-0014 treats as untrusted, so a cloned repo could repoint a kit-named server and record a matching hash.
 - 2026-10-09: A JSON entry the user already has under a kit key stays the user's even when it equals the kit's entry: it is not recorded in `ownedKeys`, never duplicated, changed or removed (ADR-0014). Why: adopting it would let `uninstall` delete the user's own rule, such as this repo's `Read(**/.env)`, and break the v0.1 exit criterion that a pre-existing `settings.json` comes back deep-equal.
 - 2026-10-09: Sidecars are committed with `lock.json`, never gitignored (ADR-0014). Why: `pending` is in the committed lock, and a lock pulled without its sidecar would mark a kit change nobody merged as seen. Keeping `pending` and its blob out of the committed state instead would need a second, uncommitted blob store.
+- 2026-10-09: Switching `--skills` to `plugin` removes only unmodified project copies, keeps and reports modified ones, and records none of these removals in `removed[]` (ADR-0016). Why: ADR-0014 never loses a user byte, and a config-driven removal in `removed[]` would stop switching back from writing the copies again.
 
 ## Done
 

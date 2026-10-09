@@ -27,7 +27,9 @@ R1 already reflects this split. ADR-0011 keeps `plugin/` in the repo but out of 
 **Skills and agents.**
 
 - Skills are written into the project by default (v0.1), as `owned` files ([ADR-0014](0014-on-disk-contract.md)).
-- From v0.3, the plugin carries the agents and the kit's skills. `--skills local|plugin` is recorded in `config.json`; switching to `plugin` removes the project copies, and switching back writes them again.
+- From v0.3, the plugin carries the agents and the kit's skills. `--skills local|plugin` is recorded in `config.json`.
+  - Switching to `plugin` removes each project copy that is still exactly as the kit wrote it. A copy the user modified is kept and reported, and `doctor` flags it as a duplicate of the plugin's skill, so no user byte is lost (ADR-0014).
+  - These removals follow the config, not a user deletion, so they are not recorded in `removed[]`. Switching back to `local` therefore writes the removed copies again, and treats a kept copy like any other user-modified owned file.
 - The plugin's contents are the same for every user, so nothing stops a user with local skills from also installing the plugin, for its agents for example. They then have each skill twice, as `/<skill>` and `/archkeeper:<skill>`. `doctor` flags every duplicate and names the fix; that is the guarantee. v0.3 M1 decides whether the skills move into a separate opt-in plugin so the agents can be installed alone.
 - The plugin carries only skills and agents. It never ships hooks, settings, MCP servers or instruction files.
 - Its skills and agents follow the same frontmatter allowlist as the project's ([ADR-0015](0015-hook-runtime.md)): no `hooks` or `mcpServers`, `permissionMode` only as `default` or `plan`, a skill's `allowed-tools` limited to `Read`, `Grep`, `Glob` and literal `Bash(<command>)` entries, and no load-time `` !`cmd` ``. Claude Code already ignores `hooks`, `mcpServers` and `permissionMode` on plugin agents (reference §3.2), but the kit does not rely on that: the static test also runs on the built `plugin/`.
