@@ -96,7 +96,12 @@ Every generated file declares one strategy in its module manifest (#18):
 - **First contact loses nothing.** An existing file identical to the kit output (after LF normalisation) is adopted. A different existing file at an owned path is never overwritten: it is left alone with `base: null` and reported, and the kit's version goes to a sidecar.
 - **User deletions are respected.** A kit file, block or JSON entry the user deleted is recorded in `removed[]` and never recreated. A kit-owned JSON entry missing from its file counts as a user deletion, so a deny rule the user removed is never added back.
 - **Path-checked.** Every write and delete target is refused when it is absolute or contains `..`, resolves (via realpath) through a symlink outside the project root, lies inside `.git/`, or uses a Windows reserved name (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`) or a name ending in a dot or space. Deletes never follow symlinks (#23).
-- **Transactional.** Every touched file is backed up first. Each write goes to a temp sibling and is renamed into place, retrying with backoff on Windows `EPERM` and `EBUSY`. Any failure restores every file byte-identical. The lock is written last, so an interrupted run leaves the previous lock and the next run plans again.
+- **Symlinks are left alone.** A write target that is itself a symlink, even one inside the project such as `CLAUDE.md -> AGENTS.md`, is never written through or replaced. It is left alone and reported, and the kit's content goes to a sidecar.
+- **Transactional.**
+  - Every touched path is backed up first. The backup manifest records whether each path was a file, a symlink (with its target) or absent.
+  - Each write goes to a temp sibling with a random name, created exclusively and without following symlinks (`wx`, plus `O_NOFOLLOW` where the platform has it), and is renamed into place, retrying with backoff on Windows `EPERM` and `EBUSY`.
+  - Any failure rolls every path back to its previous content and type, removing what the run created.
+  - The lock is written last, so an interrupted run leaves the previous lock and the next run plans again.
 - **Versions.** A lock with a newer `lockfileVersion`, or a config with a newer `version`, fails with "upgrade archkeeper", and a kit older than `lock.kit.version` refuses to run, so a downgrade cannot rewrite a newer install.
 
 ### Updates
