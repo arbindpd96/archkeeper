@@ -95,6 +95,8 @@ Every generated file declares one strategy in its module manifest (#18):
 
 - **Planned purely.** Core turns the rendered tree, a snapshot of the project and the lock into ordered operations, each with a reason: `create`, `insertBlock`, `replaceBlock`, `mergeJson`, `sidecar`, `adopt`, `skip`, `delete` and `respectRemoval` (#21). Planning against the state the previous apply left behind yields no operation but `skip`, so a second run writes nothing.
 - **First contact loses nothing.** An existing file identical to the kit output (after LF normalisation) is adopted. A different existing file at an owned path is never overwritten: it is left alone with `base: null` and reported, and the kit's version goes to a sidecar.
+  - A hook script with `base: null` is not registered in settings, so a script the kit neither wrote nor adopted never runs as the kit's guard.
+  - `doctor` reports every registered kit hook whose script does not hash to its `base`.
 - **User deletions are respected.** A kit file, block or JSON entry the user deleted is recorded in `removed[]` and never recreated. A kit-owned JSON entry missing from its file counts as a user deletion, so a deny rule the user removed is never added back.
 - **Path-checked.** #23 holds the exact rules and tests each case on all three OSes. Deletes never follow symlinks, and every write and delete target, including every path read from the lock, is refused when it:
   - is absolute, starts with a drive letter or a UNC prefix, or contains a `..` segment, a backslash, a `:` (which also rules out NTFS streams) or a NUL byte
