@@ -7,6 +7,7 @@ import { relativePathProblem } from './paths.js';
 import { hookScriptPath, type JsonPart, mcpPart, settingsPart, toJson } from './render-json.js';
 import { collectEntries, type Draft, type RenderTree } from './render-tree.js';
 import type { Stack } from './schema-parts.js';
+import { findSecret } from './secrets.js';
 import { reservedTarget } from './targets.js';
 import { brandScope, renderTemplate, type TemplateScope } from './template.js';
 import { asLfText } from './text.js';
@@ -137,10 +138,27 @@ function moduleDrafts(job: ModuleRender): Draft[] {
   );
 }
 
+// The schema keeps literal values out of env, headers and URLs; this catches a token anywhere else (ADR-0007).
+function refuseSecrets(tree: RenderTree): void {
+  for (const [path, entries] of tree) {
+    for (const { content, module } of entries) {
+      const secret = findSecret(content);
+      if (secret === undefined) continue;
+      throw new RenderError({
+        file: path,
+        location: '',
+        problem: `would get a likely ${secret.name} from ${module}, on line ${String(secret.line)} of its entry`,
+        hint: 'reference the value as ${NAME} or use OAuth: the kit never writes a secret into a project',
+      });
+    }
+  }
+}
+
 /**
  * Renders modules into a virtual tree of project paths (#20). The same modules, context and brand give the same
  * bytes on every run and OS and in any module order: output is LF, sorted, and reads no clock, path or
- * environment. JSON is built from objects. Two modules writing one owned path, block or JSON entry throw RenderError.
+ * environment. JSON is built from objects. Two modules writing one owned path, block or JSON entry, or output
+ * that holds a likely secret, throw RenderError.
  */
 export function render(
   modules: readonly KitModule[],
@@ -149,5 +167,7 @@ export function render(
 ): RenderTree {
   const scope: TemplateScope = { ...context.values, brand: brandScope(brand) };
   const drafts = modules.flatMap((kit) => moduleDrafts({ kit, context, scope, brand }));
-  return collectEntries(drafts);
+  const tree = collectEntries(drafts);
+  refuseSecrets(tree);
+  return tree;
 }
