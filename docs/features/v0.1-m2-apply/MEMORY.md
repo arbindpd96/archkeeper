@@ -62,8 +62,8 @@ No command imports the engine yet, so `dist/cli.mjs` barely moves; the probe (bu
 - [x] Conflicted lock rebuild (0655203); hooks only for kit scripts (3efd30c); no lock entry in the state folder (f81a0cf); `node:zlib` lint (2f18e43)
 - [x] #23/#24 CLI: confined paths, atomic writes with retries, blobs, backups, transactional apply, rollback at every rename, snapshots of a fresh and a first-contact install, second run writes nothing (cc2bf62); ripgrep check (d5eea67); only `local/` private (b1f13bd)
 - [x] `docs/architecture.md` (0dce695), `docs/decisions.md`, `docs/mistakes.md`, ROADMAP M2 ticked (6e13aad), changeset (02fbcf4).
-- [x] Stale plans refused: the apply writes nothing over a file edited since planning.
-- [ ] Per-commit `npm run check`, each commit checked out in a plain shell.
+- [x] Stale plans refused: the apply writes nothing over a file edited since planning (47ed64f); the coordinator's subagent kept the caller's git variables out of the tests' git children (eb7a557); the incident and the check are logged (9ffead4).
+- [x] `npm run check` green on each of the 20 commits from b27e264 to 9ffead4, each one checked out in a plain shell with git's repository variables unset.
 
 ## Next step
 
