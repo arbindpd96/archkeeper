@@ -3,7 +3,8 @@ import { readInput, respond } from './lib.mjs';
 const RULES = [
   {
     decision: 'deny',
-    pattern: /\brm\s+(-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*|--recursive\s+--force|--force\s+--recursive)\s+(\/|~|\$HOME|\*|\.{1,2})(\s|\/?$)/i,
+    pattern:
+      /\brm\s+(-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*|--recursive\s+--force|--force\s+--recursive)\s+(\/|~|\$HOME|\*|\.{1,2})(\s|\/?$)/i,
     reason: 'Recursive force-delete of a root, home or whole-directory path is blocked.',
   },
   {
@@ -43,7 +44,8 @@ const RULES = [
   },
   {
     decision: 'ask',
-    pattern: /\bgit\s+(reset\s+--hard|clean\s+-[a-z]*f|checkout\s+--\s+\.|restore\s+\.|branch\s+-D|stash\s+(drop|clear))\b/,
+    pattern:
+      /\bgit\s+(reset\s+--hard|clean\s+-[a-z]*f|checkout\s+--\s+\.|restore\s+\.|branch\s+-D|stash\s+(drop|clear))\b/,
     reason: 'This discards work irreversibly. Confirm with the user.',
   },
   {

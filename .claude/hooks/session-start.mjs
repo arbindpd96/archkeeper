@@ -1,6 +1,15 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { activeFeatures, changedFiles, git, projectDir, readInput, respond, section, truncate } from './lib.mjs';
+import {
+  activeFeatures,
+  changedFiles,
+  git,
+  projectDir,
+  readInput,
+  respond,
+  section,
+  truncate,
+} from './lib.mjs';
 
 const input = readInput();
 const lines = ['# Session context (from .claude/hooks/session-start.mjs)'];

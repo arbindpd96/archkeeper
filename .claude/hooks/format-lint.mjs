@@ -8,7 +8,12 @@ const LINTABLE = new Set(['.ts', '.tsx', '.js', '.mjs', '.cjs']);
 
 /** Runs a locally installed tool from node_modules/.bin; returns null when it is not installed. */
 function runLocal(tool, args) {
-  const bin = path.join(projectDir, 'node_modules', '.bin', process.platform === 'win32' ? `${tool}.cmd` : tool);
+  const bin = path.join(
+    projectDir,
+    'node_modules',
+    '.bin',
+    process.platform === 'win32' ? `${tool}.cmd` : tool,
+  );
   if (!existsSync(bin)) return null;
   return spawnSync(bin, args, { cwd: projectDir, encoding: 'utf8', shell: process.platform === 'win32' });
 }
@@ -27,7 +32,10 @@ if (filePath && existsSync(filePath) && FORMATTABLE.has(ext)) {
 
   const commentCheck = path.join(projectDir, 'scripts', 'check-comments.mjs');
   if (LINTABLE.has(ext) && existsSync(commentCheck)) {
-    const check = spawnSync(process.execPath, [commentCheck, filePath], { cwd: projectDir, encoding: 'utf8' });
+    const check = spawnSync(process.execPath, [commentCheck, filePath], {
+      cwd: projectDir,
+      encoding: 'utf8',
+    });
     if (check.status !== 0) problems.push(check.stdout || check.stderr);
   }
 

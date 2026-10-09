@@ -1,8 +1,8 @@
 ---
 paths:
-  - "modules/**"
-  - "packs/**"
-  - "plugin/**"
+  - 'modules/**'
+  - 'packs/**'
+  - 'plugin/**'
 ---
 
 # Rules for content we generate into users' projects

@@ -2,7 +2,16 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { activeFeatures, changedFiles, git, projectDir, readInput, readState, respond, writeState } from './lib.mjs';
+import {
+  activeFeatures,
+  changedFiles,
+  git,
+  projectDir,
+  readInput,
+  readState,
+  respond,
+  writeState,
+} from './lib.mjs';
 
 const CODE_PATH = /^(packages|modules|packs|plugin|scripts|\.claude\/hooks)\//;
 const STATE_FILE = 'stop-guard.json';

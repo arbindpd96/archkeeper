@@ -1,7 +1,7 @@
 ---
 paths:
-  - ".claude/hooks/**"
-  - "modules/**/hooks/**"
+  - '.claude/hooks/**'
+  - 'modules/**/hooks/**'
 ---
 
 # Hook script rules

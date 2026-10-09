@@ -1,7 +1,7 @@
 ---
 paths:
-  - "**/*.test.ts"
-  - "**/test/**"
+  - '**/*.test.ts'
+  - '**/test/**'
 ---
 
 # Test rules

@@ -1,6 +1,6 @@
 name: Bug report
 description: Something in claude-codekit does not work as documented
-labels: ["type: bug", "status: triage"]
+labels: ['type: bug', 'status: triage']
 body:
   - type: textarea
     id: what-happened
@@ -22,7 +22,7 @@ body:
     id: version
     attributes:
       label: claude-codekit version
-      placeholder: "0.1.0"
+      placeholder: '0.1.0'
     validations:
       required: true
   - type: input
@@ -30,7 +30,7 @@ body:
     attributes:
       label: Environment
       description: OS, Node version, Claude Code version, project stack
-      placeholder: "macOS 15, Node 24.4, Claude Code 2.1, Next.js 16"
+      placeholder: 'macOS 15, Node 24.4, Claude Code 2.1, Next.js 16'
   - type: textarea
     id: logs
     attributes:
