@@ -33,7 +33,7 @@ The `Commit authors` CI job checks every commit in a PR. It fails on a bot autho
 | Comment policy | `npm run comments`           | See [Comments](#comments)                                                                      |
 | Brand          | `npm run brand`              | The product slug appears only in `src/core/brand.ts`; `package.json` `name` and `bin` match it |
 | Schemas        | `npm run schema:check`       | `schema/*.json` match the zod schemas in `src/core`; `npm run schema` rewrites them            |
-| Demo GIFs      | `npm run demos`              | Each committed GIF comes from a tape and stays within 2 MB and 20 s (30 s for the hero)        |
+| Demo GIFs      | `npm run demos`              | GIFs come from tapes within 2 MB and 20 s (30 s hero); each module declares a demo or internal |
 | Tests          | `npm test`                   | Vitest: Linux on Node 22/24/26, macOS + Windows on 24                                          |
 | Build          | `npm run build`              | tsdown bundle in `dist/`, licenses of inlined code; CI checks that two builds are identical    |
 | Package        | `npm run package`            | publint, pack snapshot, 0 runtime deps, no install scripts, budgets; CI adds publish dry run   |
@@ -119,6 +119,7 @@ Every user-facing feature ships a README section and a GIF recorded with [VHS](h
 - **CI tapes.** The `demo-gifs` workflow renders every tape not marked `# live` against the packed CLI and uploads the GIFs as the `demo-gifs` artifact. It never commits: the maintainer runs `npm run gifs:pull -- <run-id>` and commits the GIFs. `gifs:pull` accepts only a successful run of this repository that neither a fork nor Dependabot started, and prints the run's commit and branch.
 - **Live tapes.** A tape marked `# live` needs a real Claude Code session, so the maintainer records it with `node scripts/render-tapes.mjs --live <feature>` after `npm run build`. It runs in your real shell with your real `HOME`, so record only tapes you wrote or reviewed, preferably in a throwaway VM or container (VHS ships a Docker image, `ghcr.io/charmbracelet/vhs`) that holds only a narrowly scoped key. `--live` refuses a tape when anyone but you (the repo-local `git config user.email`) committed to it, to `_settings.tape` or to its fixture. It also refuses any VHS other than the 0.12.1 that CI pins; install JetBrains Mono too.
 - **Limits.** A GIF is at most 2 MB and 20 s, or 30 s for a tape marked `# hero`. `npm run demos` checks committed GIFs, and the workflow checks rendered ones.
+- **Modules.** Every `modules/<id>/module.json` declares `demo: {tape, section}` or `internal: true`. A demo needs `docs/media/tapes/<tape>.tape`, a committed `docs/media/<tape>.gif` and a README heading named `section` whose section shows the GIF; `npm run demos` checks all three.
 - **New workflow files.** Pushing `.github/workflows/*` over HTTPS needs the `workflow` scope: `gh auth refresh -h github.com -s workflow`.
 
 ## Changesets
