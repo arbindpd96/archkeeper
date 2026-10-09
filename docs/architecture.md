@@ -157,6 +157,7 @@ _Planned for v0.1._ What `init` writes, and the decision that governs each part:
 | `docs/` feature memory, decisions, map                   | Create-only                  | ADR-0014                                                                           |
 | `.archkeeper/config.json`, `lock.json`, `base/`          | Committed kit state          | ADR-0014                                                                           |
 | `.archkeeper/local/`                                     | Gitignored state and backups | ADR-0014, ADR-0015                                                                 |
+| `<path>.archkeeper-new` beside a kit file                | Sidecar: the kit's version   | ADR-0014; from `init` or `update`, never loaded by Claude Code                     |
 
 Every name and path comes from `BRAND` ([ADR-0012](adr/0012-brand-constants.md)). `init`, `update`, `uninstall`, `doctor` and every hook stay offline, and the kit has no telemetry ([ADR-0018](adr/0018-offline-no-telemetry.md)).
 
