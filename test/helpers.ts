@@ -28,6 +28,17 @@ export interface RunResult {
   stderr: string;
 }
 
+/**
+ * `process.env` with `overrides` applied. An override also drops every name that differs from it only in
+ * case: on Windows, vitest gives its workers an uppercase copy of every variable, and Node passes a child
+ * only the lexicographically first of such names, so `NPM_EXECPATH` would beat an `npm_execpath` override.
+ */
+export function withEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
+  const overridden = new Set(Object.keys(overrides).map((name) => name.toLowerCase()));
+  const kept = Object.entries(process.env).filter(([name]) => !overridden.has(name.toLowerCase()));
+  return { ...Object.fromEntries(kept), ...overrides };
+}
+
 /** Runs a Node script from the repo with an optional JSON payload on stdin. */
 export function runScript(
   script: string,
@@ -37,7 +48,7 @@ export function runScript(
     cwd: options.cwd,
     input: options.payload === undefined ? '' : JSON.stringify(options.payload),
     encoding: 'utf8',
-    env: { ...process.env, ...options.env },
+    env: withEnv(options.env),
     timeout: SCRIPT_TIMEOUT_MS,
   });
   return { status: run.status, stdout: run.stdout, stderr: run.stderr };

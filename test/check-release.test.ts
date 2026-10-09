@@ -27,18 +27,19 @@ interface FakeNpm {
   latest?: string;
 }
 
-// Stands in for npm-cli.js, so no test reaches the registry.
-function fakeNpm({ version = '11.17.0', latest }: FakeNpm = {}): NodeJS.ProcessEnv {
+// Stands in for npm-cli.js, so no test reaches the registry, and logs each call beside itself.
+function fakeNpm({ version = '11.17.0', latest }: FakeNpm = {}): { env: NodeJS.ProcessEnv; log: string } {
   const dir = tempDir();
   const script = [
     'const args = process.argv.slice(2);',
+    "require('node:fs').appendFileSync(__dirname + '/calls.log', JSON.stringify(args) + '\\n');",
     `if (args[0] === '--version') { process.stdout.write('${version}\\n'); process.exit(0); }`,
     `const latest = ${JSON.stringify(latest ?? 'E404')};`,
     "if (latest.startsWith('E')) { process.stderr.write('npm error code ' + latest + '\\n'); process.exit(1); }",
     "process.stdout.write(latest + '\\n');",
   ];
-  writeFiles(dir, { 'npm-cli.js': `${script.join('\n')}\n` });
-  return { npm_execpath: path.join(dir, 'npm-cli.js') };
+  writeFiles(dir, { 'npm-cli.js': `${script.join('\n')}\n`, 'calls.log': '' });
+  return { env: { npm_execpath: path.join(dir, 'npm-cli.js') }, log: path.join(dir, 'calls.log') };
 }
 
 function checkRelease(
@@ -46,18 +47,28 @@ function checkRelease(
   args: string[],
   env: NodeJS.ProcessEnv = {},
   npm: FakeNpm = {},
-): RunResult & { outputs: string } {
+): RunResult & { outputs: string; npmCalls: string[][] } {
   const outputFile = path.join(tempDir(), 'github-output');
   writeFiles(path.dirname(outputFile), { 'github-output': '' });
+  const fake = fakeNpm(npm);
   const result = runScript('scripts/check-release.mjs', {
     args,
     cwd: root,
-    env: { GITHUB_OUTPUT: outputFile, GITHUB_ACTIONS: '', GITHUB_REF_NAME: '', ...fakeNpm(npm), ...env },
+    env: { GITHUB_OUTPUT: outputFile, GITHUB_ACTIONS: '', GITHUB_REF_NAME: '', ...fake.env, ...env },
   });
-  return { ...result, outputs: readFileSync(outputFile, 'utf8') };
+  const npmCalls = readFileSync(fake.log, 'utf8')
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as string[]);
+  return { ...result, outputs: readFileSync(outputFile, 'utf8'), npmCalls };
 }
 
 describe('check-release', () => {
+  it('asks the npm that launched it for its version and for the latest dist-tag', () => {
+    const result = checkRelease(project(), ['--tag', 'v1.2.0']);
+    expect(result.npmCalls).toEqual([['--version'], ['view', '--', 'fixture-kit', 'dist-tags.latest']]);
+  });
+
   it('passes a tagged stable release and writes the facts later steps need', () => {
     const result = checkRelease(project(), ['--tag', 'v1.2.0']);
     expect(result.stderr).toBe('');

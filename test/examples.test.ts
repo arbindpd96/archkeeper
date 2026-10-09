@@ -4,8 +4,8 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { ESLint } from 'eslint';
 import { getFileInfo } from 'prettier';
-import { describe, expect, it } from 'vitest';
-import { REPO_ROOT, fixtureCopy, runScript, tempRepo } from './helpers.js';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
+import { REPO_ROOT, fixtureCopy, runScript, tempRepo, withEnv } from './helpers.js';
 
 const EXAMPLES = path.join(REPO_ROOT, 'examples');
 const TS_FILES = [
@@ -72,6 +72,19 @@ describe('examples', () => {
     expect(runScript('scripts/check-comments.mjs', { cwd: repo }).status).toBe(0);
     writeFileSync(path.join(repo, 'index.ts'), '// export const old = 1;\nexport const a = 1;\n');
     expect(runScript('scripts/check-comments.mjs', { cwd: repo }).stderr).toContain('commented-out code');
+  });
+});
+
+describe('withEnv', () => {
+  it('lets an override replace a variable whose name differs only in case', () => {
+    vi.stubEnv('R2_CASE_PROBE', 'from the parent');
+    onTestFinished(() => {
+      vi.unstubAllEnvs();
+    });
+    const env = withEnv({ r2_case_probe: 'override' });
+    const names = Object.keys(env).filter((name) => name.toLowerCase() === 'r2_case_probe');
+    expect(names).toEqual(['r2_case_probe']);
+    expect(env.r2_case_probe).toBe('override');
   });
 });
 
