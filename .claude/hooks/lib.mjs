@@ -54,7 +54,7 @@ export function activeFeatures() {
     .map((entry) => {
       const file = path.join(FEATURES_DIR, entry.name, 'MEMORY.md');
       const memory = existsSync(file) ? readFileSync(file, 'utf8') : '';
-      return { name: entry.name, file: path.relative(projectDir, file), memory };
+      return { name: entry.name, file: path.relative(projectDir, file).split(path.sep).join('/'), memory };
     })
     .filter((feature) => /^status:\s*in progress/im.test(feature.memory));
 }
