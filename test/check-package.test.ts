@@ -70,6 +70,24 @@ describe('check-package', () => {
     expect(result.stderr).toContain('remove postinstall');
   });
 
+  it('allows the dev-only prepare script outside a release', () => {
+    const result = checkPackage(fixture({ scripts: { prepare: 'husky' } }));
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+  });
+
+  it('fails on prepare in the manifest a release publishes, and names the strip command', () => {
+    const result = checkPackage(fixture({ scripts: { prepare: 'husky' } }), '--release');
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('remove prepare (npm pkg delete scripts.prepare)');
+  });
+
+  it('passes a release manifest once prepare is stripped', () => {
+    const result = checkPackage(fixture({ scripts: { test: 'vitest run' } }), '--release');
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+  });
+
   it('fails when the published files differ from the snapshot, and --update accepts them', () => {
     const root = fixture({}, { 'dist/extra.mjs': 'export {};\n' });
     const result = checkPackage(root);
