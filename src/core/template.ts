@@ -112,7 +112,8 @@ export function renderTemplate(template: string, scope: TemplateScope, file: str
  * Writes a CLAUDE.md import of a project path: `@path`, never quoted (a quoted path is not imported), with each
  * space escaped as `\ ` (reference §2.1). `toImport('Design Docs/api.md')` is `@Design\ Docs/api.md`. A path
  * that leaves the project, such as `../x`, `/etc/x` or `~/x`, throws RenderError: it would pull an outside
- * file into Claude's context.
+ * file into Claude's context. Claude Code resolves an import from the importing file, so the result is right
+ * only in a file at the project root, such as `CLAUDE.md`; a nested file needs a path relative to itself.
  */
 export function toImport(path: string): string {
   const problem =
