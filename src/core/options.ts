@@ -40,7 +40,7 @@ function moduleValues(
 ): ModuleOptions {
   const values: Record<string, OptionValue> = { ...optionDefaults(manifest) };
   for (const [name, value] of Object.entries(given)) {
-    const spec = manifest.options[name];
+    const spec = Object.hasOwn(manifest.options, name) ? manifest.options[name] : undefined;
     if (spec === undefined) {
       const known = Object.keys(manifest.options).join(', ') || 'none';
       warnings.push(

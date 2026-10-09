@@ -108,6 +108,12 @@ describe('loadModule cross-field rules', () => {
       'declare it in options',
     ],
     [
+      'a when option named like an inherited member',
+      (m) => (m.when = { options: { constructor: true } }),
+      'when.options.constructor',
+      'declare it in options',
+    ],
+    [
       'a when option compared with the wrong type',
       (m) => (entry(m, 'files', 1).when = { options: { blockNoVerify: 'yes' } }),
       'files[1].when.options.blockNoVerify',
