@@ -115,9 +115,21 @@ describe('guard-secrets edit replay', () => {
   it('asks when a multi-edit has too many edits to replay on a file its size', () => {
     const dir = tempDir();
     writeFiles(dir, { 'big.txt': 'x'.repeat(999_000) });
-    const edits = Array.from({ length: 201 }, () => ({ old_string: 'x', new_string: 'x' }));
+    const edits = Array.from({ length: 60 }, () => ({ old_string: 'x', new_string: 'x' }));
     const verdict = verdictFor(path.join(dir, 'big.txt'), { edits }, dir);
-    expect(verdict.reason).toContain('too many edits to replay');
+    expect(verdict.reason).toContain('too many to replay in time');
+  });
+
+  it('counts replay work as a multi-edit grows a small file, and asks in time', () => {
+    const dir = tempDir();
+    writeFiles(dir, { 'a.ts': 'a' });
+    const grow = { old_string: 'a', new_string: `a${'b'.repeat(500_000)}` };
+    const rescan = { old_string: 'b', new_string: 'b', replace_all: true };
+    const rescans = Array.from({ length: 2_000 }, () => rescan);
+    const started = performance.now();
+    const verdict = verdictFor(path.join(dir, 'a.ts'), { edits: [grow, ...rescans] }, dir);
+    expect(performance.now() - started).toBeLessThan(3_000);
+    expect(verdict.reason).toContain('too many to replay in time');
   });
 
   it('asks rather than reading a file that is not a regular file', () => {
