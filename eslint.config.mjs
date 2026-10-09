@@ -116,6 +116,7 @@ export default defineConfig(
       '**/coverage/',
       'plugin/',
       '**/fixtures/',
+      'examples/',
       '.claude/state/',
       '.claude/worktrees/',
     ],

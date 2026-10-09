@@ -48,7 +48,7 @@
   "lint-staged": {
     "*.{ts,tsx,mts,cts,js,mjs,cjs}": [
       "prettier --write",
-      "eslint --max-warnings=0 --no-warn-ignored",
+      "eslint --max-warnings=0 --no-warn-ignored --config eslint.config.mjs",
       "node scripts/check-comments.mjs"
     ],
     "*.{json,md,yml,yaml}": "prettier --write"

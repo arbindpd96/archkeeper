@@ -7,5 +7,6 @@ docs/research/
 docs/media/
 .claude/state/
 plugin/
+examples/
 CHANGELOG.md
 .claude/worktrees/
