@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { BRAND, type Brand } from '../src/core/brand.js';
 import { RenderError } from '../src/core/errors.js';
 import { type KitModule, loadModule } from '../src/core/loader.js';
 import { render } from '../src/core/render.js';
@@ -101,6 +102,21 @@ describe('render refuses two modules writing one thing', () => {
     );
     expect(tree.get('AGENTS.md')).toHaveLength(2);
     expect(tree.get('.claude/settings.json')).toHaveLength(1);
+  });
+});
+
+describe('render refuses reserved targets', () => {
+  it('refuses a target that renders into the state folder of the brand it is given', () => {
+    const error = renderError([owned('a', '{{ brand.stateDir }}/notes.md')]);
+    expect(error.location).toBe('files[0].to');
+    expect(error.message).toContain(`renders to "${BRAND.stateDir}/notes.md", which is inside`);
+  });
+
+  it('refuses a target that a brand with other folders would put in its hook folder', () => {
+    const brand: Brand = { ...BRAND, hookDir: 'docs/hooks' };
+    expect(() => render([owned('a', 'docs/hooks/x.md')], { stack: [] }, brand)).toThrow(
+      'which is inside docs/hooks, which the kit manages itself',
+    );
   });
 });
 
