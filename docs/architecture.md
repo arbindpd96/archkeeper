@@ -17,7 +17,7 @@ flowchart LR
   project --> cc
 ```
 
-- **One source of truth.** Modules hold templates, hooks, skills and agents. The CLI scaffolds the project-owned parts. The build emits the plugin-owned parts into `plugin/`.
+- **One source of truth.** Modules hold templates, hooks, skills and agents. The CLI writes hooks, instructions, rules, settings and (by default) skills into the project. From v0.3 the build emits only skills and agents into `plugin/`, never hooks ([ADR-0016](adr/0016-delivery-split.md)).
 - **One package, zero runtime dependencies** (ADR-0011). Every library is a devDependency that tsdown inlines. The published `files` are `dist`, `modules`, `packs` and `schema`.
 - **Core is pure.** It does module resolution, rendering, merge planning and the lockfile. The CLI owns prompts, output and exit codes.
 - **Layers are lint-enforced** (ESLint `no-restricted-*` rules in `eslint.config.mjs`; each is proven by a fixture in `test/fixtures/layers/`):
@@ -144,9 +144,25 @@ Every bundle may import only `node:` built-ins (tsdown `deps.onlyImport`), so th
 
 CI also runs `npm publish --dry-run` and installs the packed tarball under a path with a space on ubuntu, macOS and Windows.
 
+## In a user's project
+
+_Planned for v0.1._ What `init` writes, and the decision that governs each part:
+
+| Path                                                     | Strategy                     | Contract                                                                           |
+| -------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------- |
+| `CLAUDE.md`, `AGENTS.md`, `.gitignore`, `.gitattributes` | Managed blocks               | [ADR-0014](adr/0014-on-disk-contract.md)                                           |
+| `.claude/settings.json`, `.mcp.json`                     | Kit-owned JSON entries       | ADR-0014; hook registration and deny rules in [ADR-0015](adr/0015-hook-runtime.md) |
+| `.claude/hooks/archkeeper/*.mjs`                         | Owned                        | ADR-0015                                                                           |
+| `.claude/rules/archkeeper/`, `.claude/skills/<name>/`    | Owned                        | ADR-0014; skills move to the plugin only with `--skills plugin` (ADR-0016)         |
+| `docs/` feature memory, decisions, map                   | Create-only                  | ADR-0014                                                                           |
+| `.archkeeper/config.json`, `lock.json`, `base/`          | Committed kit state          | ADR-0014                                                                           |
+| `.archkeeper/local/`                                     | Gitignored state and backups | ADR-0014, ADR-0015                                                                 |
+
+Every name and path comes from `BRAND` ([ADR-0012](adr/0012-brand-constants.md)). `init`, `update`, `uninstall`, `doctor` and every hook stay offline, and the kit has no telemetry ([ADR-0018](adr/0018-offline-no-telemetry.md)).
+
 ## Conventions
 
-- Brand: never write the product slug. Import `BRAND` from `src/core/brand.ts`. Core APIs that need a name, path or marker take `brand: Brand` as a parameter that defaults to `BRAND`, so tests can pass another brand and a rename touches one file.
+- Brand: never write the product slug. Import `BRAND` from `src/core/brand.ts` ([ADR-0012](adr/0012-brand-constants.md)). Core APIs that need a name, path or marker take `brand: Brand` as a parameter that defaults to `BRAND`, so tests can pass another brand and a rename touches one file.
 - Feature work: `docs/features/<feature>/MEMORY.md`, using the template in `docs/features/_template/`.
 - Decisions: `docs/decisions.md` index, with one ADR per big decision in `docs/adr/`.
 - Failures not to repeat: `docs/mistakes.md`. Terms: `docs/glossary.md`.
