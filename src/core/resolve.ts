@@ -3,7 +3,7 @@ import { configPath } from './config.js';
 import { ResolveError } from './errors.js';
 import { installOrder } from './install-order.js';
 import type { Catalog, KitModule, Preset } from './loader.js';
-import { optionDefaults, type ResolvedOptions } from './options.js';
+import { moduleOptions, type ResolvedOptions } from './options.js';
 import type { Stack } from './schema-parts.js';
 import { compareText } from './text.js';
 import { whenMismatch } from './when.js';
@@ -169,7 +169,7 @@ function unmatched({ request, catalog, origins }: Context): Map<string, string> 
   for (const id of [...origins.keys()].sort(compareText)) {
     const manifest = catalog.modules.get(id)?.manifest;
     if (manifest === undefined) continue;
-    const options = request.options?.get(id) ?? optionDefaults(manifest);
+    const options = moduleOptions(request.options, manifest);
     const reason = whenMismatch(manifest.when, request.stack, options);
     if (reason !== undefined) dropped.set(id, reason);
   }
