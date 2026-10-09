@@ -35,6 +35,56 @@ function refusal(change: Change): ManifestError {
   throw new Error('the manifest loaded without an error');
 }
 
+const stdio = (m: ManifestData): Record<string, unknown> => entry(m, 'mcpServers', 1);
+
+describe('MCP stdio values that hide a credential', () => {
+  it.each<[string, string[], string]>([
+    ['a camelCase token flag', ['--accessToken', 'hunter2'], 'args[1]'],
+    ['a camelCase secret flag with =', ['--clientSecret=hunter2'], 'args[0]'],
+    ['a passphrase flag', ['--passphrase', 'hunter2'], 'args[1]'],
+    ['a camelCase NAME=value pair', ['apiToken=hunter2'], 'args[0]'],
+    ['a pair inside a flag value', ['--env=API_KEY=hunter2'], 'args[0]'],
+    ['an Authorization header argument', ['--header', 'Authorization: Bearer hunter2'], 'args[1]'],
+    ['a Bearer value after any flag', ['--x', 'Bearer hunter2'], 'args[1]'],
+  ])('refuses %s', (_name, args, location) => {
+    expect(refusal((m) => (stdio(m).args = args)).location).toBe(`mcpServers[1].${location}`);
+  });
+
+  it.each(['bin\\graph-mcp', '.\\graph-mcp.exe', '${PWD}/bin/graph-mcp'])(
+    'refuses the stdio command %j, which resolves from where Claude Code started',
+    (command) => {
+      expect(refusal((m) => (stdio(m).command = command)).hint).toContain('${CLAUDE_PROJECT_DIR:-.}/<path>');
+    },
+  );
+
+  it.each(['toString', 'hasOwnProperty', 'valueOf'])(
+    'refuses the inherited object name %j for a server',
+    (name) => {
+      expect(refusal((m) => (entry(m, 'mcpServers', 0).name = name)).hint).toBe('choose another name');
+    },
+  );
+
+  it('accepts a referenced Bearer value, a project command and plain words', () => {
+    const loaded = loadRich((m) => {
+      stdio(m).command = '${CLAUDE_PROJECT_DIR:-.}/bin/graph-mcp';
+      stdio(m).args = [
+        '--author',
+        'Acme',
+        '--header',
+        'Authorization: Bearer ${API_TOKEN}',
+        'https://x.example',
+      ];
+    });
+    expect(loaded.manifest.mcpServers).toHaveLength(2);
+  });
+
+  it('checks a value with thousands of unclosed ${ in linear time', () => {
+    const started = performance.now();
+    loadRich((m) => (entry(m, 'mcpServers', 0).url = `https://x.example/${'${'.repeat(40_000)}`));
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
+});
+
 describe('template targets that Claude Code reads from a subfolder or as secrets', () => {
   it.each<[string, string]>([
     ['pkg/.claude/settings.json', 'in a subfolder'],
