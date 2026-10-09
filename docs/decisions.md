@@ -16,3 +16,4 @@ Long-term decisions for archkeeper. Each big decision gets an ADR in `docs/adr/`
 | [0009](adr/0009-toolchain-and-quality-gates.md)  | Toolchain: npm workspaces, TS 6, ESLint+JSDoc comment policy, Vitest; CI gates + branch rules | accepted; workspace clause superseded by 0011 | 2026-10-09 |
 | [0010](adr/0010-rename-to-archkeeper.md)         | Rename to `archkeeper` (trademark and plugin-name constraints)                                | accepted                                      | 2026-10-09 |
 | [0011](adr/0011-single-package.md)               | One published package, zero runtime deps, tsdown bundle, no workspaces                        | accepted                                      | 2026-10-09 |
+| [0017](adr/0017-lightness-budgets.md)            | Lightness budgets in `budgets.json` as a CI contract, including hook-injected context         | accepted                                      | 2026-10-09 |
