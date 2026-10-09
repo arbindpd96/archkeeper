@@ -174,7 +174,7 @@ describe('render refuses output that holds a likely secret', () => {
       () =>
         kit('m', {
           files: [{ to: '.mcp.json', strategy: 'json', target: 'project' }],
-          mcpServers: [{ name: 'gh', type: 'stdio', command: 'gh-mcp', args: ['--token', token] }],
+          mcpServers: [{ name: 'gh', type: 'stdio', command: 'gh-mcp', args: ['--profile', token] }],
         }),
       '.mcp.json',
       'GitHub token from m, on line 8 of its entry',

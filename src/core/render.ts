@@ -163,7 +163,8 @@ function moduleDrafts(job: ModuleRender): Draft[] {
   );
 }
 
-// The schema keeps literal values out of env, headers and URLs; this catches a token anywhere else (ADR-0007).
+// The schema keeps literal values out of env, headers and URL queries and refuses key-like text in URLs and stdio
+// arguments; this catches a known token format anywhere else, such as a template (ADR-0007).
 function refuseSecrets(tree: RenderTree): void {
   for (const [path, entries] of tree) {
     for (const { content, module } of entries) {
