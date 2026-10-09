@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="t">
+  <title id="t">archkeeper - an arch of stone blocks held together by a keystone</title>
+  <defs>
+    <clipPath id="card"><rect width="1280" height="640" rx="28" ry="28"/></clipPath>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fdfefd"/>
+      <stop offset="1" stop-color="#f6faf8"/>
+    </linearGradient>
+    <radialGradient id="b0"><stop offset="0" stop-color="#5fcdb9" stop-opacity="0.62"/><stop offset="0.3" stop-color="#5fcdb9" stop-opacity="0.5"/><stop offset="0.6" stop-color="#5fcdb9" stop-opacity="0.22"/><stop offset="0.82" stop-color="#5fcdb9" stop-opacity="0.06"/><stop offset="1" stop-color="#5fcdb9" stop-opacity="0"/></radialGradient>
+    <radialGradient id="b1"><stop offset="0" stop-color="#a9ecd3" stop-opacity="0.8"/><stop offset="0.3" stop-color="#a9ecd3" stop-opacity="0.64"/><stop offset="0.6" stop-color="#a9ecd3" stop-opacity="0.28"/><stop offset="0.82" stop-color="#a9ecd3" stop-opacity="0.08"/><stop offset="1" stop-color="#a9ecd3" stop-opacity="0"/></radialGradient>
+    <radialGradient id="b2"><stop offset="0" stop-color="#7bd3e6" stop-opacity="0.58"/><stop offset="0.3" stop-color="#7bd3e6" stop-opacity="0.46"/><stop offset="0.6" stop-color="#7bd3e6" stop-opacity="0.2"/><stop offset="0.82" stop-color="#7bd3e6" stop-opacity="0.06"/><stop offset="1" stop-color="#7bd3e6" stop-opacity="0"/></radialGradient>
+    <radialGradient id="b3"><stop offset="0" stop-color="#b5f0dc" stop-opacity="0.75"/><stop offset="0.3" stop-color="#b5f0dc" stop-opacity="0.6"/><stop offset="0.6" stop-color="#b5f0dc" stop-opacity="0.26"/><stop offset="0.82" stop-color="#b5f0dc" stop-opacity="0.08"/><stop offset="1" stop-color="#b5f0dc" stop-opacity="0"/></radialGradient>
+    <radialGradient id="b4"><stop offset="0" stop-color="#ddf3ec" stop-opacity="0.85"/><stop offset="0.3" stop-color="#ddf3ec" stop-opacity="0.68"/><stop offset="0.6" stop-color="#ddf3ec" stop-opacity="0.3"/><stop offset="0.82" stop-color="#ddf3ec" stop-opacity="0.09"/><stop offset="1" stop-color="#ddf3ec" stop-opacity="0"/></radialGradient>
+    <filter id="keyglow" x="-150%" y="-150%" width="400%" height="400%"><feGaussianBlur stdDeviation="14"/></filter>
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a7d73"/>
+      <stop offset="1" stop-color="#0f5e57"/>
+    </linearGradient>
+    <linearGradient id="pier" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#14695f"/>
+      <stop offset="1" stop-color="#0e534d"/>
+    </linearGradient>
+    <linearGradient id="keygrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f7b955"/>
+      <stop offset="1" stop-color="#e88a1e"/>
+    </linearGradient>
+    <linearGradient id="word" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f5e57"/>
+      <stop offset="1" stop-color="#0c4c47"/>
+    </linearGradient>
+  </defs>
+  <g clip-path="url(#card)">
+    <rect width="1280" height="640" fill="url(#bg)"/>
+    <ellipse cx="120" cy="660" rx="520" ry="330" fill="url(#b0)"/>
+    <ellipse cx="430" cy="730" rx="470" ry="250" fill="url(#b1)"/>
+    <ellipse cx="1170" cy="650" rx="520" ry="340" fill="url(#b2)"/>
+    <ellipse cx="870" cy="730" rx="470" ry="240" fill="url(#b3)"/>
+    <ellipse cx="640" cy="-70" rx="660" ry="180" fill="url(#b4)"/>
+  </g>
+  <rect x="0.5" y="0.5" width="1279" height="639" rx="27.5" ry="27.5" fill="none" stroke="#dfe8e5"/>
+  <path d="M70,100 V70 H100 M1210,100 V70 H1180 M70,540 V570 H100 M1210,540 V570 H1180" fill="none" stroke="#1b2f2c" stroke-opacity="0.75" stroke-width="2" stroke-linecap="square"/>
+  <g transform="translate(262,337.35) scale(0.86)">
+      <path d="M-92,5 h38 v58 h-38 Z M54,5 h38 v58 h-38 Z" fill="url(#pier)"/>
+      <path d="M92,-0 A92,92 0 0 0 83.94,-37.65 L49.68,-21.15 A54,54 0 0 1 54,-0 Z M81.77,-42.15 A92,92 0 0 0 59.29,-70.34 L35.59,-40.61 A54,54 0 0 1 47.52,-25.66 Z M55.39,-73.46 A92,92 0 0 0 22.9,-89.1 L14.44,-52.03 A54,54 0 0 1 31.68,-43.73 Z M-22.9,-89.1 A92,92 0 0 0 -55.39,-73.46 L-31.68,-43.73 A54,54 0 0 1 -14.44,-52.03 Z M-59.29,-70.34 A92,92 0 0 0 -81.77,-42.15 L-47.52,-25.66 A54,54 0 0 1 -35.59,-40.61 Z M-83.94,-37.65 A92,92 0 0 0 -92,-0 L-54,-0 A54,54 0 0 1 -49.68,-21.15 Z" fill="url(#stone)"/>
+      <path d="M9.57,-53.15 L22.09,-108 L-22.09,-108 L-9.57,-53.15 A54,54 0 0 1 9.57,-53.15 Z" fill="#f4a43a" filter="url(#keyglow)" opacity="0.45"/>
+      <path d="M9.57,-53.15 L22.09,-108 L-22.09,-108 L-9.57,-53.15 A54,54 0 0 1 9.57,-53.15 Z" fill="url(#keygrad)"/>
+  </g>
+  <text x="385.12" y="391.53" font-family="Inter, 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="132" font-weight="800" letter-spacing="-4" textLength="712" lengthAdjust="spacing" fill="url(#word)">archkeeper</text>
+</svg>
