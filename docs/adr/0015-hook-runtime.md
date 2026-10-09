@@ -132,12 +132,17 @@ Frontmatter can widen access without touching `settings.json` (reference §3.1, 
 - `mcpServers` adds MCP servers.
 - A skill's `` !`cmd` `` runs a command at load time, without a prompt, whenever the permission rules or the skill's own `allowed-tools` allow it.
 
-So every skill and agent the kit generates, for the project or for the plugin ([ADR-0016](0016-delivery-split.md)), follows an allowlist:
+So every skill and agent the kit generates, for the project or for the plugin ([ADR-0016](0016-delivery-split.md)), follows an allowlist of keys and values. A key that is not on the list fails the static test, so a key Claude Code adds later is refused until it has been reviewed:
 
-- no `hooks` and no `mcpServers`
+- skill keys: `name`, `description`, `disable-model-invocation`, `user-invocable`, `allowed-tools`, `arguments` and `paths`
+- agent keys: `name`, `description`, `tools`, `disallowedTools`, `model`, `permissionMode`, `maxTurns`, `memory` and `skills`
+- never `hooks` or `mcpServers`
 - `permissionMode` only as `default` or `plan`
+- `model` only as an alias (`inherit`, `sonnet`, `opus` or `haiku`), never a model id
+- `memory` only as `project` or `local`, never `user`, which keeps the agent's memory under the user's home directory, outside the project, and carries it into every project
 - a skill's `allowed-tools` lists only `Read`, `Grep`, `Glob` and `Bash(<command>)` entries, because every tool it lists runs without a prompt:
-  - A `Bash` entry names a literal command. A wildcard may follow only a literal subcommand, as in `Bash(git log:*)`, so `Bash(*)`, `Bash(git:*)` and `Bash(npm *)` are refused.
+  - A `Bash` entry is an exact literal command with no wildcard, such as `Bash(git status)`, so `Bash(*)`, `Bash(git:*)`, `Bash(git log:*)` and `Bash(npm *)` are refused. A wildcard after a subcommand still admits its flags, and flags can write files or run programs: `git log --output=<path>` writes any content to any path, and `git grep -O<cmd>` runs `<cmd>`.
+  - An entry never contains a flag that writes a file or runs a program: `--output`, `-O` or `--open-files-in-pager`, `--ext-diff`, `--textconv`, `--exec`, `--upload-pack` or `rg --pre`.
   - Its command is never a shell, wrapper, interpreter or package runner, because each of those runs whatever follows it: `bash`, `sh`, `zsh`, `pwsh`, `cmd`, `env`, `xargs`, `sudo`, `node`, `python`, `deno`, `bun`, `ruby`, `perl`, `npx`, `npm exec`, `pnpm dlx`, `uvx` and the like.
   - No `Edit`, `Write`, `WebFetch`, `WebSearch` or `mcp__` entries, and no other tool. A skill can still use them, with the usual prompt.
   - The static test holds the exact lists.
