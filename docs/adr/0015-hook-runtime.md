@@ -84,6 +84,7 @@ Both guards fail closed because the backstop behind them is thin: deny rules are
 ### Guards
 
 - **guard-bash decides on parsed commands, never on regexes over raw text.** It tokenizes quotes, escapes, here-documents, substitutions and brace expansion within a work budget, unwraps wrappers such as `sudo`, `env`, `xargs` and `bash -c`, and judges each simple command. When a case is ambiguous it asks rather than denies.
+  - It asks before any command that names a `.env`, `.env.*` or `.envrc` file at any depth, such as `cat sub/.env.local` or `source .env`, except templates such as `.env.example`. The `Read` deny rules below cover only the Read tool, so this is the only check on shell access to those files.
 - **guard-secrets** scans every string a write would put into a file, denies likely secrets with a reason that names the rule and the file but never the value, and asks before editing `.env`, `.env.*` or `.envrc`, except templates such as `.env.example`.
   - An `archkeeper:allow-secret` pragma exempts a line only when that exact line is already in the file on disk, read without following symlinks.
   - A write that adds a pragma line matching a secret rule asks instead, so an agent cannot approve its own secret. The user confirms each new fixture once, and later edits that keep the line pass. This repo's guard-secrets already works this way.
