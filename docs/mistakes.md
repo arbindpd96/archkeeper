@@ -4,6 +4,11 @@ Record approaches that failed, so no session repeats them. Newest first.
 
 Format: `- YYYY-MM-DD — <what we tried> → <what went wrong> → <what to do instead>`
 
+- 2026-10-10 — Checking each commit with only the lint, types and tests of the files it touched → four JSDoc comments named the product slug, which `check-brand` refuses everywhere outside `src/core/brand.ts`, comments included, so those commits failed `npm run check` → write `<prefix>`, `<state dir>` or "the sidecar suffix" in comments, and run the whole `npm run check` before every commit.
+- 2026-10-10 — Locating a JSON container that is not a list in the text left by earlier edits (such as the added `$schema`) → the line and column pointed into the kit's edited text, not the user's file → check every container against the user's text before the first edit.
+- 2026-10-10 — Reporting a zod record-key failure as just "is not a valid key" → the path-safety reason inside it was lost, so a crafted lock path told the user nothing → describe the nested key issue in the problem.
+- 2026-10-10 — Snapshotting a project tree that holds CRLF text → the repo stores snapshots with LF (`test/__snapshots__/** eol=lf`), so a CR would vanish on commit and the Windows and Linux runs would disagree → write each CR as visible text in the snapshot.
+
 - 2026-10-10 — Matching private names after an `@` with `toLowerCase()` alone → macOS folds the long s (U+017F) onto `s`, so `@.claude/ſettings.local.json` loaded the personal settings file → refuse non-ASCII names after an `@`; kit paths are ASCII anyway.
 - 2026-10-10 — Testing only the last name of an `@` word for a private file → Claude Code cuts the path at `#`, a trailing escaped space or the end of inline markdown, so `@.env#x`, `@.env/` and `*@.env*` loaded `.env`, and HTML comments could join split names → look for a private name anywhere after the first `@`, and check the text again without comments.
 - 2026-10-10 — Checking template values for `@` imports only after a space or at the start, and only for outside paths → Claude Code also imports right after inline markdown (`` `a`@~/x ``) and loads project files such as `@.env` with no prompt and no Read deny rule → check every `@` in each word for outside and private paths, and check rendered markdown again.
