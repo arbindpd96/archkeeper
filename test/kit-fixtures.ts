@@ -73,7 +73,7 @@ export function richManifest(): ManifestData {
         name: 'graph',
         type: 'stdio',
         command: 'graph-mcp',
-        args: ['--root', '.'],
+        args: ['--root', '${CLAUDE_PROJECT_DIR:-.}'],
         env: { TOKEN: '${GRAPH_TOKEN}' },
       },
     ],

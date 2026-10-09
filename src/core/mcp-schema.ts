@@ -58,8 +58,13 @@ const CREDENTIAL_FLAG = /^--?(?:[a-z0-9]+[-_])*(?:key|token|secret|password|auth
 const ARG_KEY_HINT =
   'pass the key from the environment as ${NAME}, such as --token ${GITHUB_TOKEN}: the kit never writes a secret ' +
   '(ADR-0007)';
+const PROJECT_HINT =
+  'write ${CLAUDE_PROJECT_DIR:-.}/<path>: a project .mcp.json names project paths that way (reference §5.1)';
 
 function stdioValueRefusal(value: string, flag: string | undefined): Refusal | undefined {
+  if (value === '.' || value === '..' || value.startsWith('./') || value.startsWith('../')) {
+    return { problem: 'is a path relative to the folder Claude Code started in', hint: PROJECT_HINT };
+  }
   if (flag !== undefined && CREDENTIAL_FLAG.test(flag) && !REFERENCE_ONLY.test(value)) {
     return { problem: `gives ${flag} a literal value`, hint: ARG_KEY_HINT };
   }
