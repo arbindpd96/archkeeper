@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { runScript, tempDir, tempRepo, writeFiles } from './helpers.js';
+import { canSymlink, runScript, tempDir, tempRepo, writeFiles } from './helpers.js';
 
 const ACTIVE_MEMORY = `# Feature: login
 Status: in progress | Branch: feat/login
@@ -68,7 +68,7 @@ describe('pre-compact', () => {
   });
 });
 
-describe.skipIf(process.platform === 'win32')('hook state symlink safety', () => {
+describe.skipIf(!canSymlink())('hook state symlink safety', () => {
   function repoWithStateLink(): { dir: string; outside: string } {
     const dir = tempRepo();
     const outside = path.join(tempDir(), 'victim.txt');

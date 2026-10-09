@@ -1,5 +1,14 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { onTestFinished } from 'vitest';
@@ -91,6 +100,21 @@ export function tempDir(): string {
     rmSync(dir, { recursive: true, force: true });
   });
   return dir;
+}
+
+/** Tells whether this process may create symlinks; Windows refuses (EPERM) without admin rights or developer mode. */
+export function canSymlink(): boolean {
+  const dir = mkdtempSync(path.join(tmpdir(), `${BRAND.npmName}-symlink-`));
+  try {
+    writeFileSync(path.join(dir, 'target'), '');
+    symlinkSync(path.join(dir, 'target'), path.join(dir, 'link'));
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EPERM') return false;
+    throw error;
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
 
 /** Runs git in `dir` with an isolated global config and the test identity, returning stdout. */

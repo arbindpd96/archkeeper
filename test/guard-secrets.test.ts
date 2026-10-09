@@ -3,7 +3,15 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
-import { REPO_ROOT, hookDecision, hookVerdict, permissionDecision, tempDir, writeFiles } from './helpers.js';
+import {
+  REPO_ROOT,
+  canSymlink,
+  hookDecision,
+  hookVerdict,
+  permissionDecision,
+  tempDir,
+  writeFiles,
+} from './helpers.js';
 
 const decision = (toolInput: unknown) => hookDecision('guard-secrets.mjs', toolInput);
 
@@ -144,7 +152,7 @@ describe('guard-secrets allow pragma', () => {
     expect(decideIn('', { content: `Use ${pragma} only in tests.` })).toBe('allow');
   });
 
-  it.skipIf(process.platform === 'win32')('does not trust a marked line behind a symlink', () => {
+  it.skipIf(!canSymlink())('does not trust a marked line behind a symlink', () => {
     const dir = tempDir();
     const outside = tempDir();
     writeFiles(outside, { 'real.ts': `${fixtureLine('a')}\n` });
