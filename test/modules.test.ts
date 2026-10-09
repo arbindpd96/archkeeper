@@ -1,18 +1,9 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadCatalog, type ReadKitFile } from '../src/core/loader.js';
+import { readKit } from '../src/cli/kit.js';
 import { resolveModules } from '../src/core/resolve.js';
 import { REPO_ROOT } from './helpers.js';
 
-const readKit: ReadKitFile = (file) => {
-  const absolute = path.join(REPO_ROOT, file);
-  return existsSync(absolute) ? readFileSync(absolute, 'utf8') : undefined;
-};
-const moduleIds = readdirSync(path.join(REPO_ROOT, 'modules'), { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => entry.name);
-const catalog = loadCatalog(moduleIds, readKit);
+const catalog = readKit(REPO_ROOT);
 
 // The v0.1 preset table in docs/ROADMAP.md and #19.
 const MEMBERSHIP: Record<string, readonly string[]> = {
