@@ -26,6 +26,10 @@ const PLACEHOLDER = /\{\{\s*([^{}]*?)\s*\}\}/g;
 const FIXTURE = /^#\s*fixture:\s*(\S+)\s*$/m;
 const LIVE = /^#\s*live\s*$/m;
 const OWNED_COMMANDS = /^\s*(Output|Source)\b/m;
+// A tape is a shell script that the maintainer may run locally with --live, so it may not set the
+// environment, write screenshots or use the clipboard; settings other than typing speed are _settings.tape's.
+const REFUSED_IN_TAPES = /^\s*(Env|Screenshot|Copy|Paste|Set(?!\s+TypingSpeed\b))\b/m;
+const SECRET_ENV = /TOKEN|SECRET|PASSWORD|^npm_config_/i;
 const SLUGS = [...new Set([BRAND.npmName, BRAND.binName, BRAND.pluginName, BRAND.marketplaceName])];
 const USAGE =
   'Usage: node scripts/render-tapes.mjs [<feature>...] [--out <dir>] [--tarball <file>]\n' +
@@ -67,8 +71,9 @@ function textProblems(label, text) {
     problems.push(`${label}: remove Output and Source; render-tapes adds the output path and ${SETTINGS}.`);
   }
   const slug = SLUGS.find((candidate) => text.includes(candidate));
-  if (slug !== undefined)
+  if (slug !== undefined) {
     problems.push(`${label}: write {{brand.binName}} or another {{brand.*}}, not "${slug}".`);
+  }
   const unknown = [];
   fillPlaceholders(text, unknown);
   for (const match of unknown) problems.push(`${label}: unknown placeholder ${match}; use {{brand.<key>}}.`);
@@ -79,6 +84,9 @@ function textProblems(label, text) {
 function tapeProblems(root, tape) {
   const label = `${TAPES}/${tape.feature}.tape`;
   const problems = textProblems(label, tape.text);
+  if (REFUSED_IN_TAPES.test(tape.text)) {
+    problems.push(`${label}: remove Env, Screenshot, Copy, Paste and Set (only Set TypingSpeed is allowed).`);
+  }
   if (tape.fixture === undefined || !TAPE_NAME.test(tape.fixture)) {
     problems.push(`${label}: name its fixture with a "# fixture: <name>" line (a folder in examples/).`);
   } else if (!existsSync(path.join(root, 'examples', tape.fixture))) {
@@ -195,9 +203,10 @@ requireVhs();
 const work = mkdtempSync(path.join(tmpdir(), 'render-tapes-'));
 process.on('exit', () => rmSync(work, { recursive: true, force: true }));
 const prefix = installCli(root, work, options.tarball);
-// The packed CLI comes first on PATH, and npm_config_prefix lets `npx <bin>` find it offline too.
+// The tape's shell gets no tokens or npm config. The packed CLI comes first on PATH, and
+// npm_config_prefix lets `npx <bin>` find it offline too.
 const env = {
-  ...process.env,
+  ...Object.fromEntries(Object.entries(process.env).filter(([name]) => !SECRET_ENV.test(name))),
   PATH: `${path.join(prefix, 'bin')}${path.delimiter}${process.env.PATH ?? ''}`,
   npm_config_prefix: prefix,
 };

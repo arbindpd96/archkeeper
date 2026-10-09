@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { onTestFinished } from 'vitest';
@@ -160,6 +160,14 @@ export function fixtureCopy(name: string): FixtureCopy {
     GIT_CONFIG_NOSYSTEM: '1',
   };
   return { dir, env };
+}
+
+/** Writes an executable `name` script into a fresh temp folder and returns it, to put a stand-in tool on PATH. */
+export function fakeBin(name: string, script: string): string {
+  const dir = tempDir();
+  writeFiles(dir, { [name]: script });
+  chmodSync(path.join(dir, name), 0o755);
+  return dir;
 }
 
 const GIF_HEADER = [...Buffer.from('GIF89a', 'latin1'), 1, 0, 1, 0, 0x80, 0, 0, 0, 0, 0, 255, 255, 255];
