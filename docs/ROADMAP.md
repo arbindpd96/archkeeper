@@ -115,7 +115,7 @@ More ADRs will be written when their phase starts:
 - [ ] docs(adr): ADR-0013 release process with maintainer-run changesets and staged publishing
 - [ ] ci(release): tag-triggered staged-publish workflow and docs/releasing.md
 - [ ] chore(release): changesets for maintainer-run local versioning
-- [ ] ci: commit-author check and Dependabot re-authoring policy
+- [ ] ci: commit-author check (no AI attribution; dependabot[bot] allowed for dependency bumps)
 
 **R3: ADRs accepted, roadmap published.** The architecture is decided, and the plan is public.
 
@@ -166,7 +166,7 @@ Only the README skeleton changes in this phase. It gets:
 | The restructure breaks the just-merged toolchain (globs, coverage, comment checker) | Do it in one PR, and get `npm run check` green before any feature work                                                                                                                                 |
 | Staged publishing can't be fully exercised before the package exists                | Dry run now; a real rc publish in v0.1 M9                                                                                                                                                              |
 | VHS renders differ between CI and local machines                                    | Non-live GIFs come only from CI artifacts. Live tapes are recorded with the VHS version pinned in `demo-gifs.yml` and the shared `_settings.tape`, and `check-demos` checks size and duration for both |
-| Dependabot bumps stall while they wait to be re-authored                            | Grouped weekly bumps keep the PR count low. Security updates are re-authored first, and `npm run deps:adopt` makes it one command                                                                      |
+| Bot or AI-tool commits reach `main`                                                 | `commit-authors` in `CI passed` fails them; `dependabot[bot]` may author commits only on its own grouped dependency-bump PRs                                                                           |
 | The gh token lacks the `workflow` scope needed to push new workflow files           | `gh auth refresh -h github.com -s workflow` (reference §7.4)                                                                                                                                           |
 
 ---
