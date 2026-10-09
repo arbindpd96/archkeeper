@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { BRAND } from '../src/core/brand.ts';
+import { exitWith, repositoryFiles } from './lib.mjs';
 
 const BRAND_SOURCE = 'src/core/brand.ts';
 
@@ -20,12 +20,6 @@ const ALLOWED_FILES = new Set([
 const ALLOWED_DIRECTORIES = [/^plugin\//, /^docs\//, /^\.claude\//, /^\.github\/ISSUE_TEMPLATE\//];
 const ROOT_MARKDOWN = /^[^/]+\.md$/;
 
-/** Prints a message to stderr and exits with the given code. */
-function exitWith(message, code) {
-  process.stderr.write(`${message}\n`);
-  process.exit(code);
-}
-
 /** Returns true for files where the slug is allowed to appear. */
 function isAllowed(file) {
   return (
@@ -33,20 +27,6 @@ function isAllowed(file) {
     ROOT_MARKDOWN.test(file) ||
     ALLOWED_DIRECTORIES.some((directory) => directory.test(file))
   );
-}
-
-/** Lists tracked and untracked (not ignored) files under the repository root. */
-function repositoryFiles(root) {
-  try {
-    const output = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
-      cwd: root,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    return output.split('\0').filter(Boolean);
-  } catch {
-    return exitWith(`check-brand: ${root} is not inside a git repository.`, 2);
-  }
 }
 
 /** Reads a text file, or returns undefined for missing and binary files. */
@@ -59,7 +39,8 @@ function readText(file) {
 /** Returns `path:line` findings for every slug literal outside the allowlist. */
 function slugLeaks(root, slugs) {
   const findings = [];
-  for (const file of repositoryFiles(root).filter((candidate) => !isAllowed(candidate))) {
+  const nextStep = 'Run it inside the git repository, or pass the repository root as the first argument.';
+  for (const file of repositoryFiles(root, nextStep).filter((candidate) => !isAllowed(candidate))) {
     const lines = readText(path.join(root, file))?.split('\n') ?? [];
     lines.forEach((line, index) => {
       const slug = slugs.find((candidate) => line.includes(candidate));
