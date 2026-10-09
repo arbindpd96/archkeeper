@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { hasLong, parseOptions } from './cli-options.mjs';
 
 const deny = (reason) => Object.freeze({ decision: 'deny', reason });
@@ -103,9 +104,15 @@ const judgeStash = ({ operands }) => (['drop', 'clear'].includes(operands[0]) ? 
 const judgeOutput = (options) =>
   options.long.has('--output') || options.long.has('--no-index') ? OUTSIDE_REPO : null;
 
+const isExistingPath = (operand) => !hasExpansion(operand) && existsSync(operand);
+
+// `git checkout <file>` or `git checkout <rev> <file>` overwrites uncommitted edits with no prompt.
 function judgeCheckout(options) {
   const forced = options.short.has('f') || options.long.has('--force');
-  const discardsPaths = options.afterDashes.length > 0 || options.operands.includes('.');
+  const createsBranch = options.short.has('b') || options.short.has('B') || options.long.has('--orphan');
+  const { operands } = options;
+  const namesPaths = !createsBranch && (operands.length > 1 || operands.some(isExistingPath));
+  const discardsPaths = options.afterDashes.length > 0 || operands.includes('.') || namesPaths;
   return forced || discardsPaths ? DISCARDS_WORK : null;
 }
 

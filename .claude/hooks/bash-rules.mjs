@@ -26,7 +26,7 @@ const INTERPRETER =
   /^(?:sh|bash|zsh|dash|ksh|mksh|fish|python[\d.]*|node|nodejs|perl|ruby|php|eval|source|\.)$/;
 const PUBLISH_COMMANDS = new Set(['publish', 'pub', 'unpublish', 'deprecate', 'dist-tag']);
 const PRIVILEGED = new Set(['sudo', 'doas', 'su']);
-const ENV_FILE = /^\.env(?:rc|\..+)?$/i;
+const ENV_FILE = /^\.env(?:rc)?(?![a-z0-9_-])/i;
 const ENV_TEMPLATE = /^\.env\.(?:example|sample|template)$/i;
 const ENV_FILE_NAMES = ['.env', '.envrc', '.env.local', '.env.production', '.env.development'];
 const HOOKS_PATH_SETTING = /core\.hookspath/i;
@@ -114,7 +114,8 @@ function envGlobMatches(name) {
 }
 
 function isEnvFile(word) {
-  const name = word.slice(Math.max(word.lastIndexOf('/'), word.lastIndexOf(':'), word.lastIndexOf('=')) + 1);
+  const path = word.replace(/\/+$/, '');
+  const name = path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf(':'), path.lastIndexOf('=')) + 1);
   const lower = name.toLowerCase();
   if (ENV_TEMPLATE.test(lower)) return false;
   if (ENV_FILE.test(lower)) return true;
@@ -134,12 +135,16 @@ const runsDownload = (command) =>
 const CODE_FROM_ARGUMENT = new Set(['-c', '-e', '-E', '--eval', '-p', '--print', '-m']);
 const STDIN_PATHS = new Set(['-', '/dev/stdin', '/proc/self/fd/0']);
 
-// Piped data only becomes code when the interpreter has no script, module or -c/-e source of its own.
-function runsStdinAsCode({ program, args, dynamicProgram }) {
-  if (dynamicProgram || ['eval', 'source', '.'].includes(program) || args.includes('-s')) return true;
+const EXECUTES_INPUT =
+  /\b(?:exec|eval|system|popen|spawn|execSync|child_process|Function|compile|__import__|subprocess)\b/;
+
+// Piped data stays data only with a leading script path, a module, or inline code that cannot execute input.
+function runsStdinAsCode({ program, args, dynamicProgram, subs }) {
+  if (dynamicProgram || subs.length > 0 || ['eval', 'source', '.'].includes(program)) return true;
+  if (args.includes('-s') || args.some((arg) => EXECUTES_INPUT.test(arg))) return true;
   if (args.some((arg) => CODE_FROM_ARGUMENT.has(arg))) return false;
-  const operand = args.find((arg) => !arg.startsWith('-') || STDIN_PATHS.has(arg));
-  return operand === undefined || STDIN_PATHS.has(operand) || !/[./]/.test(operand);
+  const [first] = args;
+  return first === undefined || first.startsWith('-') || STDIN_PATHS.has(first) || !/[./]/.test(first);
 }
 
 function downloadPipedToInterpreter(commands) {
