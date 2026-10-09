@@ -67,7 +67,11 @@ Everything the kit keeps lives in `.archkeeper/` (`BRAND.stateDir`):
 - A managed `.gitattributes` block marks `.archkeeper/base/**` as `binary linguist-generated`.
 - A blob is valid when its decompressed sha256 matches its name. Either side of a git conflict on a blob is therefore correct, and `doctor` checks integrity.
 
-**`local/`** is gitignored through the base module's `.gitignore` block. It holds the active-feature pointer (`local/active-feature`), the pre-compact snapshot (`local/snapshots/latest.json`), caches, hook state ([ADR-0015](0015-hook-runtime.md)) and per-run backups. A backup is a set of compressed, content-addressed blobs, named like the bases, plus a `manifest.json` that maps paths to blobs, under `local/backup/<runId>/`. The last 3 runs are kept.
+**`local/`** holds the active-feature pointer (`local/active-feature`), the pre-compact snapshot (`local/snapshots/latest.json`), caches, hook state ([ADR-0015](0015-hook-runtime.md)) and per-run backups.
+
+- It is gitignored twice: by the base module's `.gitignore` block, and by its own `.archkeeper/local/.gitignore`, which contains `*` and so ignores itself too. A user who deletes the root block therefore cannot commit backups or snapshots by accident.
+- A backup is a set of compressed, content-addressed blobs, named like the bases, plus a `manifest.json` that maps paths to blobs, under `local/backup/<runId>/`. The last 3 runs are kept.
+- Backups can hold copies of gitignored files, such as a user's `.mcp.json` with tokens, so they are created with mode `0600`, like hook state.
 
 **Not discoverable.** Nothing under `.archkeeper/` is named `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md` or `SKILL.md`, sits under a `.claude/` folder, or ends in `.md`. Bases and backups are compressed, so a ripgrep search for template text finds nothing there. A test enforces both (#24). The map seeder and, from v0.2, the duplicate checker skip `.archkeeper/`.
 
