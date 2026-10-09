@@ -138,6 +138,7 @@ What counts as a change:
 - **Sidecars keep the base.** Writing a sidecar leaves `base` at the last kit-written content and records the sidecar's content as `pending`. A sidecar that already holds the new kit content is left alone. An unedited sidecar is rewritten when the kit content changes again, and one the user edited is never overwritten; it is reported instead.
 - **One sidecar per blocks file.** Blocks are judged one by one. In a file with both kinds, the unchanged blocks are still replaced in place, and the file's single sidecar holds the file as it now is with every user-edited block swapped for its new kit version. Each of those blocks records its own `pending`.
 - **Resolving a sidecar.** The user takes what they want from the sidecar into the file, or copies it over the file, and deletes the sidecar. The next run finds `pending` with no sidecar on disk and moves `base` to `pending`. That kit version then counts as seen: it is never offered again, and the v0.2 merge starts from it. Kit changes the user never saw stay out of the base, so a merge can still bring them in.
+- **Sidecars are committed with the lock.** `pending` lives in the committed lock, so its sidecar must travel with it: otherwise a teammate who pulls the lock without the sidecar would have a kit change nobody merged marked as seen. The kit never gitignores sidecars, and `update`'s exit-2 hint names each sidecar with `lock.json` and says to commit them together.
 
 The command-line contract (#40):
 
@@ -148,7 +149,7 @@ The command-line contract (#40):
   - A create-only doc, or an owned file listed in `removed[]`, is rewritten whole.
   - In a blocks file, only the removed blocks are re-inserted, and every byte outside them stays as it is.
   - In a json file, only the removed entries are re-added, through the same edits `update` makes.
-- `update` exits 2 when it wrote sidecars, and lists them with a hint.
+- `update` exits 2 when it wrote sidecars, and lists them with a hint to commit them with `lock.json`.
 
 `uninstall` (#41) removes only what is still exactly as the kit wrote it, and backs up everything it touches first:
 
