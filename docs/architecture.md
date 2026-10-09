@@ -1,7 +1,7 @@
 # Architecture map
 
 > The living map of archkeeper. Read it before creating anything new; update it (or run `/update-map`) after adding a
-> source layer, module, pack or shared util. Status: **single-package layout in place (ADR-0011); product code starts in v0.0 Runway** (see `docs/ROADMAP.md`). Rows marked _planned_ are the agreed target (handoff §8, ADR-0002/0003/0011).
+> source layer, module, pack or shared util. Status: **v0.1 M1 core in place: module manifests, project config, preset resolution and the renderer** (see `docs/ROADMAP.md`). Rows marked _planned_ are the agreed target (handoff §8, ADR-0002/0003/0011).
 
 ## Overview
 

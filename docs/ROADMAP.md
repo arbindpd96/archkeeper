@@ -205,9 +205,9 @@ Only the README skeleton changes in this phase. It gets:
 
 **M1: Core: module manifests, config, presets, renderer.** Modules are validated data covering files, hooks, permissions, MCP servers, preset membership and demo. Presets resolve deterministically, and templates render byte-identically on every OS and for any brand.
 
-- [ ] feat(core): module manifest schema and loader
-- [ ] feat(core): project config and preset/module resolution
-- [ ] feat(core): deterministic logic-less renderer with an injectable brand
+- [x] feat(core): module manifest schema and loader
+- [x] feat(core): project config and preset/module resolution
+- [x] feat(core): deterministic logic-less renderer with an injectable brand
 
 **M2: Core: install planner, ownership strategies, transactional apply.** Every write is:
 
