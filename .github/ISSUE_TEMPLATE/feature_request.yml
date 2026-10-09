@@ -1,0 +1,23 @@
+name: Feature request
+description: Suggest a module, command, pack or improvement
+labels: ["type: feature", "status: triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What goes wrong for you today with Claude Code? Real examples help most.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should claude-codekit do? Which module or preset would it belong to?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing tools (Superpowers, Spec Kit, ...) or workarounds you tried.

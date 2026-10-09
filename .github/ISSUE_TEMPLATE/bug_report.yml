@@ -1,0 +1,38 @@
+name: Bug report
+description: Something in claude-codekit does not work as documented
+labels: ["type: bug", "status: triage"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you ran, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. npx claude-codekit init --preset small
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: claude-codekit version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node version, Claude Code version, project stack
+      placeholder: "macOS 15, Node 24.4, Claude Code 2.1, Next.js 16"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output
+      render: shell
