@@ -25,5 +25,8 @@ CLAUDE.local.md
 tmp/
 .tmp/
 
+# pipeline-only demo GIFs such as _smoke.gif (rendered by CI, never committed)
+docs/media/_*.gif
+
 # Claude Code agent worktrees
 .claude/worktrees/
