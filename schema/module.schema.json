@@ -646,12 +646,13 @@
               },
               "url": {
                 "type": "string",
-                "pattern": "^https?:\\/\\/[^\\s/?#@]+(?:\\/[^\\s?#]*)?(?:\\?[^\\s=&#]+=\\$\\{[A-Za-z_][A-Za-z0-9_]*\\}(?:&[^\\s=&#]+=\\$\\{[A-Za-z_][A-Za-z0-9_]*\\})*)?$"
+                "pattern": "^(?:https:\\/\\/[^\\s/?#@]+|http:\\/\\/(?:localhost|127\\.0\\.0\\.1|\\[::1\\])(?::\\d+)?)(?:\\/[^\\s?#]*)?(?:\\?[^\\s=&#]+=\\$\\{[A-Za-z_][A-Za-z0-9_]*\\}(?:&[^\\s=&#]+=\\$\\{[A-Za-z_][A-Za-z0-9_]*\\})*)?$"
               },
               "headers": {
                 "type": "object",
                 "propertyNames": {
-                  "type": "string"
+                  "type": "string",
+                  "pattern": "^[\\w!#$%&'*+.^`|~-]+$"
                 },
                 "additionalProperties": {
                   "type": "string",
