@@ -30,6 +30,7 @@ R1 already reflects this split. ADR-0011 keeps `plugin/` in the repo but out of 
 - From v0.3, the plugin carries agents, and skills when the user chooses `--skills plugin`. `--skills local|plugin` is recorded in `config.json`.
 - The two copies of a skill are never active at once, and `doctor` flags duplicates.
 - The plugin carries only skills and agents. It never ships hooks, settings, MCP servers or instruction files.
+- Its skills and agents follow the same frontmatter allowlist as the project's ([ADR-0015](0015-hook-runtime.md)): no `hooks` or `mcpServers`, `permissionMode` only as `default` or `plan`, no unscoped `Bash` in a skill's `allowed-tools`, and no load-time `` !`cmd` ``. Claude Code already ignores `hooks`, `mcpServers` and `permissionMode` on plugin agents (reference §3.2), but the kit does not rely on that: the static test also runs on the built `plugin/`.
 
 **Distribution.**
 
