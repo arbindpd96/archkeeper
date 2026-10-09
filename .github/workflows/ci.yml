@@ -41,7 +41,7 @@ jobs:
         run: npm run brand
       - name: Schemas (schema/*.json match the zod schemas in src/core)
         run: npm run schema:check
-      - name: Demo GIFs (2 MB, 20 s or 30 s for the hero, each from a tape)
+      - name: Demos (GIFs within 2 MB and 20 s or 30 s for the hero; each module has a demo or is internal)
         run: npm run demos
       - name: Tests
         run: npm test

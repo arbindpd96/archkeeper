@@ -2,12 +2,14 @@
 import { appendFileSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
+import { moduleDemoProblems } from './demo-rules.mjs';
 import { exitWith } from './lib.mjs';
 
 const MAX_BYTES = 2_000_000;
 const MAX_SECONDS = { hero: 30, feature: 20 };
 const HERO = /^#\s*hero\s*$/m;
-const USAGE = 'Usage: node scripts/check-demos.mjs [<gif-dir>] [--tapes <dir>]';
+const USAGE =
+  'Usage: node scripts/check-demos.mjs [<gif-dir>] [--tapes <dir>] [--modules <dir>] [--readme <file>]';
 
 const GIF_TRAILER = 0x3b;
 const GIF_EXTENSION = 0x21;
@@ -15,15 +17,19 @@ const GIF_IMAGE = 0x2c;
 const GRAPHIC_CONTROL = 0xf9;
 const HAS_COLOR_TABLE = 0x80;
 
-/** Reads the command line: the GIF folder (default docs/media) and the tape folder. */
+/** Reads the command line: the GIF folder (default docs/media), the tapes, the modules and the README. */
 function readOptions() {
   try {
     const { values, positionals } = parseArgs({
-      options: { tapes: { type: 'string', default: 'docs/media/tapes' } },
+      options: {
+        tapes: { type: 'string', default: 'docs/media/tapes' },
+        modules: { type: 'string', default: 'modules' },
+        readme: { type: 'string', default: 'README.md' },
+      },
       allowPositionals: true,
     });
     if (positionals.length > 1) throw new Error('more than one GIF folder');
-    return { gifs: positionals[0] ?? 'docs/media', tapes: values.tapes };
+    return { gifs: positionals[0] ?? 'docs/media', ...values };
   } catch (error) {
     return exitWith(`check-demos: ${error.message}\n${USAGE}`, 2);
   }
@@ -112,13 +118,11 @@ const gifs = existsSync(options.gifs)
       .filter((file) => file.endsWith('.gif'))
       .sort()
   : [];
-if (gifs.length === 0) {
-  process.stdout.write(`check-demos: no GIFs in ${options.gifs}.\n`);
-  process.exit(0);
-}
 const results = gifs.map((file) => checkGif(path.join(options.gifs, file), options.tapes));
-report(results.map((result) => result.row));
-const problems = results.flatMap((result) => result.problems);
+if (gifs.length === 0) process.stdout.write(`check-demos: no GIFs in ${options.gifs}.\n`);
+else report(results.map((result) => result.row));
+// TODO(#26): apply the same demo-or-internal rule to every command in the CLI command registry.
+const problems = [...results.flatMap((result) => result.problems), ...moduleDemoProblems(options)];
 if (problems.length > 0) {
-  exitWith(`Demo check failed (2 MB; hero 30 s, feature 20 s):\n${problems.join('\n')}`, 1);
+  exitWith(`Demo check failed (2 MB; hero 30 s, feature 20 s; demo or internal):\n${problems.join('\n')}`, 1);
 }
