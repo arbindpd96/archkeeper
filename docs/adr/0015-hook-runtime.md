@@ -84,7 +84,10 @@ Both guards fail closed because the backstop behind them is thin: deny rules are
 ### Guards
 
 - **guard-bash decides on parsed commands, never on regexes over raw text.** It tokenizes quotes, escapes, here-documents, substitutions and brace expansion within a work budget, unwraps wrappers such as `sudo`, `env`, `xargs` and `bash -c`, and judges each simple command. When a case is ambiguous it asks rather than denies.
-- **guard-secrets** scans every string a write would put into a file, denies likely secrets with a reason that names the rule and the file but never the value, and asks before editing `.env`, `.env.*` or `.envrc`, except templates such as `.env.example`. An `archkeeper:allow-secret` pragma exempts one line.
+- **guard-secrets** scans every string a write would put into a file, denies likely secrets with a reason that names the rule and the file but never the value, and asks before editing `.env`, `.env.*` or `.envrc`, except templates such as `.env.example`.
+  - An `archkeeper:allow-secret` pragma exempts a line only when that exact line is already in the file on disk, read without following symlinks.
+  - A write that adds a pragma line matching a secret rule asks instead, so an agent cannot approve its own secret. The user confirms each new fixture once, and later edits that keep the line pass.
+  - The pragma is also accepted under every `BRAND.legacySlugs` prefix (ADR-0012). This repo's guard-secrets behaves the same way, and its tests cover these cases.
 - **Repo-specific policies** such as `blockAiAttribution` and `blockNoVerify` are module options, off by default.
 
 ### Deny rules
