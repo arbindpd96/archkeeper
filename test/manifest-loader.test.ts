@@ -148,34 +148,28 @@ describe('loadModule cross-field rules', () => {
     expect(loadRich((m) => (entry(m, 'files', 2).to = '.mcp.json')).location).toBe('files[2].to');
   });
 
-  it.each<[string, string]>([
-    ['Bash', 'allows every use of Bash'],
-    ['Bash(*)', 'allows every use of Bash'],
-    ['Bash(:*)', 'allows every use of Bash'],
-    ['Read(**)', 'allows every use of Read'],
-    ['Edit(/**)', 'allows every use of Edit'],
-    ['Read(~/**)', 'allows every use of Read'],
-    ['mcp__docs', 'allows every use of mcp__docs'],
-    ['Read(**/.env)', 'can hold secrets'],
-    ['Read(./.env.*)', 'can hold secrets'],
-    ['Read(~/.ssh/**)', 'can hold secrets'],
-    ['Edit(config/secrets.yml)', 'can hold secrets'],
-    ['Read(certs/server.pem)', 'can hold secrets'],
-  ])('rejects the broad allow rule %s', (rule, problem) => {
+  it.each([
+    'Bash(npm test)',
+    'Bash(node:*)',
+    'Bash(sh -c:*)',
+    'Edit(.claude/**)',
+    'Write(.git/hooks/*)',
+    'Read(//etc/**)',
+    'Read(**/.en*)',
+    'WebFetch(domain:*)',
+    'mcp__docs__search',
+  ])('rejects the allow rule %s, since modules add none yet', (rule) => {
     const error = loadRich((m) => (m.permissions = { allow: [rule] }));
     expect(error.location).toBe('permissions.allow[0]');
-    expect(error.message).toContain(problem);
-    expect(error.hint).toContain('allow one command or path');
+    expect(error.message).toContain('skip the permission prompt');
+    expect(error.hint).toContain('move it to ask');
   });
 
-  it('accepts narrow allow rules and keeps secret paths in deny', () => {
+  it('accepts ask and deny rules', () => {
     const manifest = richManifest();
-    manifest.permissions = {
-      allow: ['Bash(npm test)', 'Edit(src/**/*.ts)', 'Read(docs/**)', 'mcp__docs__search'],
-      deny: ['Read(**/.env)', 'Bash(rm -rf:*)'],
-    };
+    manifest.permissions = { ask: ['Bash(git push:*)'], deny: ['Read(**/.env)', 'Bash(rm -rf:*)'] };
     const read = memoryReader({ 'modules/rich/module.json': JSON.stringify(manifest), ...richSources() });
-    expect(loadModule('rich', read).manifest.permissions.allow).toHaveLength(4);
+    expect(loadModule('rich', read).manifest.permissions).toEqual(manifest.permissions);
   });
 
   it.each(['.github/notes.md', '.claude/settings.md', `${BRAND.stateDir}-notes/x.md`, 'docs/.gitkeep'])(
