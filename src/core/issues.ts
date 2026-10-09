@@ -38,15 +38,17 @@ function article(type: string): string {
 
 function invalidType(issue: Extract<Issue, { code: 'invalid_type' }>): Described {
   if (issue.expected === 'never') return { problem: 'is not allowed here', hint: 'remove it' };
-  if (issue.input === undefined)
+  if (issue.input === undefined) {
     return { problem: 'is required', hint: `add it as ${article(issue.expected)}` };
+  }
   return { problem: `must be ${article(issue.expected)}`, hint: `set it to ${article(issue.expected)}` };
 }
 
 function invalidUnion(issue: Extract<Issue, { code: 'invalid_union' }>): Described {
   const { discriminator, options = [] } = issue as { discriminator?: string; options?: unknown[] };
-  if (discriminator === undefined)
+  if (discriminator === undefined) {
     return { problem: 'matches none of the allowed forms', hint: 'see the schema' };
+  }
   const value = (issue.input as Record<string, unknown> | undefined)?.[discriminator];
   const problem = value === undefined ? 'is required' : `${show(value)} is not allowed`;
   return { problem, hint: `use ${oneOf(options)}` };
@@ -114,8 +116,9 @@ export function checkSchema<Schema extends z.ZodMiniType>(
   const result = z.safeParse(schema, value, { reportInput: true });
   if (result.success) return { ok: true, data: result.data };
   const [issue] = result.error.issues;
-  if (issue === undefined)
+  if (issue === undefined) {
     return { ok: false, finding: { location: '', problem: 'is not valid', hint: 'fix it' } };
+  }
   return { ok: false, finding: describeIssue(issue, schemaName) };
 }
 

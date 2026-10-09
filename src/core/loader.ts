@@ -90,12 +90,13 @@ function readSources(manifest: ModuleManifest, file: string, read: ReadKitFile):
   const sources = new Map<string, string>();
   for (const { field, path } of referencedSources(manifest)) {
     const text = read(path);
-    if (text === undefined)
+    if (text === undefined) {
       fail(file, {
         location: field,
         problem: `names ${path}, which does not exist`,
         hint: 'add the file or fix the path',
       });
+    }
     sources.set(path, text);
   }
   return sources;
@@ -121,12 +122,13 @@ function loadPresets(read: ReadKitFile): PresetCatalog {
   const catalog = validate(presetCatalogSchema, readJson(PRESETS_FILE, read), PRESETS_FILE, PRESETS_SCHEMA);
   const names = catalog.presets.map((preset) => preset.name);
   const repeated = names.findIndex((name, index) => names.indexOf(name) !== index);
-  if (repeated !== -1)
+  if (repeated !== -1) {
     fail(PRESETS_FILE, {
       location: `presets[${String(repeated)}].name`,
       problem: 'repeats a preset',
       hint: 'name each preset once',
     });
+  }
   if (!names.includes(catalog.default)) {
     fail(PRESETS_FILE, {
       location: 'default',
@@ -140,12 +142,13 @@ function loadPresets(read: ReadKitFile): PresetCatalog {
 // Presets form a chain (small ⊂ medium ⊂ full), so a module in one preset must be in every later one.
 function presetFinding(manifest: ModuleManifest, chain: readonly string[]): Finding | undefined {
   const unknown = manifest.presets.findIndex((name) => !chain.includes(name));
-  if (unknown !== -1)
+  if (unknown !== -1) {
     return {
       location: `presets[${String(unknown)}]`,
       problem: 'is not a preset',
       hint: `use ${chain.join(', ')}`,
     };
+  }
   const first = chain.findIndex((name) => manifest.presets.includes(name));
   const missing =
     first === -1 ? undefined : chain.slice(first).find((name) => !manifest.presets.includes(name));

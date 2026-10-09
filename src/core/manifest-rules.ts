@@ -98,12 +98,15 @@ function undeclaredJson(manifest: ModuleManifest): { field: string; file: string
   const hasRules = [permissions.allow, permissions.ask, permissions.deny].some(
     (list) => (list ?? []).length > 0,
   );
-  if (hooks.length > 0 && !declares(manifest, 'json', SETTINGS_FILE))
+  if (hooks.length > 0 && !declares(manifest, 'json', SETTINGS_FILE)) {
     return { field: 'hooks', file: SETTINGS_FILE };
-  if (hasRules && !declares(manifest, 'json', SETTINGS_FILE))
+  }
+  if (hasRules && !declares(manifest, 'json', SETTINGS_FILE)) {
     return { field: 'permissions', file: SETTINGS_FILE };
-  if (mcpServers.length > 0 && !declares(manifest, 'json', MCP_FILE))
+  }
+  if (mcpServers.length > 0 && !declares(manifest, 'json', MCP_FILE)) {
     return { field: 'mcpServers', file: MCP_FILE };
+  }
   return undefined;
 }
 
