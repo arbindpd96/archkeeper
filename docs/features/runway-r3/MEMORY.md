@@ -35,6 +35,10 @@ v0.0 Runway milestone R3 (issues #14, #15): ADR-0012, 0014, 0015, 0016 and 0018 
 - 2026-10-09: A JSON entry the user already has under a kit key stays the user's even when it equals the kit's entry: it is not recorded in `ownedKeys`, never duplicated, changed or removed (ADR-0014). Why: adopting it would let `uninstall` delete the user's own rule, such as this repo's `Read(**/.env)`, and break the v0.1 exit criterion that a pre-existing `settings.json` comes back deep-equal.
 - 2026-10-09: Sidecars are committed with `lock.json`, never gitignored (ADR-0014). Why: `pending` is in the committed lock, and a lock pulled without its sidecar would mark a kit change nobody merged as seen. Keeping `pending` and its blob out of the committed state instead would need a second, uncommitted blob store.
 - 2026-10-09: Switching `--skills` to `plugin` removes only unmodified project copies, keeps and reports modified ones, and records none of these removals in `removed[]` (ADR-0016). Why: ADR-0014 never loses a user byte, and a config-driven removal in `removed[]` would stop switching back from writing the copies again.
+- 2026-10-10: guard-secrets judges an edit to a file outside the project by its written text alone, follows a symlink only to a file inside the project, and names the cause when it asks (ADR-0015). Why: the third review showed every edit to auto memory under `~/.claude/projects/`, or to a symlinked `CLAUDE.md`, prompting; files outside the project are never committed with it.
+- 2026-10-10: Secret patterns run in linear time, and guard-secrets asks above 1 MB of written text or edited file instead of using a wall-clock deadline. Why: a 300 KB line timed the hook out (fail open); a size cap is deterministic across machines, and a timing test catches a slow pattern.
+- 2026-10-10: A skill's `allowed-tools` takes exact `Bash(<command>)` entries only, with no wildcard and no flag that writes or runs (ADR-0015), and frontmatter is an allowlist of keys that forbids `memory: user`. Why: `Bash(git log:*)` admitted `--output=<path>`, and `git grep -O<cmd>` runs a program; guard-bash now asks on `git grep -O`.
+- 2026-10-10: `doctor` and every `update` warn about safety deny rules or guard registrations that are missing or in `removed[]` (ADR-0014). Why: `removed[]` comes from the untrusted committed lock, so one PR could switch protections off for a team.
 
 ## Done
 
@@ -44,17 +48,18 @@ v0.0 Runway milestone R3 (issues #14, #15): ADR-0012, 0014, 0015, 0016 and 0018 
 - [x] Review fixes, ADR-0014 (e5c9e50–f49f58b): edits judged against `base`, sidecars keep `base`, deleted JSON entries, in-place `--restore`, uninstall keeps user files and its backup, config `version`, symlinks, path rules, untrusted lock, conflicted lock.
 - [x] Review fixes, the rest (c3c6eed–f611b47): blocks sidecars and hook registration (0014); native `rm -rf`, pragma, `.env` shell access, state-file `lstat`, frontmatter allowlist, opt-in stop check (0015); duplicates and release-only plugin paths (0016); rename list (0012); `doctor --online` hosts (0018); reference §3.1–§3.2; roadmap and map fixes; two `.claude/hooks/` fixes with tests. `npm run check` green before every commit.
 - [x] Second review pass (f3569b2–8e71ba6): guard-secrets replays edits and reads through one no-follow, non-blocking descriptor, with tests; `rm -rf` wording and reference §1.7; replay and `O_NOFOLLOW` in ADR-0015; `allowed-tools` allowlist (0015, 0016, rules); `doctor --online` origin (0018); user JSON entries on first contact, committed sidecars, hook render check, uninstall's state exception, `local/.gitignore` (0014); `--skills` switch (0016). `npm run check` green before every commit.
+- [x] Third review pass: guard-secrets outside-the-project fallback, symlinks inside the project, named causes, linear patterns, 1 MB caps, non-boolean `replace_all`; shared `readRegularFile` in `lib.mjs`; guard-bash `git grep -O`; symlink tests run wherever symlinks can be made, Windows included; ADR-0015 exact `allowed-tools`, key allowlist and prompt cost; ADR-0014 `removed[]` warning; rules, map, CONTRIBUTING and mistakes log.
 
 ## Next step
 
-Coordinator: run `security-reviewer` on the four `.claude/hooks/` fixes (bb4ca25, 35365da, f3569b2, 45f7268), then open the R3 PR (closes #14 and #15). Its body carries, from Open questions, the deviation list, the issue texts to align and the four hook fixes, and asks the owner to confirm each of the five ADRs explicitly (#15's acceptance criterion). Before or with the merge, edit those issue texts. Then start v0.1 M1 (#18–#20).
+Open the R3 PR (closes #14 and #15). Its body carries the deviation list from Open questions and the `.claude/hooks/` fixes, and asks the owner to confirm the five ADRs; merging is that confirmation. Comment the issue texts to align on each issue. Then start v0.1 M1 (#18–#20).
 
 ## Gotchas / don't try again
 
 - R2 rewrote the `docs/decisions.md` table, and Prettier re-pads every row when a cell grows, so any branch that adds a row conflicts with any other that does. Resolve by keeping every row from both sides, then run Prettier.
 - This repo's `.claude/settings.json` denies `Bash(git push --force *)`; the safety module will emit the `:*` form (reference §1.9). After the M8 migration (#45) the old entries stay as user entries; drop them then.
 - Tests other than `test/guards.test.ts` must build the pragma from `BRAND.markerPrefix`: `check-brand` rejects the literal anywhere else under `test/`.
-- guard-secrets now asks before every Edit or MultiEdit it cannot replay: a target outside the project, a symlink, a file over 1 MB or not a regular file, or an `old_string` it cannot find. Expect that prompt when Claude edits such a file.
+- guard-secrets asks before an Edit or MultiEdit on a project file that is not a regular file or is over 1 MB, or whose `old_string` it cannot find; the reason names which. Edits outside the project are judged by their text alone.
 
 ## Open questions
 
