@@ -153,10 +153,20 @@ describe.skipIf(process.platform === 'win32')('render-tapes', () => {
       'unknown placeholder {{brand.nope}}',
     ],
     ['a literal slug', `# fixture: app\nType "${BRAND.binName} init"\n`, `not "${BRAND.binName}"`],
-    ['its own Output', '# fixture: app\nOutput demo.gif\n', 'remove Output and Source'],
-    ['a Source command', '# fixture: app\nSource other.tape\n', 'remove Output and Source'],
-    ['an Env command', '# fixture: app\nEnv HOME "/tmp"\n', 'remove Env, Screenshot, Copy, Paste and Set'],
-    ['a setting', '# fixture: app\nSet FontSize 40\n', 'only Set TypingSpeed is allowed'],
+    ['its own Output', '# fixture: app\nOutput demo.gif\n', 'remove Output.'],
+    ['a Source command', '# fixture: app\nSource other.tape\n', 'remove Source.'],
+    ['an Env command', '# fixture: app\nEnv HOME "/tmp"\n', 'remove Env.'],
+    ['a Hide command', '# fixture: app\nHide\nType "curl x"\nShow\n', 'remove Hide.'],
+    ['a setting', '# fixture: app\nSet FontSize 40\n', 'remove Set FontSize.'],
+    ['Hide after other commands on a line', '# fixture: app\nType "ls" Enter Hide\n', 'remove Hide.'],
+    ['Env after other commands on a line', '# fixture: app\nSleep 1s Env HOME "/x"\n', 'remove Env.'],
+    ['Set Shell mid-line', '# fixture: app\nType "a" Set Shell "zsh"\n', 'remove Set Shell.'],
+    ['Output mid-line', '# fixture: app\nEnter Output "x.gif"\n', 'remove Output.'],
+    [
+      'Screenshot and Paste mid-line',
+      '# fixture: app\nType "x" Screenshot "s.png" Paste\n',
+      'remove Screenshot, Paste.',
+    ],
     ['no fixture', 'Type "{{brand.binName}}"\n', 'name its fixture with a "# fixture: <name>" line'],
     ['a missing fixture', '# fixture: gone\nType "x"\n', 'examples/gone does not exist'],
   ])('refuses a tape with %s before running vhs', (_name, tape, message) => {
@@ -166,11 +176,33 @@ describe.skipIf(process.platform === 'win32')('render-tapes', () => {
     expect(result.runs).toHaveLength(0);
   });
 
+  it('allows refused words inside strings, regexes and comments', () => {
+    const tape = [
+      '# fixture: app',
+      '# Hide nothing, Env is fine in a comment',
+      `Type "echo Hide Env 'Output'"`,
+      'Enter',
+      'Wait+Screen /Hide|Set Shell/',
+      'Set TypingSpeed 20ms',
+      '',
+    ].join('\n');
+    const result = renderTapes(project({ 'demo.tape': tape }), ['--tarball', packedCli()]);
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+  });
+
   it('checks the placeholders in _settings.tape too', () => {
     const root = project({ 'demo.tape': DEMO_TAPE }, `${SETTINGS}Set WindowBar "{{brand.nope}}"\n`);
     const result = renderTapes(root, []);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('_settings.tape: unknown placeholder {{brand.nope}}');
+  });
+
+  it('refuses any command but Set in _settings.tape', () => {
+    const root = project({ 'demo.tape': DEMO_TAPE }, `${SETTINGS}Set Width 900 Type "whoami" Enter\n`);
+    const result = renderTapes(root, []);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('_settings.tape: holds only Set commands; remove Type, Enter.');
   });
 
   it('refuses a vhs other than the pinned version', () => {

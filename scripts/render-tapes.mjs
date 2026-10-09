@@ -14,23 +14,21 @@ import {
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { BRAND } from '../src/core/brand.ts';
 import { exitWith, npm } from './lib.mjs';
+import {
+  fillPlaceholders,
+  SETTINGS,
+  settingsProblems,
+  TAPE_NAME,
+  TAPES,
+  tapeProblems,
+} from './tape-rules.mjs';
 
 // Pinned with the vhs-action input in .github/workflows/demo-gifs.yml; a test keeps the two equal.
 const VHS_VERSION = '0.12.1';
-const TAPES = 'docs/media/tapes';
-const SETTINGS = '_settings.tape';
-const TAPE_NAME = /^_?[a-z0-9][a-z0-9-]*$/;
-const PLACEHOLDER = /\{\{\s*([^{}]*?)\s*\}\}/g;
 const FIXTURE = /^#\s*fixture:\s*(\S+)\s*$/m;
 const LIVE = /^#\s*live\s*$/m;
-const OWNED_COMMANDS = /^\s*(Output|Source)\b/m;
-// A tape is a shell script that the maintainer may run locally with --live, so it may not set the
-// environment, write screenshots or use the clipboard; settings other than typing speed are _settings.tape's.
-const REFUSED_IN_TAPES = /^\s*(Env|Screenshot|Copy|Paste|Set(?!\s+TypingSpeed\b))\b/m;
 const SECRET_ENV = /TOKEN|SECRET|PASSWORD|^npm_config_/i;
-const SLUGS = [...new Set([BRAND.npmName, BRAND.binName, BRAND.pluginName, BRAND.marketplaceName])];
 const USAGE =
   'Usage: node scripts/render-tapes.mjs [<feature>...] [--out <dir>] [--tarball <file>]\n' +
   '       node scripts/render-tapes.mjs --live <feature> [--out <dir>] [--tarball <file>]';
@@ -51,48 +49,6 @@ function readOptions() {
   } catch (error) {
     return exitWith(`render-tapes: ${error.message}\n${USAGE}`, 2);
   }
-}
-
-/** Replaces `{{brand.<key>}}` with the BRAND string, collecting any placeholder that is not one. */
-function fillPlaceholders(text, unknown = []) {
-  return text.replace(PLACEHOLDER, (match, key) => {
-    const [scope, name, ...rest] = key.split('.');
-    const known = scope === 'brand' && rest.length === 0 && Object.hasOwn(BRAND, name);
-    if (known && typeof BRAND[name] === 'string') return BRAND[name];
-    unknown.push(match);
-    return match;
-  });
-}
-
-/** Lists what any tape text must not contain: commands render-tapes owns, slugs, unknown placeholders. */
-function textProblems(label, text) {
-  const problems = [];
-  if (OWNED_COMMANDS.test(text)) {
-    problems.push(`${label}: remove Output and Source; render-tapes adds the output path and ${SETTINGS}.`);
-  }
-  const slug = SLUGS.find((candidate) => text.includes(candidate));
-  if (slug !== undefined) {
-    problems.push(`${label}: write {{brand.binName}} or another {{brand.*}}, not "${slug}".`);
-  }
-  const unknown = [];
-  fillPlaceholders(text, unknown);
-  for (const match of unknown) problems.push(`${label}: unknown placeholder ${match}; use {{brand.<key>}}.`);
-  return problems;
-}
-
-/** Lists why a tape cannot be rendered, including a missing or unknown fixture. */
-function tapeProblems(root, tape) {
-  const label = `${TAPES}/${tape.feature}.tape`;
-  const problems = textProblems(label, tape.text);
-  if (REFUSED_IN_TAPES.test(tape.text)) {
-    problems.push(`${label}: remove Env, Screenshot, Copy, Paste and Set (only Set TypingSpeed is allowed).`);
-  }
-  if (tape.fixture === undefined || !TAPE_NAME.test(tape.fixture)) {
-    problems.push(`${label}: name its fixture with a "# fixture: <name>" line (a folder in examples/).`);
-  } else if (!existsSync(path.join(root, 'examples', tape.fixture))) {
-    problems.push(`${label}: examples/${tape.fixture} does not exist.`);
-  }
-  return problems;
 }
 
 /** Reads one tape by feature name, or exits when there is no such tape. */
@@ -189,10 +145,7 @@ if (!existsSync(settingsFile))
   exitWith(`render-tapes: ${TAPES}/${SETTINGS} is missing; run it from the repo root.`, 1);
 const settings = readFileSync(settingsFile, 'utf8');
 const tapes = selectTapes(root, options);
-const problems = [
-  ...textProblems(`${TAPES}/${SETTINGS}`, settings),
-  ...tapes.flatMap((tape) => tapeProblems(root, tape)),
-];
+const problems = [...settingsProblems(settings), ...tapes.flatMap((tape) => tapeProblems(root, tape))];
 if (problems.length > 0) exitWith(`render-tapes: cannot render:\n${problems.join('\n')}`, 1);
 if (tapes.length === 0) {
   process.stdout.write('render-tapes: no tapes to render.\n');
