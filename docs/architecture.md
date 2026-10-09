@@ -30,7 +30,7 @@ flowchart LR
 | Path                      | Purpose                                                                                                       | Status           |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------- |
 | `src/cli/`                | npx entry: Node version check, `--version`, `--help`; commands, prompts and output from v0.1                  | active           |
-| `src/core/`               | Brand constants; from v0.1 the module loader, manifest schema, detection, renderer, merge planner, lockfile   | active           |
+| `src/core/`               | Brand, typed errors, manifest schema and loader; later the config, renderer, detection, planner and lockfile  | active           |
 | `src/hooks/`              | Hook sources (one self-contained bundle each) and the shared hook runtime in `src/hooks/runtime/`             | _planned v0.1_   |
 | `modules/<id>/`           | One switchable feature: `module.json` and `files/`                                                            | _planned v0.1_   |
 | `packs/languages/<lang>/` | Language rules, linter configs, detection (TS/JS, Python first)                                               | _planned v0.1–2_ |
@@ -53,12 +53,20 @@ Add a row whenever something is created. Keep one line per item.
 
 ### Source layers
 
-| Path                      | Purpose                                                                                                 | Key exports                                           |
-| ------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| `src/core/brand.ts`       | The only place the product slug is written; every name, path and marker derives from it                 | `BRAND`, `Brand`                                      |
-| `src/cli/bin.ts`          | Bundle entry (`dist/cli.mjs`): rejects unsupported Node.js before it imports the program                | none (entry)                                          |
-| `src/cli/node-version.ts` | The supported Node.js range (equal to `engines.node`) and the upgrade message                           | `SUPPORTED_NODE_RANGE`, `nodeVersionProblem`          |
-| `src/cli/main.ts`         | Argument parsing with `node:util` `parseArgs`: `--version` and `--help` until commander arrives in v0.1 | `main`, `readPackageInfo`, `CliOutput`, `PackageInfo` |
+| Path                          | Purpose                                                                                                   | Key exports                                                                                 |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `src/core/brand.ts`           | The only place the product slug is written; every name, path and marker derives from it                   | `BRAND`, `Brand`                                                                            |
+| `src/core/errors.ts`          | `ArchkeeperError` and its subclasses: the message names the file, the JSON path or line, and a `Try:` fix | `ArchkeeperError`, `ManifestError`, `ConfigError`, `ResolveError`, `RenderError`, `Finding` |
+| `src/core/paths.ts`           | Refuses absolute, backslash, `:`, control-character and `..` paths before any file-system check (#23)     | `relativePathProblem`, `RELATIVE_PATH_HINT`                                                 |
+| `src/core/json.ts`            | Parses JSON with `JSON.parse` and locates the first syntax error with jsonc-parser                        | `parseJson`, `JsonResult`                                                                   |
+| `src/core/issues.ts`          | Turns zod's first issue into a finding with a JSON path, a problem and a fix                              | `checkSchema`, `describeIssue`, `jsonPath`                                                  |
+| `src/core/schema-parts.ts`    | Shared zod pieces: stacks, kebab ids, option names, one-line text, safe relative paths                    | `STACKS`, `Stack`, `kebabId`, `relativePath`, `described`, `listOf`                         |
+| `src/core/manifest-schema.ts` | The zod contract of `modules/<id>/module.json` and `modules/presets.json` (#18)                           | `moduleManifestSchema`, `presetCatalogSchema`, `HOOK_EVENTS`, `ModuleManifest`              |
+| `src/core/manifest-rules.ts`  | Cross-field manifest rules the schema cannot express: demo or internal, declared files, unique entries    | `manifestRuleFinding`                                                                       |
+| `src/core/loader.ts`          | Loads modules, their templates and hook scripts, and the preset chain through an injected reader          | `loadModule`, `loadCatalog`, `ReadKitFile`, `KitModule`, `Catalog`                          |
+| `src/cli/bin.ts`              | Bundle entry (`dist/cli.mjs`): rejects unsupported Node.js before it imports the program                  | none (entry)                                                                                |
+| `src/cli/node-version.ts`     | The supported Node.js range (equal to `engines.node`) and the upgrade message                             | `SUPPORTED_NODE_RANGE`, `nodeVersionProblem`                                                |
+| `src/cli/main.ts`             | Argument parsing with `node:util` `parseArgs`: `--version` and `--help` until commander arrives in v0.1   | `main`, `readPackageInfo`, `CliOutput`, `PackageInfo`                                       |
 
 ### Modules
 
@@ -100,6 +108,7 @@ Add a row whenever something is created. Keep one line per item.
 | `scripts/tape-rules.mjs`                                                                                    | Tape checks with a VHS-faithful tokenizer: refused commands anywhere on a line, Set-only settings, brand placeholders      |
 | `scripts/pull-gifs.mjs`                                                                                     | `npm run gifs:pull -- <run-id>`: copies a demo-gifs run's feature GIFs into `docs/media/` for the maintainer to commit     |
 | `test/helpers.ts`                                                                                           | Test helpers: `runScript`, hook verdicts, temp dirs and repos, `git`, `commitFiles`, `fixtureCopy`, `fakeBin`, `gifBytes`  |
+| `test/kit-fixtures.ts`                                                                                      | Core test data: an in-memory `ReadKitFile`, a manifest that uses every field, and the v0.1 preset chain                    |
 
 ## This repo's Claude Code setup
 
