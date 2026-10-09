@@ -64,12 +64,25 @@ function changelogSection(root, version) {
   return body === '' ? undefined : body;
 }
 
+/** Returns the version npm's `latest` dist-tag points at, or undefined when the package is not on npm yet. */
+function registryLatest(name) {
+  const printed = npm(['view', '--', String(name), 'dist-tags.latest'], {
+    nextStep: 'Check the network and the npm registry, then re-run.',
+    tolerate: /\bE404\b/,
+  });
+  const latest = printed?.trim() ?? '';
+  return NUMERIC_VERSION.test(latest) ? latest : undefined;
+}
+
 /** Lists what stops this commit from being released under `tag`. */
-function releaseProblems(manifest, tag, notes) {
+function releaseProblems(manifest, { tag, notes, latest }) {
   const { version } = manifest;
   const problems = [];
   if (!RELEASE_VERSION.test(String(version))) {
     problems.push(`package.json version "${version}" is not X.Y.Z or X.Y.Z-<pre>.N.`);
+  } else if (latest !== undefined && isOlder(version, latest)) {
+    // Every stage passes an explicit --tag, which turns off npm's own refusal to move latest backwards.
+    problems.push(`Version ${version} is below ${latest}, npm's latest dist-tag; release a higher version.`);
   }
   if (tag !== `v${version}`) {
     problems.push(`Tag ${tag ?? '(none)'} does not match package.json version ${version}; tag v${version}.`);
@@ -120,7 +133,7 @@ const manifest = readManifest(root);
 const tag = options.tag ?? (dryRun ? `v${manifest.version}` : process.env.GITHUB_REF_NAME || undefined);
 const notes = changelogSection(root, manifest.version);
 const blocking = [npmProblem()].filter((problem) => problem !== undefined);
-const releaseIssues = releaseProblems(manifest, tag, notes);
+const releaseIssues = releaseProblems(manifest, { tag, notes, latest: registryLatest(manifest.name) });
 if (dryRun) warnDryRun(releaseIssues);
 else blocking.push(...releaseIssues);
 if (blocking.length > 0) exitWith(`check-release: cannot release (ADR-0013):\n- ${blocking.join('\n- ')}`, 1);
