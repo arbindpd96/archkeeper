@@ -57,7 +57,7 @@ Placeholders in `args` are substituted as plain strings, so project paths with s
 - answers with exit 0 plus JSON, or exit 2 plus stderr, never both
 - never touches the network ([ADR-0018](0018-offline-no-telemetry.md))
 - keeps state only under `.archkeeper/local/` (ADR-0014), writing `local/.gitignore` whenever it creates `local/`: every folder on the way must resolve inside the project and must not be a symlink, files are opened without following symlinks (`O_NOFOLLOW`, plus an `lstat` check before the open because Windows lacks that flag) and created with mode `0600`, and a refused write is skipped and reported, never redirected
-- reads or injects into context only files whose real path is inside the project and that are not symlinks
+- reads or injects into context only files whose real path is inside the project and that are not symlinks; guard-secrets alone resolves a symlink to a project file and reads its real path, to compare an edit with the file it changes
 - runs child processes with `execFile` and argument arrays, never through a shell:
   - Node tools through `process.execPath` and the tool's JS entry file
   - npm scripts through npm's own JS entry with `--ignore-scripts`
@@ -92,7 +92,7 @@ Both guards fail closed because the backstop behind them is thin: deny rules are
   - A file whose real path is outside the project, such as Claude Code's auto memory under `~/.claude/projects/` (reference §2.4), is not committed with it, so an edit there is judged by its written text alone, and a new marked line there still asks.
   - For NotebookEdit the guard compares marked lines with the raw `.ipynb` JSON, so a marked line in a notebook cell asks on every edit.
   - Every secret pattern runs in linear time: patterns that need text after an unbounded run start at a lookbehind, so each run of token characters is tried once. The guard asks rather than scan written text, or an edited file, over 1 MB, so a check stays far below the 10-second hook timeout. A timing test holds both.
-  - This repo's guard-secrets already follows the pragma, replay, size and outside-the-project rules above. Its reasons name the rule but not the file.
+  - This repo's guard-secrets already follows every rule above, except that its reasons name the rule but not the file.
   - The pragma is also accepted under every `BRAND.legacySlugs` prefix (ADR-0012).
 - **Repo-specific policies** such as `blockAiAttribution` and `blockNoVerify` are module options, off by default.
 
@@ -175,8 +175,8 @@ These are part of the ADR-0017 contract:
 - Kit hooks merge with user hooks by event and `args` path (ADR-0014). User hooks on the same events keep running, because hook arrays are additive (reference §1.8).
 - The guards cost extra prompts:
   - guard-bash asks on commands it cannot read.
-  - guard-secrets asks once for each new fixture line, and on every edit to a project file that is not a regular file or is over 1 MB.
-  - Edits outside the project and through symlinks inside it do not prompt.
+  - guard-secrets asks once for each new fixture line, on every edit to a notebook cell that holds a marked line, and on every edit to a project file that is not a regular file, is over 1 MB, or has no match for an `old_string`.
+  - Edits outside the project, and through symlinks inside it, prompt only for a new marked line.
   - False-positive suites and asking rather than denying keep the prompts rare.
 - Claude cannot run any command that starts with `rm -rf`, because the native rule denies it whatever guard-bash decides. The user runs it, and other spellings such as `rm -r dist` go to guard-bash. #31's rule that safe look-alikes pass applies to guard-bash alone. A user who wants Claude to run `rm -rf` deletes the rule, and `update` does not add it back (ADR-0014). The one exception is a copy of the rule the user had before `init`: that copy stays the user's, so after the user deletes it the next `update` adds the kit's own entry once, as ADR-0014's first-contact rule says.
 - Repo-specific policies are off by default; this repo turns them on.
