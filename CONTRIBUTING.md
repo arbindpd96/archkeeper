@@ -32,6 +32,7 @@ The `Commit authors` CI job checks every commit in a PR. It fails on a bot autho
 | Types          | `npm run typecheck`          | TypeScript strict, `noUncheckedIndexedAccess`                                                  |
 | Comment policy | `npm run comments`           | See [Comments](#comments)                                                                      |
 | Brand          | `npm run brand`              | The product slug appears only in `src/core/brand.ts`; `package.json` `name` and `bin` match it |
+| Schemas        | `npm run schema:check`       | `schema/*.json` match the zod schemas in `src/core`; `npm run schema` rewrites them            |
 | Demo GIFs      | `npm run demos`              | Each committed GIF comes from a tape and stays within 2 MB and 20 s (30 s for the hero)        |
 | Tests          | `npm test`                   | Vitest: Linux on Node 22/24/26, macOS + Windows on 24                                          |
 | Build          | `npm run build`              | tsdown bundle in `dist/`, licenses of inlined code; CI checks that two builds are identical    |

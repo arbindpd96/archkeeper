@@ -10,3 +10,4 @@ plugin/
 examples/
 CHANGELOG.md
 .claude/worktrees/
+schema/
