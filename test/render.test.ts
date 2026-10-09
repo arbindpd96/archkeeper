@@ -160,11 +160,16 @@ describe('render', () => {
     }
   });
 
-  it('refuses a brand whose folders would render a path outside the project', () => {
-    const outside: Brand = { ...ACME, rulesDir: '../rules' };
+  it.each<[string, Partial<Brand>, string]>([
+    ['rules', { rulesDir: '../rules' }, 'renders to "../rules/guard.md", which has a ".." segment'],
+    [
+      'hook',
+      { hookDir: '../hooks' },
+      'hooks[0].script: installs to "../hooks/guard.mjs", which has a ".." segment',
+    ],
+  ])('refuses a brand whose %s folder would render a path outside the project', (_name, folders, problem) => {
+    const outside: Brand = { ...ACME, ...folders };
     expect(() => render(MODULES, CONTEXT, outside)).toThrow(RenderError);
-    expect(() => render(MODULES, CONTEXT, outside)).toThrow(
-      'renders to "../rules/guard.md", which has a ".." segment',
-    );
+    expect(() => render(MODULES, CONTEXT, outside)).toThrow(problem);
   });
 });
