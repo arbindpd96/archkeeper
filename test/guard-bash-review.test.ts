@@ -264,6 +264,8 @@ describe('guard-bash review cases', () => {
     ['find $(pwd) -delete', 'deny'],
     ['find . -type f $ACTION', 'ask'],
     ['find ~ $OP', 'ask'],
+    ['find "$DIR" $OP', 'ask'],
+    ['find "$DIR" -name x', 'allow'],
     ["find . -name '*.o' $MORE", 'ask'],
     ['find . -name "$PAT" -delete', 'ask'],
     // The review expected ask for these; deny is kept because each deletes as much as a bare `find <root> -delete`.
