@@ -63,17 +63,32 @@ function helpText({ description }: PackageInfo): string {
   ].join('\n');
 }
 
+function reasonOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 /** Runs the CLI with the given arguments and returns the process exit code. */
-export function main(args: readonly string[], output: CliOutput = PROCESS_OUTPUT): number {
+export function main(
+  args: readonly string[],
+  output: CliOutput = PROCESS_OUTPUT,
+  readInfo: () => PackageInfo = readPackageInfo,
+): number {
   let flags: { version?: boolean; help?: boolean };
+  let info: PackageInfo;
   try {
     flags = parseArgs({ args: [...args], options: OPTIONS, strict: true, allowPositionals: false }).values;
   } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    output.stderr(`${reason}\nRun ${BRAND.binName} --help for usage.\n`);
+    output.stderr(`${reasonOf(error)}\nRun ${BRAND.binName} --help for usage.\n`);
     return 1;
   }
-  const info = readPackageInfo();
+  try {
+    info = readInfo();
+  } catch (error) {
+    output.stderr(
+      `${reasonOf(error)}\nThe ${BRAND.displayName} install looks damaged. Reinstall it and try again.\n`,
+    );
+    return 1;
+  }
   output.stdout(flags.version === true ? `${info.version}\n` : helpText(info));
   return 0;
 }
