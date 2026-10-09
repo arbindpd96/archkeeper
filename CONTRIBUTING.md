@@ -93,7 +93,8 @@ export function resolveModules(config: KitConfig): Module[] { ... }
 
 `// archkeeper:allow-secret` on the same line tells the secret guard that a line which looks like a credential is a deliberate fixture.
 Use it only in tests, and never on real secrets.
-The guard honours it only on a line that is already in the file, so an agent that writes a new marked line, or edits the secret on one, has to ask you first.
+The guard honours it only on a line that is already in the file, so an agent that writes a new marked line, or edits the secret on one, through the Write, Edit, MultiEdit or NotebookEdit tools has to ask you first.
+Shell writes are not checked for secrets, so review fixtures that a command adds.
 
 ## Tests
 

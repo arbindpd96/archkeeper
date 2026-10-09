@@ -71,13 +71,13 @@ Placeholders in `args` are substituted as plain strings, so project paths with s
 
 A crash lets the action proceed (reference §1.5), so each hook declares what it does when it cannot do its job:
 
-| Hook                       | Event                                             | When it cannot do its job                                                                      |
-| -------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| guard-bash                 | PreToolUse `Bash`                                 | Fails closed with `ask`: load errors, crashes, unparseable commands, commands over 8,000 chars |
-| guard-secrets              | PreToolUse `Write\|Edit\|MultiEdit\|NotebookEdit` | Fails closed with `ask`                                                                        |
-| session-start, pre-compact | SessionStart, PreCompact                          | Fails open: exit 0 with a one-line note on stderr                                              |
-| memory stop, stop check    | Stop                                              | Fails open: never blocks the stop                                                              |
-| format-on-edit             | PostToolUse `Edit\|Write\|MultiEdit`              | Fails open; a missing tool is a silent no-op with a one-time hint                              |
+| Hook                       | Event                                             | When it cannot do its job                                                                                                        |
+| -------------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| guard-bash                 | PreToolUse `Bash`                                 | Fails closed with `ask`: load errors, crashes, unparseable commands, commands over 8,000 chars                                   |
+| guard-secrets              | PreToolUse `Write\|Edit\|MultiEdit\|NotebookEdit` | Fails closed with `ask`: load errors, crashes, project files it cannot read or replay an edit on, text or edited files over 1 MB |
+| session-start, pre-compact | SessionStart, PreCompact                          | Fails open: exit 0 with a one-line note on stderr                                                                                |
+| memory stop, stop check    | Stop                                              | Fails open: never blocks the stop                                                                                                |
+| format-on-edit             | PostToolUse `Edit\|Write\|MultiEdit`              | Fails open; a missing tool is a silent no-op with a one-time hint                                                                |
 
 Both guards fail closed because the backstop behind them is thin: deny rules are prefix-only, and a secret that reaches a commit cannot be taken back.
 
@@ -86,10 +86,13 @@ Both guards fail closed because the backstop behind them is thin: deny rules are
 - **guard-bash decides on parsed commands, never on regexes over raw text.** It tokenizes quotes, escapes, here-documents, substitutions and brace expansion within a work budget, unwraps wrappers such as `sudo`, `env`, `xargs` and `bash -c`, and judges each simple command. When a case is ambiguous it asks rather than denies.
   - It asks before any command that names a `.env`, `.env.*` or `.envrc` file at any depth, such as `cat sub/.env.local` or `source .env`, except templates such as `.env.example`. The `Read` deny rules below cover only the Read tool, so this is the only check on shell access to those files.
 - **guard-secrets** scans every string a write would put into a file, denies likely secrets with a reason that names the rule and the file but never the value, and asks before editing `.env`, `.env.*` or `.envrc`, except templates such as `.env.example`.
-  - An `archkeeper:allow-secret` pragma exempts a line only when that exact line is already in the file on disk. The guard reads the file through one descriptor opened with `O_NOFOLLOW` and `O_NONBLOCK`, after an `lstat` check for platforms that lack those flags, and only when it is a regular project file of at most 1 MB.
-  - A write that adds a pragma line matching a secret rule asks instead, so an agent cannot approve its own secret. The user confirms each new fixture once, and later edits that keep the line pass.
-  - An Edit or MultiEdit is judged by the lines it leaves in the file, not by its `new_string` alone, because an edit to part of a line, such as only the token on a marked line, never shows that line. The guard replays each `old_string` → `new_string` (honouring `replace_all`) on the file and asks about every new line that holds a likely secret. It also asks when it cannot read the file or find an `old_string` in it.
-  - This repo's guard-secrets already works this way.
+  - An `archkeeper:allow-secret` pragma exempts a line only when that exact line is already in the file on disk. The guard reads the file through one descriptor opened with `O_NOFOLLOW` and `O_NONBLOCK`, after an `lstat` check for platforms that lack those flags, and only when it is a regular file of at most 1 MB whose real path is inside the project. It follows a symlink only to a file inside the project, such as `CLAUDE.md` linked to `AGENTS.md`, and reads it through its real path.
+  - A Write, Edit, MultiEdit or NotebookEdit that adds a pragma line matching a secret rule asks instead, so an agent cannot approve its own secret through those tools. The user confirms each new fixture once, and later edits that keep the line pass. Shell writes such as `printf … >> src/a.ts` never reach guard-secrets, and guard-bash does not scan them for secrets; that is out of scope for v0.1.
+  - An Edit or MultiEdit on a project file is judged by the lines it leaves in the file, not by its `new_string` alone, because an edit to part of a line, such as only the token on a marked line, never shows that line. The guard replays each `old_string` → `new_string` (honouring `replace_all`) on the file and asks about every new line that holds a likely secret. It also asks, naming the cause, when the file is not a regular file or is over 1 MB, when an `old_string` is not in it, or when `replace_all` is present but not a boolean.
+  - A file whose real path is outside the project, such as Claude Code's auto memory under `~/.claude/projects/` (reference §2.4), is not committed with it, so an edit there is judged by its written text alone, and a new marked line there still asks.
+  - For NotebookEdit the guard compares marked lines with the raw `.ipynb` JSON, so a marked line in a notebook cell asks on every edit.
+  - Every secret pattern runs in linear time: patterns that need text after an unbounded run start at a lookbehind, so each run of token characters is tried once. The guard asks rather than scan written text, or an edited file, over 1 MB, so a check stays far below the 10-second hook timeout. A timing test holds both.
+  - This repo's guard-secrets already follows the pragma, replay, size and outside-the-project rules above. Its reasons name the rule but not the file.
   - The pragma is also accepted under every `BRAND.legacySlugs` prefix (ADR-0012).
 - **Repo-specific policies** such as `blockAiAttribution` and `blockNoVerify` are module options, off by default.
 
@@ -165,8 +168,12 @@ These are part of the ADR-0017 contract:
   - Without it, every hook fails without blocking, guards included; only the deny rules still apply.
   - The README's Requirements section must state this (a v0.1 exit criterion, delivered in M9), and `doctor` checks it.
 - Kit hooks merge with user hooks by event and `args` path (ADR-0014). User hooks on the same events keep running, because hook arrays are additive (reference §1.8).
-- The guards cost an occasional extra prompt on commands they cannot read. False-positive suites and asking rather than denying keep that rare.
-- Claude cannot run any command that starts with `rm -rf`, because the native rule denies it whatever guard-bash decides. The user runs it, and other spellings such as `rm -r dist` go to guard-bash. #31's rule that safe look-alikes pass applies to guard-bash alone. A user who wants Claude to run `rm -rf` deletes the rule, and `update` never adds it back (ADR-0014).
+- The guards cost extra prompts:
+  - guard-bash asks on commands it cannot read.
+  - guard-secrets asks once for each new fixture line, and on every edit to a project file that is not a regular file or is over 1 MB.
+  - Edits outside the project and through symlinks inside it do not prompt.
+  - False-positive suites and asking rather than denying keep the prompts rare.
+- Claude cannot run any command that starts with `rm -rf`, because the native rule denies it whatever guard-bash decides. The user runs it, and other spellings such as `rm -r dist` go to guard-bash. #31's rule that safe look-alikes pass applies to guard-bash alone. A user who wants Claude to run `rm -rf` deletes the rule, and `update` does not add it back (ADR-0014). The one exception is a copy of the rule the user had before `init`: that copy stays the user's, so after the user deletes it the next `update` adds the kit's own entry once, as ADR-0014's first-contact rule says.
 - Repo-specific policies are off by default; this repo turns them on.
 - SessionStart output counts toward each preset's always-on budget at its cap (ADR-0017).
 - The hooks in this repo's `.claude/hooks/` stay the reference implementation until v0.1 M8 replaces them with generated ones (#45).
