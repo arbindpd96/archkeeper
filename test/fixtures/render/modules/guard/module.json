@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "guard",
+  "description": "A guard hook, deny rules and a rule file for the render tests.",
+  "requires": ["core-docs"],
+  "files": [
+    { "to": ".claude/settings.json", "strategy": "json", "target": "project" },
+    { "to": "AGENTS.md", "strategy": "blocks", "target": "project" },
+    { "from": "guard-rule.md", "to": "{{brand.rulesDir}}/guard.md", "strategy": "owned", "target": "project" }
+  ],
+  "blocks": [{ "file": "AGENTS.md", "id": "guard", "template": "agents-guard.md" }],
+  "hooks": [
+    {
+      "event": "PreToolUse",
+      "matcher": "Bash",
+      "script": "dist/hooks/guard.mjs",
+      "timeout": 10,
+      "if": "Bash(git *)"
+    },
+    {
+      "event": "SessionStart",
+      "matcher": "startup|resume|clear|compact",
+      "script": "dist/hooks/guard.mjs",
+      "timeout": 5
+    }
+  ],
+  "permissions": { "deny": ["Read(**/.env)", "Bash(rm -rf:*)"] },
+  "internal": true
+}

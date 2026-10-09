@@ -1,10 +1,6 @@
 import { ResolveError } from './errors.js';
 import type { KitModule } from './loader.js';
-
-function byId(left: string, right: string): number {
-  if (left === right) return 0;
-  return left < right ? -1 : 1;
-}
+import { compareText as byId } from './text.js';
 
 function cycleFrom(start: string, remaining: ReadonlyMap<string, KitModule>): string[] {
   const path = [start];

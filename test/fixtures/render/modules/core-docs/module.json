@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "core-docs",
+  "description": "Instruction files and ignore rules for the render tests.",
+  "files": [
+    { "to": "CLAUDE.md", "strategy": "blocks", "target": "project" },
+    { "to": "AGENTS.md", "strategy": "blocks", "target": "project" },
+    { "to": ".gitignore", "strategy": "blocks", "target": "project" },
+    { "from": "notes.md", "to": "docs/notes.md", "strategy": "create-only", "target": "project" }
+  ],
+  "blocks": [
+    { "file": "CLAUDE.md", "id": "imports", "template": "claude-imports.md" },
+    { "file": "AGENTS.md", "id": "principles", "template": "agents-principles.md" }
+  ],
+  "gitignore": ["CLAUDE.local.md", "{{brand.stateDir}}/local/"],
+  "internal": true
+}

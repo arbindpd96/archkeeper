@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "servers",
+  "description": "MCP servers, a skill and a stack-specific rule for the render tests.",
+  "files": [
+    { "to": ".mcp.json", "strategy": "json", "target": "project" },
+    {
+      "from": "python.md",
+      "to": "{{brand.rulesDir}}/python.md",
+      "strategy": "owned",
+      "target": "project",
+      "when": { "stack": ["python"] }
+    },
+    { "from": "why.md", "to": ".claude/skills/why/SKILL.md", "strategy": "owned", "target": "plugin" }
+  ],
+  "mcpServers": [
+    {
+      "name": "graph",
+      "type": "stdio",
+      "command": "graph-mcp",
+      "args": ["--root", "${CLAUDE_PROJECT_DIR:-.}"],
+      "env": { "ZETA": "${ZETA_HOME}", "ALPHA": "${ALPHA_HOME}" }
+    },
+    {
+      "name": "docs",
+      "type": "http",
+      "url": "https://example.com/mcp",
+      "headers": { "X-Team": "${TEAM_ID}" }
+    }
+  ],
+  "internal": true
+}

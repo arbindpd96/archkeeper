@@ -1,0 +1,112 @@
+=== .claude/hooks/acmekit/guard.mjs [owned guard]
+export const guard = 'guard';
+=== .claude/rules/acmekit/guard.md [owned guard]
+---
+paths:
+  - '**/*.sh'
+---
+
+# Shell scripts
+
+Run shell scripts through the guard in `.claude/hooks/acmekit/guard.mjs`.
+=== .claude/rules/acmekit/python.md [owned servers]
+---
+paths:
+  - '**/*.py'
+---
+
+# Python
+
+Format with the project's own tools.
+=== .claude/settings.json [json guard]
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/guard.mjs"
+            ],
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/guard.mjs"
+            ],
+            "timeout": 10,
+            "if": "Bash(git *)"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Read(**/.env)",
+      "Bash(rm -rf:*)"
+    ]
+  }
+}
+=== .claude/skills/why/SKILL.md [owned servers]
+---
+name: why
+description: Explain why something is the way it is by searching the recorded decisions.
+---
+
+Search `docs/decisions.md` and `docs/adr/` for the topic, then answer with links.
+=== .gitignore [blocks core-docs#core-docs]
+CLAUDE.local.md
+.acmekit/local/
+=== .mcp.json [json servers]
+{
+  "mcpServers": {
+    "graph": {
+      "type": "stdio",
+      "command": "graph-mcp",
+      "args": [
+        "--root",
+        "${CLAUDE_PROJECT_DIR:-.}"
+      ],
+      "env": {
+        "ALPHA": "${ALPHA_HOME}",
+        "ZETA": "${ZETA_HOME}"
+      }
+    },
+    "docs": {
+      "type": "http",
+      "url": "https://example.com/mcp",
+      "headers": {
+        "X-Team": "${TEAM_ID}"
+      }
+    }
+  }
+}
+=== AGENTS.md [blocks guard#guard]
+## Safety
+
+`acmekit` blocks destructive commands before they run.
+=== AGENTS.md [blocks core-docs#principles]
+## Working with Acme Kit
+
+Hooks live in `.claude/hooks/acmekit/`, and the kit keeps its state in `.acmekit/`.
+Write {{name}} in a template to show a literal pair of braces.
+=== CLAUDE.md [blocks core-docs#imports]
+@AGENTS.md
+@Design\ Docs/api.md
+=== docs/notes.md [create-only core-docs]
+# Notes
+
+Created once by Acme Kit; edit freely.
