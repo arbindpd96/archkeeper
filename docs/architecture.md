@@ -98,7 +98,7 @@ Add a row whenever something is created. Keep one line per item.
 | `scripts/check-demos.mjs`                                                                                   | Demo GIF caps: each GIF has a tape, ≤ 2 MB, ≤ 20 s (30 s for a `# hero` tape), timed from its frame delays                 |
 | `scripts/render-tapes.mjs`                                                                                  | Fills `{{brand.*}}` in `docs/media/tapes/*.tape`, installs the packed CLI, runs pinned VHS in a fixture copy               |
 | `scripts/pull-gifs.mjs`                                                                                     | `npm run gifs:pull -- <run-id>`: copies a demo-gifs run's feature GIFs into `docs/media/` for the maintainer to commit     |
-| `test/helpers.ts`                                                                                           | `runScript`, hook verdict helpers, `tempDir`, `tempRepo`, `git`, `commitFiles`, `writeFiles`, `fixtureCopy` (own HOME)     |
+| `test/helpers.ts`                                                                                           | Test helpers: `runScript`, hook verdicts, temp dirs and repos, `git`, `commitFiles`, `fixtureCopy`, `fakeBin`, `gifBytes`  |
 
 ## This repo's Claude Code setup
 
