@@ -219,6 +219,28 @@ describe('render refuses output that holds a likely secret', () => {
   });
 });
 
+describe('render checks each rendered gitignore line', () => {
+  const ignores = (): KitModule =>
+    kit('m', {
+      files: [{ to: '.gitignore', strategy: 'blocks', target: 'project' }],
+      gitignore: ['{{local.dir}}/'],
+    });
+
+  it.each([
+    ['a newline', 'tmp\n!.env'],
+    ['a leading !', '!secrets'],
+  ])('refuses a template value with %s', (_name, dir) => {
+    const run = (): unknown => render([ignores()], { stack: [], values: { local: { dir } } });
+    expect(run).toThrow(RenderError);
+    expect(run).toThrow('m/module.json: gitignore[0]: renders to');
+  });
+
+  it('writes a value that stays one pattern', () => {
+    const tree = render([ignores()], { stack: [], values: { local: { dir: 'tmp' } } });
+    expect(tree.get('.gitignore')?.[0]?.content).toBe('tmp/\n');
+  });
+});
+
 describe('render output', () => {
   it('turns CRLF templates into LF text and adds the trailing newline', () => {
     const crlf = kit(

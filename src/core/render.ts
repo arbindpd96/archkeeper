@@ -1,7 +1,7 @@
 import { BRAND, type Brand } from './brand.js';
 import { RenderError } from './errors.js';
 import { type KitModule, templatePath } from './loader.js';
-import { GITIGNORE_FILE, MCP_FILE, type ModuleManifest } from './manifest-schema.js';
+import { GITIGNORE_FILE, ignoreLineProblem, MCP_FILE, type ModuleManifest } from './manifest-schema.js';
 import { optionDefaults, type ResolvedOptions } from './options.js';
 import { relativePathProblem } from './paths.js';
 import { hookScriptPath, type JsonPart, mcpPart, settingsPart, toJson } from './render-json.js';
@@ -74,6 +74,20 @@ function template(job: ModuleRender, relative: string): string {
   return asLfText(renderTemplate(source(job.kit, file), job.scope, file));
 }
 
+// A template value can hold a newline or a leading !, so each rendered line is checked again.
+function ignoreLine(job: ModuleRender, line: string, index: number): string {
+  const location = `gitignore[${String(index)}]`;
+  const rendered = renderTemplate(line, job.scope, `${job.kit.file} ${location}`);
+  const problem = ignoreLineProblem(rendered);
+  if (problem === undefined) return rendered;
+  throw new RenderError({
+    file: job.kit.file,
+    location,
+    problem: `renders to ${JSON.stringify(rendered)}, which ${problem}`,
+    hint: 'fix the template value it uses: a line renders to one pattern, never a comment, blank or ! negation',
+  });
+}
+
 function blockDrafts(job: ModuleRender, file: ManifestFile, path: string): Draft[] {
   const { manifest } = job.kit;
   const drafts: Draft[] = manifest.blocks
@@ -86,9 +100,7 @@ function blockDrafts(job: ModuleRender, file: ManifestFile, path: string): Draft
       content: template(job, block.template),
     }));
   if (file.to === GITIGNORE_FILE && manifest.gitignore.length > 0) {
-    const lines = manifest.gitignore.map((line) =>
-      renderTemplate(line, job.scope, `${job.kit.file} gitignore`),
-    );
+    const lines = manifest.gitignore.map((line, index) => ignoreLine(job, line, index));
     drafts.push({
       path,
       strategy: 'blocks',
