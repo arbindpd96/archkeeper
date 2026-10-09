@@ -75,6 +75,8 @@ Every module is `internal: true` until its milestone ships its README section an
 - [x] #20 renderer, `toImport`, snapshot, property and acmekit tests, `.gitattributes` (1b11959)
 - [x] CLI loads the catalog, so zod is inlined and measured (74d7f33); brand JSDoc points at ADR-0012 (d1d3658)
 - [x] `docs/architecture.md`, `docs/decisions.md`, ROADMAP M1 ticked, changeset. `npm run check` green before every commit.
+- [x] Local proofs: two builds in different directories are byte-identical; the packed tarball installs under a path with a space and its bin loads `modules/`; the bundle parses as ES2022, so the Node 18 gate still runs. Plugin root-matching fix for Windows short paths (f2701b2).
+- [x] A `/code-review` pass found two low-severity bugs, both fixed with tests: `modules.remove` of a requirement whose module is left out anyway (9e30edf), and `# ` lines in README code blocks read as headings (b3cdf01). The `reviewer` and `security-reviewer` agents have not run yet.
 
 ## Next step
 
