@@ -5,7 +5,7 @@ import { exitWith } from './lib.mjs';
 
 const OUTPUT = 'THIRD_PARTY_LICENSES.md';
 const REGION = /^\/\/#region (.+)$/gm;
-const LICENSE_FILE = /^(licen[cs]e|copying|notice)(\.[a-z]+)?$/i;
+const LICENSE_FILE = /^(licen[cs]e|copying|notice)([-_.][\w.-]+)?$/i;
 const NODE_MODULES = 'node_modules/';
 
 /** Lists every bundle under dist/, sorted so the output never depends on directory order. */
@@ -38,6 +38,31 @@ function inlinedFolders(bundle, root) {
   return regions.map(packageFolder).filter(Boolean);
 }
 
+/** Resolves a region's package folder, refusing any folder outside `<root>/node_modules`. */
+function resolvePackageFolder(root, folder) {
+  const nodeModules = path.join(root, 'node_modules');
+  const resolved = path.resolve(root, folder);
+  if (!resolved.startsWith(nodeModules + path.sep)) {
+    exitWith(`third-party-licenses: ${folder} is outside ${nodeModules}; refusing to read it.`, 1);
+  }
+  return resolved;
+}
+
+/** Returns the license, including the legacy object and `licenses` array forms. */
+function licenseOf({ license, licenses }) {
+  if (typeof license === 'string') return license;
+  const entries = [license, ...(Array.isArray(licenses) ? licenses : [])];
+  const types = entries.map((entry) => entry?.type).filter((type) => typeof type === 'string');
+  return types.length > 0 ? types.join(' OR ') : 'not declared';
+}
+
+/** Returns the source URL from a string or object `repository`, falling back to `homepage`. */
+function repositoryOf({ repository, homepage }) {
+  const url = typeof repository === 'string' ? repository : repository?.url;
+  if (typeof url === 'string') return url;
+  return typeof homepage === 'string' ? homepage : 'not declared';
+}
+
 /** Reads a package's name, version, license and license files. */
 function readPackage(folder) {
   const manifest = JSON.parse(readFileSync(path.join(folder, 'package.json'), 'utf8'));
@@ -45,11 +70,10 @@ function readPackage(folder) {
     .filter((file) => LICENSE_FILE.test(file))
     .sort()
     .map((file) => ({ file, text: readFileSync(path.join(folder, file), 'utf8').trim() }));
-  const repository = manifest.repository?.url ?? manifest.repository ?? manifest.homepage ?? 'not declared';
   return {
     id: `${manifest.name}@${manifest.version}`,
-    license: manifest.license ?? 'not declared',
-    repository,
+    license: licenseOf(manifest),
+    repository: repositoryOf(manifest),
     files,
   };
 }
@@ -80,7 +104,7 @@ if (files.length === 0) exitWith('third-party-licenses: no bundles in dist/. Run
 
 const folders = new Set(files.flatMap((bundle) => inlinedFolders(bundle, root)));
 const byId = new Map(
-  [...folders].map((folder) => readPackage(path.resolve(root, folder))).map((pkg) => [pkg.id, pkg]),
+  [...folders].map((folder) => readPackage(resolvePackageFolder(root, folder))).map((pkg) => [pkg.id, pkg]),
 );
 const packages = [...byId.keys()].sort().map((id) => byId.get(id));
 writeFileSync(path.join(dist, OUTPUT), render(packages));
