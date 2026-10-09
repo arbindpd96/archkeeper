@@ -69,27 +69,35 @@ function linesOf(text) {
   return text.split('\n').map((line) => line.replace(/\r$/, ''));
 }
 
-/** Reads the real file behind a project path, or names why it cannot. */
-function readRealFile(real, readRegularFile) {
-  const stat = lstatSync(real);
-  if (!stat.isFile()) return { cause: 'it is not a regular file' };
-  if (stat.size > MAX_CHECKED_SIZE) return { cause: 'it is over 1 MB' };
-  const text = readRegularFile(real, MAX_CHECKED_SIZE);
-  return text === null ? { cause: 'it changed while being read' } : { text };
+/**
+ * Finds the file a write targets: `file` resolved against the session's working directory, and `real`, its path
+ * with every symlink resolved, or null when it does not exist yet. `cause` says why it cannot be found.
+ */
+function locate(target, baseDir) {
+  if (typeof target !== 'string' || target === '') return { file: '', cause: 'the call names no file' };
+  const file = path.resolve(baseDir, target);
+  try {
+    const exists = lstatSync(file, { throwIfNoEntry: false }) !== undefined;
+    return { file, real: exists ? realpathSync(file) : null };
+  } catch {
+    return { file, cause: 'its path could not be resolved' };
+  }
 }
 
 /**
- * Returns `{ text }` for the file a write targets ('' when it does not exist yet), `{ outside: true }` when its
- * real path is outside the project, or `{ cause }` naming why it cannot be read. A symlink is followed only to
- * a file inside the project, read through its real path.
+ * Reads the target through its real path, wherever that is: `{ text }` ('' when it does not exist yet), or
+ * `{ cause }` naming why it cannot be read. Whether a path is inside the project is not decided here, because
+ * case-insensitive file systems, firmlinks and hardlinks make a path prefix check unreliable.
  */
-function readTarget(target, { projectDir, isProjectFile, readRegularFile }) {
-  if (typeof target !== 'string') return { cause: 'the call names no file' };
-  const file = path.resolve(projectDir, target);
+function readTarget({ real, cause }, readRegularFile) {
+  if (cause) return { cause };
+  if (real === null) return { text: '' };
   try {
-    if (lstatSync(file, { throwIfNoEntry: false }) === undefined) return { text: '' };
-    const real = realpathSync(file);
-    return isProjectFile(real) ? readRealFile(real, readRegularFile) : { outside: true };
+    const stat = lstatSync(real);
+    if (!stat.isFile()) return { cause: 'it is not a regular file' };
+    if (stat.size > MAX_CHECKED_SIZE) return { cause: 'it is over 1 MB' };
+    const text = readRegularFile(real, MAX_CHECKED_SIZE);
+    return text === null ? { cause: 'it changed while being read' } : { text };
   } catch {
     return { cause: 'it could not be read' };
   }
@@ -103,7 +111,7 @@ function judgeMarkedLines(lines, read) {
   if (found.cause) {
     return decide('ask', `could not check the marked line because ${found.cause}. Confirm with the user.`);
   }
-  const onDisk = new Set(found.outside ? [] : linesOf(found.text));
+  const onDisk = new Set(linesOf(found.text));
   return marked.every((line) => onDisk.has(line)) ? null : decide('ask', NEW_PRAGMA_REASON);
 }
 
@@ -147,13 +155,11 @@ function cannotCheckEdit(cause) {
 }
 
 /**
- * Replays the edits on a project file and asks about every new line that holds a likely secret. An edit to
- * part of a line, such as the token on a marked line, never shows that line in its new_string. A file outside
- * the project is judged by the written text alone.
+ * Replays the edits on the file and asks about every new line that holds a likely secret. An edit to part of
+ * a line, such as the token on a marked line, never shows that line in its new_string.
  */
-function judgeEdits(target, edits, lines, helpers) {
-  const found = readTarget(target, helpers);
-  if (found.outside) return judgeMarkedLines(lines, () => found);
+function judgeEdits(location, edits, readRegularFile) {
+  const found = readTarget(location, readRegularFile);
   if (found.cause) return cannotCheckEdit(found.cause);
   const before = found.text.replaceAll('\r\n', '\n');
   const after = editedText(before, edits);
@@ -169,12 +175,16 @@ function judgeEdits(target, edits, lines, helpers) {
 }
 
 /** Returns the permission response for a write, or null when the write is safe. */
-function evaluate(toolInput, helpers) {
-  const target = toolInput.file_path ?? toolInput.notebook_path;
-  const fileName = typeof target === 'string' ? path.basename(target) : '';
-  if (helpers.isEnvFileName(fileName)) {
-    return decide('ask', `${fileName} holds secrets. Confirm with the user before editing it.`);
-  }
+function evaluate(input, helpers) {
+  const toolInput = input.tool_input ?? {};
+  const baseDir =
+    typeof input.cwd === 'string' && path.isAbsolute(input.cwd) ? input.cwd : helpers.projectDir;
+  const location = locate(toolInput.file_path ?? toolInput.notebook_path, baseDir);
+  const envName = [location.file, location.real]
+    .filter(Boolean)
+    .map((file) => path.basename(file))
+    .find(helpers.isEnvFileName);
+  if (envName) return decide('ask', `${envName} holds secrets. Confirm with the user before editing it.`);
   const text = writtenText(toolInput);
   if (text.length > MAX_CHECKED_SIZE) {
     return decide('ask', 'the written text is over 1 MB. Confirm with the user.');
@@ -186,15 +196,14 @@ function evaluate(toolInput, helpers) {
   }
   // An agent could add the pragma to its own secret, so only a line already in the file keeps its exemption.
   const edits = editsOf(toolInput);
-  if (edits !== null) return judgeEdits(target, edits, lines, helpers);
-  return judgeMarkedLines(lines, () => readTarget(target, helpers));
+  if (edits !== null) return judgeEdits(location, edits, helpers.readRegularFile);
+  return judgeMarkedLines(lines, () => readTarget(location, helpers.readRegularFile));
 }
 
 try {
   const [lib, { isEnvFileName }] = await Promise.all([import('./lib.mjs'), import('./env-files.mjs')]);
-  const { readInput, respond, projectDir, isProjectFile, readRegularFile } = lib;
-  const helpers = { isEnvFileName, isProjectFile, projectDir, readRegularFile };
-  const response = evaluate(readInput().tool_input ?? {}, helpers);
+  const { readInput, respond, projectDir, readRegularFile } = lib;
+  const response = evaluate(readInput(), { isEnvFileName, projectDir, readRegularFile });
   if (response) respond(response);
 } catch {
   // Fail closed: if the hook cannot load or crashes, the write must not go through unchecked.
