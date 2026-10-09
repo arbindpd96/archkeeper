@@ -131,6 +131,17 @@ const unknownProgramRule = ({ splitProgram }) => (splitProgram ? UNKNOWN_PROGRAM
 const runsDownload = (command) =>
   isInterpreter(command) && command.subs.some((sub) => DOWNLOADERS.has(sub.program)) ? PIPE_TO_SHELL : null;
 
+const CODE_FROM_ARGUMENT = new Set(['-c', '-e', '-E', '--eval', '-p', '--print', '-m']);
+const STDIN_PATHS = new Set(['-', '/dev/stdin', '/proc/self/fd/0']);
+
+// Piped data only becomes code when the interpreter has no script, module or -c/-e source of its own.
+function runsStdinAsCode({ program, args, dynamicProgram }) {
+  if (dynamicProgram || ['eval', 'source', '.'].includes(program) || args.includes('-s')) return true;
+  if (args.some((arg) => CODE_FROM_ARGUMENT.has(arg))) return false;
+  const operand = args.find((arg) => !arg.startsWith('-') || STDIN_PATHS.has(arg));
+  return operand === undefined || STDIN_PATHS.has(operand) || !/[./]/.test(operand);
+}
+
 function downloadPipedToInterpreter(commands) {
   const earliestDownload = new Map();
   for (const { pipes } of commands.filter((command) => DOWNLOADERS.has(command.program))) {
@@ -140,7 +151,8 @@ function downloadPipedToInterpreter(commands) {
   }
   const fed = ({ pipes }) =>
     pipes.some(({ pipeline, stage }) => (earliestDownload.get(pipeline) ?? Infinity) < stage);
-  return commands.some((command) => isInterpreter(command) && fed(command)) ? PIPE_TO_SHELL : null;
+  const executesDownload = (command) => isInterpreter(command) && runsStdinAsCode(command) && fed(command);
+  return commands.some(executesDownload) ? PIPE_TO_SHELL : null;
 }
 
 const PROGRAM_RULES = new Map([
