@@ -3,7 +3,13 @@ import { copyFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { REPO_ROOT, runScript, tempDir } from './helpers.js';
+import {
+  REPO_ROOT,
+  hookDecision as decision,
+  permissionDecision as decisionOf,
+  runScript,
+  tempDir,
+} from './helpers.js';
 
 interface ShellModule {
   parseCommands: (source: string) => unknown[];
@@ -14,16 +20,6 @@ interface RulesModule {
 
 interface PermissionOutput {
   hookSpecificOutput?: { permissionDecision?: string; permissionDecisionReason?: string };
-}
-
-function decisionOf(stdout: string): string {
-  if (!stdout) return 'allow';
-  const output = JSON.parse(stdout) as PermissionOutput;
-  return output.hookSpecificOutput?.permissionDecision ?? 'allow';
-}
-
-function decision(hook: string, toolInput: Record<string, unknown>, env: NodeJS.ProcessEnv = {}): string {
-  return decisionOf(runScript(`.claude/hooks/${hook}`, { payload: { tool_input: toolInput }, env }).stdout);
 }
 
 const fakeAwsKey = `AKIA${'Q'.repeat(16)}`;
