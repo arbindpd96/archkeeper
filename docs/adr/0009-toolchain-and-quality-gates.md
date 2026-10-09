@@ -1,6 +1,6 @@
 # ADR-0009: Toolchain and CI quality gates
 
-- Status: accepted
+- Status: accepted; workspace clause superseded by [ADR-0011](0011-single-package.md)
 - Date: 2026-10-09
 - Deciders: arbindpd96 (owner)
 
