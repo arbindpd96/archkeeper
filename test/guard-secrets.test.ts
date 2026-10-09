@@ -1,5 +1,8 @@
+import { copyFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { runScript } from './helpers.js';
+import { REPO_ROOT, runScript, tempDir } from './helpers.js';
 
 function decision(toolInput: unknown): string {
   const { stdout } = runScript('.claude/hooks/guard-secrets.mjs', { payload: { tool_input: toolInput } });
@@ -50,5 +53,22 @@ describe('guard-secrets env files and robustness', () => {
   it('does not crash on malformed multi-edit payloads', () => {
     expect(decision({ file_path: 'a.ts', edits: [null, { new_string: 'ok' }] })).toBe('allow');
     expect(decision({ file_path: 'a.ts', edits: 'not-an-array' })).toBe('allow');
+  });
+});
+
+describe('guard-secrets fail-closed loading', () => {
+  it('asks instead of allowing when its helper module cannot be loaded', () => {
+    const isolated = path.join(tempDir(), 'guard-secrets.mjs');
+    copyFileSync(path.join(REPO_ROOT, '.claude', 'hooks', 'guard-secrets.mjs'), isolated);
+    const run = spawnSync(process.execPath, [isolated], {
+      input: JSON.stringify({ tool_input: { file_path: 'a.ts', content: 'x' } }),
+      encoding: 'utf8',
+    });
+    const output = JSON.parse(run.stdout) as { hookSpecificOutput: { permissionDecision: string } };
+    expect(output.hookSpecificOutput.permissionDecision).toBe('ask');
+  });
+
+  it.each(['/p/.env~', '/p/.env.backup'])('asks before editing %s', (file) => {
+    expect(decision({ file_path: file, content: 'A=1' })).toBe('ask');
   });
 });

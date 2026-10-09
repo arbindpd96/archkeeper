@@ -1,5 +1,4 @@
 import path from 'node:path';
-import { readInput, respond } from './lib.mjs';
 
 const ALLOW_PRAGMA = 'codekit:allow-secret';
 
@@ -22,8 +21,8 @@ const SECRET_PATTERNS = [
   },
 ];
 
-const ENV_FILE = /^\.env(rc|\..+)?$/i;
-const ENV_TEMPLATE = /^\.env\.example$/i;
+const ENV_FILE = /^\.env(?:rc)?(?![a-z0-9_-])/i;
+const ENV_TEMPLATE = /^\.env\.(?:example|sample|template)$/i;
 
 /** Collects every string the tool call would write into the file. */
 function writtenText(toolInput) {
@@ -68,8 +67,10 @@ function evaluate(toolInput) {
 }
 
 try {
+  const { readInput, respond } = await import('./lib.mjs');
   const response = evaluate(readInput().tool_input ?? {});
   if (response) respond(response);
 } catch {
-  respond(decide('ask', 'could not inspect this write. Confirm with the user.'));
+  // Fail closed: if the hook cannot load or crashes, the write must not go through unchecked.
+  process.stdout.write(JSON.stringify(decide('ask', 'could not inspect this write. Confirm with the user.')));
 }
