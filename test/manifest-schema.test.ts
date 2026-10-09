@@ -182,6 +182,16 @@ describe('module manifest schema', () => {
     );
   });
 
+  it('never shows an env or header value it refuses, since that value can be a pasted token', () => {
+    const token = `ghp_${'a'.repeat(36)}`;
+    const env = load((m) => (server(m, 1).env = { TOKEN: token }));
+    const header = load((m) => (server(m, 0).headers = { Authorization: `Bearer ${token}` }));
+    for (const error of [env, header]) {
+      expect(error.message).not.toContain(token);
+      expect(error.message).toContain('does not have the required form');
+    }
+  });
+
   it('is an ArchkeeperError whose message ends with the fix on a Try line', () => {
     const error = load((m) => (m.extra = 1));
     expect(error).toBeInstanceOf(ArchkeeperError);
