@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { appendFileSync, existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { exitWith } from './lib.mjs';
@@ -59,19 +59,31 @@ function gifSeconds(gif) {
   throw new Error('it ends before the GIF trailer');
 }
 
+/** Reads a text file, returning null when it does not exist. */
+function readOptional(file) {
+  try {
+    return readFileSync(file, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
 /** Checks one GIF against its tape and the caps, returning a summary row and any problems. */
 function checkGif(file, tapes) {
   const name = path.basename(file, '.gif');
   const tape = path.join(tapes, `${name}.tape`);
-  const bytes = statSync(file).size;
-  const hasTape = existsSync(tape);
-  const kind = hasTape && HERO.test(readFileSync(tape, 'utf8')) ? 'hero' : 'feature';
+  const gif = readFileSync(file);
+  const bytes = gif.length;
+  const tapeText = readOptional(tape);
+  const hasTape = tapeText !== null;
+  const kind = hasTape && HERO.test(tapeText) ? 'hero' : 'feature';
   const problems = [];
   if (!hasTape) problems.push(`${name}.gif has no tape at ${tape}; GIFs are rendered from tapes.`);
   if (bytes > MAX_BYTES) problems.push(`${name}.gif is ${String(bytes)} bytes, over ${String(MAX_BYTES)}.`);
   let seconds;
   try {
-    seconds = gifSeconds(readFileSync(file));
+    seconds = gifSeconds(gif);
   } catch (error) {
     problems.push(`${name}.gif is not a valid GIF: ${error.message}.`);
   }
