@@ -64,3 +64,6 @@ The full guide is in `CONTRIBUTING.md`.
 - `docs/architecture.md`: what exists and where.
 - `docs/decisions.md` and `docs/adr/`: why things are the way they are.
 - `README.md`: each shipped user-facing feature gets a short section and a GIF rendered from `docs/media/tapes/<feature>.tape`.
+  - Tapes use `{{brand.*}}` placeholders, never the product name, and always run through `scripts/render-tapes.mjs`, never `vhs` directly.
+  - CI renders tapes and uploads the GIFs as artifacts; it never commits. Tapes marked `# live` are recorded by the maintainer. See CONTRIBUTING, "Demo GIFs".
+  - Pushing a new workflow file needs `gh auth refresh -h github.com -s workflow`.

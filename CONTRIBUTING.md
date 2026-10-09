@@ -100,7 +100,18 @@ Use it only in tests, and never on real secrets.
 
 - Added a package, module or shared util? Update `docs/architecture.md` in the same PR.
 - Made a project-wide decision? Add an ADR (`docs/adr/`, copy the template) and a row in `docs/decisions.md`.
-- Shipped a user-facing feature? Add its README section and a demo GIF (`docs/media/tapes/<feature>.tape`).
+- Shipped a user-facing feature? Add its README section and a demo GIF (`docs/media/tapes/<feature>.tape`, see [Demo GIFs](#demo-gifs)).
+
+## Demo GIFs
+
+Every user-facing feature ships a README section and a GIF recorded with [VHS](https://github.com/charmbracelet/vhs) from `docs/media/tapes/<feature>.tape`.
+
+- **Brand placeholders.** Write commands as `Type "{{brand.binName}} init"`, never with the product name. `scripts/render-tapes.mjs` fills `{{brand.*}}` from `src/core/brand.ts` into a temp copy, so a tape never runs through `vhs` directly and GIFs always show the current command.
+- **Tape header.** A `# fixture: <name>` line names the `examples/` project the tape runs in. Font, size and theme come from `docs/media/tapes/_settings.tape`, and the script adds the output path, so tapes contain no `Output` or `Source`.
+- **CI tapes.** The `demo-gifs` workflow renders every tape not marked `# live` against the packed CLI and uploads the GIFs as the `demo-gifs` artifact. It never commits: the maintainer runs `npm run gifs:pull -- <run-id>` and commits the GIFs.
+- **Live tapes.** A tape marked `# live` needs a real Claude Code session, so the maintainer records it locally with `node scripts/render-tapes.mjs --live <feature>` after `npm run build`. The script refuses any VHS other than the 0.12.1 that CI pins; install JetBrains Mono too.
+- **Limits.** A GIF is at most 2 MB and 20 s, or 30 s for a tape marked `# hero`. `npm run demos` checks committed GIFs, and the workflow checks rendered ones.
+- **New workflow files.** Pushing `.github/workflows/*` over HTTPS needs the `workflow` scope: `gh auth refresh -h github.com -s workflow`.
 
 ## Changesets
 
