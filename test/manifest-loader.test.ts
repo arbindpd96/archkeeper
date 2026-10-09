@@ -162,10 +162,22 @@ describe('loadModule cross-field rules', () => {
     ['a file in the hook folder', `${BRAND.hookDir}/guard.mjs`, 'another folder'],
     ['a file in the hook folder by brand variable', '{{brand.hookDir}}/guard.mjs', 'another folder'],
     ['a file in the state folder by a spaced brand variable', '{{ brand.stateDir }}/x.md', 'another folder'],
+    ['a .env file', 'packages/api/.env', 'never writes secrets'],
+    ['a .env.local file', '.ENV.local', 'never writes secrets'],
+    ['an .envrc file', '.envrc', 'never writes secrets'],
+    ['personal memory', 'CLAUDE.local.md', 'never writes personal memory'],
+    ['a name ending in the sidecar suffix', `CLAUDE.md${BRAND.sidecarSuffix}`, 'taken for one'],
   ])('rejects %s as the target of a file written from a template', (_name, to, fix) => {
     const error = loadRich((m) => (entry(m, 'files', 1).to = to));
     expect(error.location).toBe('files[1].to');
     expect(error.hint).toContain(fix);
+  });
+
+  it('accepts a committed .env template as the target of a template file', () => {
+    const manifest = richManifest();
+    entry(manifest, 'files', 1).to = '.env.example';
+    const read = memoryReader({ 'modules/rich/module.json': JSON.stringify(manifest), ...richSources() });
+    expect(loadModule('rich', read).manifest.files[1]).toMatchObject({ to: '.env.example' });
   });
 
   it('rejects a reserved target for an owned and a blocks file too', () => {
