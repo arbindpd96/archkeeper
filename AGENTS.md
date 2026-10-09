@@ -47,7 +47,7 @@ The full guide is in `CONTRIBUTING.md`.
 
 | Command               | Purpose                                                  |
 | --------------------- | -------------------------------------------------------- |
-| `npm install`         | Set up the workspace                                     |
+| `npm install`         | Install the toolchain and the git hooks                  |
 | `npm run check`       | Everything CI runs: format, lint, types, comments, tests |
 | `npm run check:quick` | Types and tests (fast loop)                              |
 | `npm test`            | Tests only                                               |

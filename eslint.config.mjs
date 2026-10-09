@@ -46,6 +46,55 @@ const commentPolicy = {
   '@eslint-community/eslint-comments/require-description': 'error',
 };
 
+const CORE_IS_PURE =
+  'src/core is pure (ADR-0011): return data or throw, and let src/cli own prompts, output and exit codes.';
+const HOOKS_ARE_STANDALONE =
+  'Hooks are self-contained bundles (ADR-0011): import only node: built-ins and ./runtime/.';
+const RUNTIME_HAS_NO_PACKAGES = 'The hook runtime imports no npm package (ADR-0011): use node: built-ins.';
+
+/** Layer boundaries from ADR-0011; test/layer-boundaries.test.ts proves each one with a fixture. */
+const layerBoundaries = [
+  {
+    files: ['src/core/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            { name: 'node:process', importNames: ['exit'], message: CORE_IS_PURE },
+            { name: 'node:console', message: CORE_IS_PURE },
+          ],
+          patterns: [
+            { group: ['**/cli', '**/cli/**'], message: CORE_IS_PURE },
+            { group: ['commander', 'commander/**', '@clack/**'], message: CORE_IS_PURE },
+          ],
+        },
+      ],
+      'no-restricted-properties': ['error', { object: 'process', property: 'exit', message: CORE_IS_PURE }],
+      'no-restricted-globals': ['error', { name: 'console', message: CORE_IS_PURE }],
+    },
+  },
+  {
+    files: ['src/hooks/**/*.ts'],
+    ignores: ['src/hooks/runtime/**'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ regex: String.raw`^(?!node:|\./runtime/)`, message: HOOKS_ARE_STANDALONE }] },
+      ],
+    },
+  },
+  {
+    files: ['src/hooks/runtime/**/*.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        { patterns: [{ regex: String.raw`^(?![./]|node:)`, message: RUNTIME_HAS_NO_PACKAGES }] },
+      ],
+    },
+  },
+];
+
 export default defineConfig(
   {
     ignores: [
@@ -88,5 +137,6 @@ export default defineConfig(
       'jsdoc/require-jsdoc': 'off',
     },
   },
+  ...layerBoundaries,
   prettier,
 );
