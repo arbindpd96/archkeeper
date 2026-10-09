@@ -151,7 +151,8 @@ jobs:
       - name: Integrity and lightness budgets (publint, pack snapshot, budgets.json)
         run: npm run package
       - name: Publish dry run
-        run: npm publish --dry-run --ignore-scripts
+        # An explicit tag keeps the dry run independent of what is on npm (the name holds a 0.0.1 placeholder).
+        run: npm publish --dry-run --ignore-scripts --tag ci-dry-run
 
   install-smoke:
     name: Install smoke (${{ matrix.os }})
