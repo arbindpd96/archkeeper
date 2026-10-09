@@ -258,6 +258,12 @@ describe('loadCatalog', () => {
       'presets',
       'add "medium"',
     ],
+    [
+      'a conflict with an id that is not a module',
+      plainManifest('base', { presets: ['small', 'medium', 'full'], conflicts: ['formater'] }),
+      'conflicts[0]',
+      'use one of base',
+    ],
   ])('rejects a module with %s', (_name, manifest, location, fix) => {
     const error = failure(() => loadCatalog(['base'], memoryReader(kitFiles([manifest]))));
     expect(error.file).toBe('modules/base/module.json');
