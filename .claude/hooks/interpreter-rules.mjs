@@ -1,7 +1,11 @@
+import { downloadedFiles } from './downloaded-files.mjs';
 import { readInterpreter } from './interpreters.mjs';
 import { ask, deny, strictest } from './verdicts.mjs';
 
 const PIPE_TO_SHELL = deny('Piping a download into a shell is blocked. Download, review, then run.');
+const RUN_DOWNLOADED = deny(
+  'Running a file downloaded in the same command is blocked. Download, review, then run.',
+);
 const DOWNLOAD_INTO_CODE = ask(
   'Downloaded data is piped into inline code that might run it. Confirm with the user.',
 );
@@ -39,12 +43,13 @@ const verdictFor = (interpreter, source) =>
   downloadVerdict(interpreter, source) ?? (interpreter.kinds.includes('unknown') ? UNCHECKED_CODE : null);
 
 /**
- * Judges what interpreters run. Code from a download is denied when it is the program itself, built from an
- * expansion (`c=$(curl …); sh -c "$c"`), or able to run its input; other inline code a download feeds asks.
- * Inline code built from an expansion asks even without a download.
+ * Judges what interpreters run. Code from a download is denied when it is the program itself, a script the
+ * same command downloaded, built from an expansion (`c=$(curl …); sh -c "$c"`), or able to run its input;
+ * other inline code a download feeds asks. Inline code built from an expansion asks even without a download.
  */
 export function interpreterVerdict(commands) {
   const isDownload = possibleDownload(commands);
+  const isDownloadedFile = downloadedFiles(commands);
   const piped = fedBy(commands, isDownload);
   const captured = commands.some((command) => command.subs.some(isDownload));
   return strictest(
@@ -52,6 +57,7 @@ export function interpreterVerdict(commands) {
       const interpreter = readInterpreter(command);
       if (interpreter === null) return null;
       if (command.subs.some(isDownload)) return PIPE_TO_SHELL;
+      if (interpreter.scripts.some(isDownloadedFile)) return RUN_DOWNLOADED;
       return verdictFor(interpreter, { piped: piped(command), captured });
     }),
   );
