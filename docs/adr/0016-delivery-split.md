@@ -14,7 +14,7 @@ ADR-0002 Decision 2 says the plugin bundles "commands, skills, agents and hooks"
 - The exact `hooks/hooks.json` wrapper shape for plugins is unverified (reference §12), and hooks shipped in both the project and the plugin would fire twice.
 - Relative-path marketplace plugins are not version-pinned (reference §4.1). An npm-sourced plugin would be a second published artifact, which [ADR-0011](0011-single-package.md) avoids for now.
 
-Two things also depend on the plugin's settings and trust. A team's `extraKnownMarketplaces` and `enabledPlugins` take effect only after the workspace-trust dialog is accepted (reference §4.3). And plugin components are namespaced, so a plugin skill runs as `/archkeeper:<skill>` while a project skill runs as `/<skill>` (reference §4.1).
+Two more facts shape the split. A team's `extraKnownMarketplaces` and `enabledPlugins` take effect only after the workspace-trust dialog is accepted (reference §4.3). And plugin components are namespaced, so a plugin skill runs as `/archkeeper:<skill>` while a project skill runs as `/<skill>` (reference §4.1).
 
 R1 already reflects this split. ADR-0011 keeps `plugin/` in the repo but out of the npm package's `files`, and `check-brand` treats `plugin/` as generated output ([ADR-0012](0012-brand-constants.md)).
 
@@ -43,7 +43,7 @@ R1 already reflects this split. ADR-0011 keeps `plugin/` in the repo but out of 
 - The plugin version is bumped in the same release commit as the package ([ADR-0013](0013-release-process.md)).
 - CI runs `claude plugin validate --strict` with a pinned Claude Code CLI, falling back to a zod mirror of the validator's rules. The name rules already exist as a test oracle in `test/brand.test.ts`.
 
-ADR-0002's status line reads "accepted; Decision 2 partly superseded by ADR-0016".
+ADR-0002's status line now notes "Decision 2 partly superseded by ADR-0016".
 
 ## Consequences
 

@@ -24,7 +24,7 @@ This repo's hand-written hooks in `.claude/hooks/` were hardened in the PR #1 se
 - The stop check runs without a shell or npm lifecycle scripts (808f276).
 - Hook state is confined to the project and symlinks are refused (ceb154e).
 - `.env` reads are denied at any depth (a57a792).
-- guard-bash first matched regexes against the raw command. That proved bypassable and could time out, which failed open. It now tokenizes the command and judges the parsed commands, and it asks when it cannot load, cannot parse, or the command is longer than 8,000 characters.
+- guard-bash first matched regexes against the raw command. That proved bypassable and could time out, which failed open, so it now tokenizes the command and judges the parsed commands (72efe48), hardened further in #65. It asks when it cannot load, cannot parse, or the command is longer than 8,000 characters.
 
 R1 built the build side ([ADR-0011](0011-single-package.md)):
 
@@ -140,6 +140,6 @@ These are part of the ADR-0017 contract:
 - **Shell-form hooks.** Paths with spaces need quoting, and Windows runs them through Git Bash or PowerShell, whichever is present (reference §1.6).
 - **Fail open everywhere.** Regresses the guard-secrets hardening.
 - **guard-bash failing open with a stderr note** (the earlier draft, and #31), relying on the deny rules. Prefix-only rules miss reordered flags, chains and wrappers, so a guard that cannot read a command would silently allow it.
-- **Regex guards over the raw command text.** Bypassable through quoting, wrappers and chains, and slow inputs time out, which fails open (#65).
+- **Regex guards over the raw command text.** Bypassable through quoting, wrappers and chains, and slow inputs time out, which fails open (72efe48).
 - **Root-only `Read(./.env)` rules.** Miss nested `.env` files.
 - **One global SessionStart cap of 9,000–10,000 characters.** On its own, it would exceed the small preset's whole budget.
