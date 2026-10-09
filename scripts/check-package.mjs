@@ -145,6 +145,13 @@ function report(rows) {
 const args = process.argv.slice(2);
 const root = path.resolve(args.find((arg) => !arg.startsWith('--')) ?? '.');
 const manifest = readJson(path.join(root, 'package.json'));
+// npm 10 can still print lifecycle-script output before the JSON, so parse from the first line that opens the array.
+function parsePackOutput(stdout) {
+  const start = stdout.search(/^\[/m);
+  if (start === -1) exitWith(`check-package: npm pack printed no JSON:\n${stdout.slice(0, 500)}`, 1);
+  return JSON.parse(stdout.slice(start));
+}
+
 const budgets = readBudgets(root);
 if (!existsSync(path.join(root, 'dist'))) {
   exitWith('check-package: dist/ is missing. Run npm run build first.', 1);
@@ -152,7 +159,7 @@ if (!existsSync(path.join(root, 'dist'))) {
 
 const runtime = RUNTIME_FIELDS.flatMap((field) => Object.keys(manifest[field] ?? {}));
 const packArgs = ['pack', '--dry-run', '--json', '--ignore-scripts'];
-const [pack] = JSON.parse(npm(packArgs, { cwd: root, nextStep: 'Run it as npm run package.' }));
+const [pack] = parsePackOutput(npm(packArgs, { cwd: root, nextStep: 'Run it as npm run package.' }));
 const files = pack.files.map((entry) => entry.path).sort();
 const { rows, problems: budgetProblems } = measure(pack, runtime, budgets);
 report(rows);
