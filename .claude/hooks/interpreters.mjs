@@ -7,24 +7,40 @@ const SHELL_SHORT_VALUES = SHELL_VALUE_OPTIONS.filter((option) => option.length 
 const SHELL_LONG_VALUES = SHELL_VALUE_OPTIONS.filter((option) => option.startsWith('--'));
 
 /*
- * Option specs. Letters in `code`, `module`, `script` and `value` take a value (attached or the next word);
- * `codeOperand` makes the first operand the code (sh -c); `stdin` letters read the program from stdin;
- * `digits` letters take only attached digits and `attached` letters take the rest of the word (perl -0777, -i.bak).
- * `wholeWords` specs never cluster letters, so every option is looked up in the `long*` lists.
+ * Interpreter option specs; `define` fills in every field's default.
+ * - language: picks the inline-code allowlist (inline-code.mjs).
+ * - code, module, script, value: letters whose option takes a value, attached or the next word: inline code,
+ *   a module to run, the script file, or a value that is none of these. long*: the same for whole words.
+ * - stdin, longStdin: options that read the program from stdin (bash -s, python -i, node -i).
+ * - codeOperand: the letter that makes the first operand the code (sh -c).
+ * - digits: letters that take only attached digits (perl -0777); attached: letters that take the rest of the
+ *   word (perl -i.bak).
+ * - wholeWords: options never cluster letters (node, tclsh); plusOptions: `+o` options exist (shells).
+ * - stops: -c and -m end the options (python); dashesEnd: after `--` the script is stdin (php).
+ * - programOperand: the first operand is program text (awk); allCode: every argument is code (eval);
+ *   noStdin: with no operand it reads nothing (source).
  */
 const define = (fields) => ({
+  language: '',
   code: '',
   module: '',
   script: '',
   value: '',
-  stdin: '',
-  digits: '',
-  attached: '',
-  codeOperand: '',
   longCode: [],
   longScript: [],
   longValue: [],
+  stdin: '',
   longStdin: [],
+  codeOperand: '',
+  digits: '',
+  attached: '',
+  wholeWords: false,
+  plusOptions: false,
+  stops: false,
+  dashesEnd: false,
+  programOperand: false,
+  allCode: false,
+  noStdin: false,
   ...fields,
 });
 
@@ -84,16 +100,21 @@ const WORD_ROLES = [
   ['script', 'longScript'],
   ['value', 'longValue'],
 ];
+const FOUND_LIST_OF_ROLE = new Map([
+  ['code', 'codes'],
+  ['module', 'modules'],
+  ['script', 'scripts'],
+]);
 const LEADING_DIGITS = /^(?:x[\da-fA-F]*|[0-7]*)/;
 
-const isOption = (arg, spec) =>
-  arg.length > 1 && (arg[0] === '-' || (spec.plusOptions === true && arg[0] === '+'));
+const isOption = (arg, spec) => arg.length > 1 && (arg[0] === '-' || (spec.plusOptions && arg[0] === '+'));
 const attachedValue = (text, at) => ({ value: { text, at }, width: 1 });
 const nextValue = (args, index) => ({ value: { text: args[index + 1], at: index + 1 }, width: 2 });
 
 function record(found, role, value, spec) {
-  if (value.text === undefined || role === 'value') return;
-  ({ code: found.codes, module: found.modules, script: found.scripts })[role].push(value);
+  const list = FOUND_LIST_OF_ROLE.get(role);
+  if (value.text === undefined || list === undefined) return;
+  found[list].push(value);
   if (spec.stops && role !== 'script') found.stopped = true;
 }
 
