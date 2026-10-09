@@ -1,0 +1,9 @@
+{
+  "$schema": "../../schema/module.schema.json",
+  "schemaVersion": 1,
+  "id": "base",
+  "description": "CLAUDE.md importing AGENTS.md, shared agent rules, ignore rules and settings.",
+  "presets": ["small", "medium", "full"],
+  "requires": [],
+  "internal": true
+}

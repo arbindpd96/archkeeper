@@ -1,0 +1,9 @@
+{
+  "$schema": "../../schema/module.schema.json",
+  "schemaVersion": 1,
+  "id": "format-on-edit",
+  "description": "Formats and lints each edited file with the project's own tools.",
+  "presets": ["medium", "full"],
+  "requires": ["base"],
+  "internal": true
+}

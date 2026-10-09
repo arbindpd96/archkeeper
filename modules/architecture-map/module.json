@@ -1,0 +1,9 @@
+{
+  "$schema": "../../schema/module.schema.json",
+  "schemaVersion": 1,
+  "id": "architecture-map",
+  "description": "A seeded docs/architecture.md and the /update-map skill.",
+  "presets": ["medium", "full"],
+  "requires": ["base"],
+  "internal": true
+}

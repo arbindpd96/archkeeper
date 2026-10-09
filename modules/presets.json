@@ -1,0 +1,20 @@
+{
+  "default": "medium",
+  "presets": [
+    {
+      "name": "small",
+      "description": "CLAUDE.md and AGENTS.md, the safety guards and feature memory.",
+      "defaults": { "sessionStartCap": 1200 }
+    },
+    {
+      "name": "medium",
+      "description": "Small plus decision records, the architecture map and format-on-edit.",
+      "defaults": { "sessionStartCap": 3000 }
+    },
+    {
+      "name": "full",
+      "description": "Medium plus an opt-in test check before Claude stops.",
+      "defaults": { "sessionStartCap": 4000 }
+    }
+  ]
+}

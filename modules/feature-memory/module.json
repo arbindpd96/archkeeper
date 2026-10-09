@@ -1,0 +1,9 @@
+{
+  "$schema": "../../schema/module.schema.json",
+  "schemaVersion": 1,
+  "id": "feature-memory",
+  "description": "A MEMORY.md per feature, a mistakes log, memory hooks and the /new-feature and /handoff skills.",
+  "presets": ["small", "medium", "full"],
+  "requires": ["base"],
+  "internal": true
+}
