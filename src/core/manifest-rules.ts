@@ -188,7 +188,7 @@ function whenOptionFinding(
   path: readonly PropertyKey[],
 ): Finding | undefined {
   for (const [name, value] of Object.entries(when?.options ?? {})) {
-    const spec = manifest.options[name];
+    const spec = Object.hasOwn(manifest.options, name) ? manifest.options[name] : undefined;
     const location = [...path, 'options', name];
     if (spec === undefined) {
       const known = Object.keys(manifest.options).join(', ') || 'none yet';

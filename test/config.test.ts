@@ -153,6 +153,11 @@ describe('resolveOptions', () => {
     expect(resolved.get('rich')).toEqual({ blockNoVerify: false, optOut: [] });
   });
 
+  it.each(['constructor', 'toString'])('warns about option %s, which only objects inherit', (name) => {
+    const { warnings } = options({ rich: { [name]: true } });
+    expect(warnings.map((warning) => warning.location)).toEqual([`options.rich.${name}`]);
+  });
+
   it.each<[string, unknown, string, string]>([
     [
       'a string for a boolean option',
