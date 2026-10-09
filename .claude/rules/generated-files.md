@@ -13,7 +13,7 @@ paths:
 - Generated CLAUDE.md stays under 100 lines; push detail into `.claude/rules/` or skills.
 - Generated hooks are dependency-free Node `.mjs`, registered in exec form (`"command": "node", "args": [...]`).
 - Plugin and marketplace names must not start with `claude-` (Claude Code rejects them).
-- Skill and agent frontmatter follows ADR-0015's allowlist: no `hooks` or `mcpServers`, `permissionMode` only `default` or `plan`, no unscoped `Bash` in `allowed-tools`, and no `` !`cmd` `` in skill bodies.
+- Skill and agent frontmatter follows ADR-0015's allowlist: no `hooks` or `mcpServers`, `permissionMode` only `default` or `plan`, `allowed-tools` only `Read`, `Grep`, `Glob` and literal `Bash(<command>)` entries that name no shell, wrapper, interpreter or runner, and no `` !`cmd` `` in skill bodies.
 - User-editable regions must survive `update`: use managed blocks or the lockfile merge, never overwrite.
 
 ## Hook security (lessons from the PR #1 security review)

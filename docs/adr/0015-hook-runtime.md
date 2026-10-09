@@ -133,7 +133,11 @@ So every skill and agent the kit generates, for the project or for the plugin ([
 
 - no `hooks` and no `mcpServers`
 - `permissionMode` only as `default` or `plan`
-- a skill's `allowed-tools` holds no unscoped `Bash`, only `Bash(<command>)` entries
+- a skill's `allowed-tools` lists only `Read`, `Grep`, `Glob` and `Bash(<command>)` entries, because every tool it lists runs without a prompt:
+  - A `Bash` entry names a literal command. A wildcard may follow only a literal subcommand, as in `Bash(git log:*)`, so `Bash(*)`, `Bash(git:*)` and `Bash(npm *)` are refused.
+  - Its command is never a shell, wrapper, interpreter or package runner, because each of those runs whatever follows it: `bash`, `sh`, `zsh`, `pwsh`, `cmd`, `env`, `xargs`, `sudo`, `node`, `python`, `deno`, `bun`, `ruby`, `perl`, `npx`, `npm exec`, `pnpm dlx`, `uvx` and the like.
+  - No `Edit`, `Write`, `WebFetch`, `WebSearch` or `mcp__` entries, and no other tool. A skill can still use them, with the usual prompt.
+  - The static test holds the exact lists.
 - an agent's `tools` is always explicit (reference §11); it may list `Bash`, because that list only makes a tool available, and every call still goes through the permission rules and guard-bash
 - no `` !`cmd` `` in a skill body; the skill tells Claude which command to run, so the guards judge it
 
