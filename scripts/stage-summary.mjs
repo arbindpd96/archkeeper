@@ -4,25 +4,34 @@ import { parseArgs } from 'node:util';
 import { exitWith } from './lib.mjs';
 
 const UUID = /^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i;
+const SHASUM = /^[\da-f]{40}$/;
 const PACKAGE_ID = /^[\w@./-]+$/;
 const DIST_TAG = /^[\w.-]+$/;
-const USAGE = 'Usage: node scripts/stage-summary.mjs <npm-stage-publish.json> --dist-tag <tag> [--dry-run]';
+const USAGE =
+  'Usage: node scripts/stage-summary.mjs <npm-stage-publish.json> --dist-tag <tag> --shasum <sha1>\n' +
+  '       node scripts/stage-summary.mjs <npm-stage-publish.json> --dist-tag <tag> --dry-run';
 
-/** Reads the command line, exiting with usage when the file or a valid dist-tag is missing. */
+/** Reads the command line, exiting with usage unless it names one file, a dist-tag, and a shasum or --dry-run. */
 function readOptions() {
+  let parsed;
   try {
-    const { values, positionals } = parseArgs({
-      options: { 'dist-tag': { type: 'string' }, 'dry-run': { type: 'boolean' } },
+    parsed = parseArgs({
+      options: { 'dist-tag': { type: 'string' }, shasum: { type: 'string' }, 'dry-run': { type: 'boolean' } },
       allowPositionals: true,
     });
-    const distTag = values['dist-tag'] ?? '';
-    if (positionals.length === 1 && DIST_TAG.test(distTag)) {
-      return { file: positionals[0], distTag, dryRun: values['dry-run'] === true };
-    }
   } catch {
     return exitWith(USAGE, 2);
   }
-  return exitWith(USAGE, 2);
+  const { values, positionals } = parsed;
+  const options = {
+    file: positionals[0],
+    distTag: values['dist-tag'] ?? '',
+    shasum: values.shasum,
+    dryRun: values['dry-run'] === true,
+  };
+  const shasumOk = options.shasum === undefined ? options.dryRun : SHASUM.test(options.shasum);
+  if (positionals.length !== 1 || !DIST_TAG.test(options.distTag) || !shasumOk) exitWith(USAGE, 2);
+  return options;
 }
 
 /** Returns the one package entry that `npm stage publish --json` printed, or exits when there is none. */
@@ -41,8 +50,8 @@ function readStaged(file) {
   return staged;
 }
 
-/** Builds the job summary: the exact approve command for a real stage, or what a dry run would stage. */
-function summary(staged, { distTag, dryRun }) {
+/** Builds the job summary: how to check and approve a real stage, or what a dry run would stage. */
+function summary(staged, { distTag, shasum, dryRun }) {
   if (dryRun) {
     return `### Release dry run\n\nnpm would stage \`${staged.id}\` with dist-tag \`${distTag}\`.\n`;
   }
@@ -52,17 +61,25 @@ function summary(staged, { distTag, dryRun }) {
       1,
     );
   }
+  if (staged.shasum !== shasum) {
+    exitWith(
+      `stage-summary: npm staged shasum ${String(staged.shasum)}, not the built ${shasum}. Reject it.`,
+      1,
+    );
+  }
   const id = staged.stageId;
   return [
     `### Staged \`${staged.id}\` with dist-tag \`${distTag}\``,
     '',
-    'Nothing is public until the maintainer approves it with 2FA:',
+    `Nothing is public until the maintainer approves it with 2FA. First check that \`npm stage view ${id}\` ` +
+      `shows shasum \`${shasum}\`, the tarball this run built and checked, and that \`npm stage list\` ` +
+      'shows no other pending stage. Then approve it:',
     '',
     '```sh',
     `npm stage approve ${id}`,
     '```',
     '',
-    `Inspect it first with \`npm stage view ${id}\`, or reject it with \`npm stage reject ${id}\`.`,
+    `To discard it instead: \`npm stage reject ${id}\`.`,
     '',
   ].join('\n');
 }

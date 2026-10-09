@@ -20,16 +20,16 @@ The maintainer's runbook for [ADR-0013](adr/0013-release-process.md). CI never c
    git push origin vX.Y.Z
    ```
 
-4. **Approve.** The `Release` workflow checks npm 11.15+, the tag against `package.json`, the `CHANGELOG.md` section, `private`, and that the version is not below npm's `latest`. It removes the dev-only `prepare` script, runs every check, and stages the package with an explicit dist-tag: `next` for prereleases, `latest` otherwise. Its job summary prints the exact command:
+4. **Approve.** The `Release` workflow's build job holds no secret. It checks npm 11.15+, the tag against `package.json`, the `CHANGELOG.md` section, `private`, that the version is not below npm's `latest`, and that the tagged commit is on `main`. It removes the dev-only `prepare` script, runs every check, and packs the tarball. The stage job, in the `npm-stage` environment, installs nothing: it stages that tarball with an explicit dist-tag (`next` for prereleases, `latest` otherwise), and its job summary prints the tarball's shasum and the exact commands. Before you approve, check that `npm stage view <id>` shows that shasum and that `npm stage list archkeeper` shows no other pending stage:
 
    ```sh
-   npm stage view <id>       # optional: inspect it, or npm stage download <id> for the tarball
+   npm stage view <id>       # the shasum must match the job summary
    npm stage approve <id>    # asks for your 2FA code
    ```
 
-   `npm stage list archkeeper` shows pending stages, and `npm stage reject <id>` discards one.
+   `npm stage reject <id>` discards a stage, and `npm stage download <id>` fetches its tarball.
 
-5. **Verify.** The workflow polls the registry for an hour. Once you approve, it installs `archkeeper@X.Y.Z` on ubuntu, macOS and Windows, runs `--version`, and creates the GitHub Release from the CHANGELOG section. If you approved later, re-run the **Wait for the approved publish** job. A full re-run is also safe: a version already on npm is verified, not staged again.
+5. **Verify.** The workflow polls the registry for an hour. Once you approve, it checks that npm serves exactly the files it built, installs `archkeeper@X.Y.Z` on ubuntu, macOS and Windows, runs `--version`, and creates the GitHub Release from the CHANGELOG section. If you approved later, re-run only the **Wait for the approved publish** job. Re-running the whole workflow before you approve would stage the version a second time.
 
 ## Release candidates
 
@@ -42,31 +42,37 @@ Commit `.changeset/pre.json` with the release commit, then tag `v0.1.0-rc.0`; it
 
 ## The first publish
 
+The name is reserved by a notice-only `0.0.1` placeholder on `latest`, so the first real version must be higher (planned: `0.1.0-rc.0`). Always pass an explicit `--tag`: without one, npm refuses any version at or below `0.0.1`.
+
 The first release is published from your laptop, then tagged:
 
 1. Run `npm login` with 2FA enabled on the account. Merge the release commit, which removes `"private": true`.
-2. From a clean checkout of that commit:
+2. From a clean checkout of that commit, run the same guards and checks as the workflow, then stage the packed tarball:
 
    ```sh
    npm ci --ignore-scripts
+   node scripts/check-release.mjs --tag v0.1.0-rc.0
    npm pkg delete scripts.prepare
    npm run check && npm run package -- --release
-   npm stage publish --access public --tag next --ignore-scripts
+   packed="$(mktemp -d)" && node scripts/pack-release.mjs "$packed"
+   npm stage publish "$packed/archkeeper-0.1.0-rc.0.tgz" --access public --tag next --ignore-scripts
    npm stage approve <id>
    git checkout -- package.json
    ```
 
-3. Tag the commit and push the tag. The workflow finds the version on npm, skips staging, and runs the registry smoke test and the GitHub Release.
+3. Tag the commit and push the tag. The workflow finds the version on npm and skips staging. It still checks that npm serves the files it builds from the tag, then runs the registry smoke test and the GitHub Release.
 
-The name is reserved by a notice-only `0.0.1` placeholder on `latest`, so the first real version must be higher (planned: `0.1.0-rc.0`). Always pass an explicit `--tag`: without one, npm refuses any version at or below `0.0.1`. After the first approval, check `npm view archkeeper dist-tags`.
+After the first approval, check `npm view archkeeper dist-tags`.
 
-## The stage-only token
+## The stage-only token and the npm-stage environment
 
-`release.yml` stages with the `NPM_STAGE_TOKEN` secret and refuses to start without it (#58).
+The stage job reads `NPM_STAGE_TOKEN` from the `npm-stage` environment and refuses to start without it (#58).
 
 - On npmjs.com, create a granular token with **Read and write (stage only)** for `archkeeper`, expiring in 90 days or less. It can stage but never publish directly.
-- Save it with `gh secret set NPM_STAGE_TOKEN --repo arbindpd96/archkeeper`.
-- When you create it, open an `owner-action` issue to rotate it, due a week before it expires. To rotate, create a new token, set the secret again, and revoke the old token.
+- In the repository settings, open **Environments → npm-stage** (the first tag push creates it). Set its deployment rule to allow only tags matching `v*`, and optionally add yourself as a required reviewer.
+- Save the token as an environment secret: `gh secret set NPM_STAGE_TOKEN --env npm-stage --repo arbindpd96/archkeeper`. Do not store it as a repository secret, which every workflow on every branch could read.
+- Add a tag ruleset for `v*` that lets only you create tags and blocks updating and deleting them.
+- When you create the token, open an `owner-action` issue to rotate it, due a week before it expires. To rotate, create a new token, set the secret again, and revoke the old token.
 
 ## Rollback
 

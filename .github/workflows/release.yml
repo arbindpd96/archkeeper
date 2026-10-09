@@ -19,8 +19,9 @@ env:
   HUSKY: 0
 
 jobs:
-  stage:
-    name: Stage on npm
+  # Runs every check and packs the tarball with no secret in reach; the stage job installs nothing.
+  build:
+    name: Build and check the release
     runs-on: ubuntu-latest
     timeout-minutes: 20
     outputs:
@@ -28,19 +29,30 @@ jobs:
       version: ${{ steps.guards.outputs.version }}
       bin: ${{ steps.guards.outputs.bin }}
       prerelease: ${{ steps.guards.outputs.prerelease }}
+      dist-tag: ${{ steps.guards.outputs.dist-tag }}
+      published: ${{ steps.registry.outputs.published }}
+      tarball: ${{ steps.pack.outputs.tarball }}
+      integrity: ${{ steps.pack.outputs.integrity }}
+      shasum: ${{ steps.pack.outputs.shasum }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           check-latest: true
-          registry-url: https://registry.npmjs.org
       - run: npm ci --ignore-scripts
-      - name: Release guards (npm 11.15+, tag matches version, CHANGELOG section, not private)
+      - name: Release guards (npm 11.15+, tag matches version, CHANGELOG, not private, not below latest)
         id: guards
         run: node scripts/check-release.mjs --tag "$GITHUB_REF_NAME"
+      - name: Require the tagged commit to be on main
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error title=Tag is not on main::$GITHUB_REF_NAME points at a commit that main does not contain. Tag a commit on main."
+            exit 1
+          fi
       # The first publish is made from the maintainer's laptop (ADR-0013); its tag push, like a re-run
       # after approval, then only verifies the package instead of staging it again.
       - name: Check whether this version is already on npm
@@ -55,38 +67,77 @@ jobs:
           else
             echo "published=false" >> "$GITHUB_OUTPUT"
           fi
+      - name: Strip dev-only lifecycle scripts from the manifest npm publishes
+        run: npm pkg delete scripts.prepare
+      - name: Full check (format, lint, types, comments, brand, demos, tests, build, package)
+        run: npm run check
+      - name: Package checks on the stripped manifest
+        run: npm run package -- --release
+      - name: Pack the tagged commit (only prepare removed)
+        id: pack
+        run: node scripts/pack-release.mjs "$RUNNER_TEMP/release"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-tarball
+          path: ${{ runner.temp }}/release/*.tgz
+          if-no-files-found: error
+          retention-days: 30
+
+  stage:
+    name: Stage on npm
+    needs: build
+    if: needs.build.outputs.published != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # NPM_STAGE_TOKEN is a secret of this environment, which admits only v* tags (docs/releasing.md).
+    environment: npm-stage
+    steps:
       - name: Require the stage-only npm token
-        if: steps.registry.outputs.published != 'true'
         env:
           NPM_STAGE_TOKEN: ${{ secrets.NPM_STAGE_TOKEN }}
         run: |
           if [ -z "$NPM_STAGE_TOKEN" ]; then
-            echo "::error title=NPM_STAGE_TOKEN is missing::Create the stage-only npm token and save it as the NPM_STAGE_TOKEN repository secret (owner action, issue #58), then re-run this job."
+            echo "::error title=NPM_STAGE_TOKEN is missing::Create the stage-only npm token and save it as an NPM_STAGE_TOKEN secret of the npm-stage environment (owner action, issue #58), then re-run this job."
             exit 1
           fi
-      - name: Strip dev-only lifecycle scripts from the manifest npm publishes
-        run: npm pkg delete scripts.prepare
-      - name: Full check (format, lint, types, comments, brand, tests, build, package)
-        run: npm run check
-      - name: Package checks on the stripped manifest
-        run: npm run package -- --release
+      # Only for the dependency-free stage-summary.mjs: this job runs no npm install and no checks.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          check-latest: true
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-tarball
+          path: ${{ runner.temp }}/release
       # Always an explicit dist-tag (next for prereleases, latest otherwise): the name holds a 0.0.1
       # placeholder on latest, and the release guards refuse any version below it.
-      - name: Stage the publish (no provenance until npm/cli#9969 is fixed)
-        if: steps.registry.outputs.published != 'true'
+      - name: Stage the tarball the build job checked (no provenance until npm/cli#9969 is fixed)
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_STAGE_TOKEN }}
-          DIST_TAG: ${{ steps.guards.outputs.dist-tag }}
-        run: npm stage publish --access public --ignore-scripts --json --tag "$DIST_TAG" > "$RUNNER_TEMP/stage.json"
+          DIST_TAG: ${{ needs.build.outputs.dist-tag }}
+          TARBALL: ${{ runner.temp }}/release/${{ needs.build.outputs.tarball }}
+          INTEGRITY: ${{ needs.build.outputs.integrity }}
+        run: |
+          actual="sha512-$(openssl dgst -sha512 -binary "$TARBALL" | base64 -w0)"
+          if [ "$actual" != "$INTEGRITY" ]; then
+            echo "::error title=Tarball changed::The downloaded tarball is not the one the build job packed."
+            exit 1
+          fi
+          npm stage publish "$TARBALL" --access public --ignore-scripts --json --tag "$DIST_TAG" > "$RUNNER_TEMP/stage.json"
       - name: Print the approve command
-        if: steps.registry.outputs.published != 'true'
         env:
-          DIST_TAG: ${{ steps.guards.outputs.dist-tag }}
-        run: node scripts/stage-summary.mjs "$RUNNER_TEMP/stage.json" --dist-tag "$DIST_TAG"
+          DIST_TAG: ${{ needs.build.outputs.dist-tag }}
+          SHASUM: ${{ needs.build.outputs.shasum }}
+        run: node scripts/stage-summary.mjs "$RUNNER_TEMP/stage.json" --dist-tag "$DIST_TAG" --shasum "$SHASUM"
 
   wait-for-publish:
     name: Wait for the approved publish
-    needs: stage
+    needs: [build, stage]
+    if: ${{ !cancelled() && needs.build.result == 'success' && needs.stage.result != 'failure' }}
     runs-on: ubuntu-latest
     timeout-minutes: 70
     outputs:
@@ -95,8 +146,8 @@ jobs:
       - name: Poll the registry until the maintainer approves the stage
         id: poll
         env:
-          SPEC: ${{ needs.stage.outputs.name }}@${{ needs.stage.outputs.version }}
-          VERSION: ${{ needs.stage.outputs.version }}
+          SPEC: ${{ needs.build.outputs.name }}@${{ needs.build.outputs.version }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
           for _ in $(seq 1 120); do
             if [ "$(npm view "$SPEC" version 2>/dev/null)" = "$VERSION" ]; then
@@ -107,10 +158,30 @@ jobs:
           done
           echo "::notice title=Not published yet::$SPEC is not on the registry after 60 minutes. After npm stage approve, re-run this job to smoke-test it and create the GitHub Release."
           echo "published=false" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: steps.poll.outputs.published == 'true'
+        with:
+          name: release-tarball
+          path: ${{ runner.temp }}/built
+      - name: Require npm to serve the files this run built from the tag
+        if: steps.poll.outputs.published == 'true'
+        env:
+          SPEC: ${{ needs.build.outputs.name }}@${{ needs.build.outputs.version }}
+          TARBALL: ${{ needs.build.outputs.tarball }}
+        run: |
+          cd "$RUNNER_TEMP"
+          mkdir -p registry built-files registry-files
+          npm pack "$SPEC" --ignore-scripts --pack-destination registry > /dev/null
+          tar -xzf "built/$TARBALL" -C built-files
+          tar -xzf "registry/$TARBALL" -C registry-files
+          if ! diff -r built-files registry-files; then
+            echo "::error title=npm serves other files::$SPEC on npm differs from the tarball built from $GITHUB_REF_NAME. Do not announce it; see Rollback in docs/releasing.md."
+            exit 1
+          fi
 
   smoke:
     name: Registry smoke (${{ matrix.os }})
-    needs: [stage, wait-for-publish]
+    needs: [build, wait-for-publish]
     if: needs.wait-for-publish.outputs.published == 'true'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
@@ -125,9 +196,9 @@ jobs:
       - name: Install from the registry under a path with a space and run the bin
         shell: bash
         env:
-          SPEC: ${{ needs.stage.outputs.name }}@${{ needs.stage.outputs.version }}
-          BIN: ${{ needs.stage.outputs.bin }}
-          VERSION: ${{ needs.stage.outputs.version }}
+          SPEC: ${{ needs.build.outputs.name }}@${{ needs.build.outputs.version }}
+          BIN: ${{ needs.build.outputs.bin }}
+          VERSION: ${{ needs.build.outputs.version }}
         run: |
           smoke="${RUNNER_TEMP//\\//}/registry smoke"
           mkdir -p "$smoke"
@@ -140,7 +211,7 @@ jobs:
 
   github-release:
     name: GitHub Release
-    needs: [stage, smoke]
+    needs: [build, smoke]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -158,8 +229,12 @@ jobs:
       - name: Create the GitHub Release (a release, never a commit)
         env:
           GH_TOKEN: ${{ github.token }}
-          PRERELEASE: ${{ needs.stage.outputs.prerelease }}
+          PRERELEASE: ${{ needs.build.outputs.prerelease }}
         run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            echo "::notice title=Release exists::The GitHub Release $GITHUB_REF_NAME already exists."
+            exit 0
+          fi
           prerelease_args=()
           if [ "$PRERELEASE" = true ]; then prerelease_args=(--prerelease); fi
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
