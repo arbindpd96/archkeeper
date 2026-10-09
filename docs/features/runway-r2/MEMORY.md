@@ -52,6 +52,7 @@ Open the PR for `feat/runway-r2` (the coordinator does this). Watch the first `d
 - macOS bash 3.2 with `set -u` fails on an empty array expansion; the workflows run bash 5 without `-u`.
 - npm (11.17) checks the registry even in `publish --dry-run`: an implicit `latest` fails at or below the highest version, and a version already published fails whatever `--tag` says (only `--force` skips it).
 - VHS runs `Env` as a process-wide `os.Setenv` before it starts the browser, so a tape-level `HOME` would also hide fonts from Chrome; render-tapes sets `XDG_DATA_HOME` instead.
+- On Windows, vitest gives its workers an uppercase copy of every variable (`NPM_EXECPATH` beside `npm_execpath`), and Node passes a child only the lexicographically first of names that differ in case. A plain `{ ...process.env, npm_execpath }` override therefore loses; tests build child envs with `withEnv` from `test/helpers.ts`.
 - vhs-action (v2.1.1) downloads ttyd's latest release and installs ffmpeg without a version pin or checksum. Accepted for now (coordinator, second security review): the demo-gifs job holds no secret, and only the GIFs are at stake.
 - The registry holds `0.0.0-stage` (a staged-publishing stub) and the owner's `0.0.1` placeholder on `latest`. The workflows query exact versions.
 
