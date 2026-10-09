@@ -1,0 +1,224 @@
+=== .acmekit/base/01c5ef61f9db28eccc0af2cd621a5013e0fa7f8e8fbc5853eabdd2a9c55344cb
+<gzip blob of 66 characters>
+=== .acmekit/base/09b3561909b15a596598cbcf51c362b48236995e19f14a66654190d481faf552
+<gzip blob of 77 characters>
+=== .acmekit/base/1b3b43fd591aef8830dc333f49a38a7c2d942ad0bf4dc0049c034b7f85d50e56
+<gzip blob of 173 characters>
+=== .acmekit/base/44fb4b3f177ebd93b87992d50200f598975d8b71a1ed29ae6b265745a6fa328b
+<gzip blob of 32 characters>
+=== .acmekit/base/764e380737f4d1a49da0936634c343ea91d0b2d036e5fb5bcd5e3522092ec390
+<gzip blob of 32 characters>
+=== .acmekit/base/78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7
+<gzip blob of 43 characters>
+=== .acmekit/base/9740aefc6eda3b6bf9fd0f485c7385446748b3edac1d1aef692e6b0918e5cf92
+<gzip blob of 30 characters>
+=== .acmekit/base/b13dd132f5672dc7d1a4bae0c62998aae5244e7b3eeb40e2e718ab24c178ce66
+<gzip blob of 121 characters>
+=== .acmekit/base/cf9d14e7907c204cbdc889ef5f8ed3f6439c1c05b7b513b086827735bfa0bf06
+<gzip blob of 190 characters>
+=== .acmekit/local/.gitignore
+*
+=== .acmekit/lock.json
+{
+  "lockfileVersion": 1,
+  "kit": {
+    "name": "acmekit",
+    "version": "1.0.0"
+  },
+  "modules": [
+    "core-docs",
+    "guard",
+    "servers"
+  ],
+  "files": {
+    ".claude/hooks/acmekit/guard.mjs": {
+      "module": "guard",
+      "strategy": "owned",
+      "base": "9740aefc6eda3b6bf9fd0f485c7385446748b3edac1d1aef692e6b0918e5cf92"
+    },
+    ".claude/rules/acmekit/guard.md": {
+      "module": "guard",
+      "strategy": "owned",
+      "base": "b13dd132f5672dc7d1a4bae0c62998aae5244e7b3eeb40e2e718ab24c178ce66"
+    },
+    ".claude/rules/acmekit/python.md": {
+      "module": "servers",
+      "strategy": "owned",
+      "base": "09b3561909b15a596598cbcf51c362b48236995e19f14a66654190d481faf552"
+    },
+    ".claude/skills/why/SKILL.md": {
+      "module": "servers",
+      "strategy": "owned",
+      "base": "cf9d14e7907c204cbdc889ef5f8ed3f6439c1c05b7b513b086827735bfa0bf06"
+    },
+    "docs/notes.md": {
+      "module": "core-docs",
+      "strategy": "create-only",
+      "base": "3a2ccf449ff66a90b8167f7445bb8bf47d84cb2e1b4f8110bbceae261e543e26"
+    }
+  },
+  "blocks": {
+    ".gitattributes": {
+      "base-blobs": {
+        "base": "78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7"
+      }
+    },
+    ".gitignore": {
+      "core-docs": {
+        "base": "764e380737f4d1a49da0936634c343ea91d0b2d036e5fb5bcd5e3522092ec390"
+      }
+    },
+    "AGENTS.md": {
+      "guard": {
+        "base": "01c5ef61f9db28eccc0af2cd621a5013e0fa7f8e8fbc5853eabdd2a9c55344cb"
+      },
+      "principles": {
+        "base": "1b3b43fd591aef8830dc333f49a38a7c2d942ad0bf4dc0049c034b7f85d50e56"
+      }
+    },
+    "CLAUDE.md": {
+      "imports": {
+        "base": "44fb4b3f177ebd93b87992d50200f598975d8b71a1ed29ae6b265745a6fa328b"
+      }
+    }
+  },
+  "json": {
+    ".claude/settings.json": {
+      "$schema": "b8d9909f535bc167265410f5fcef3e8213e14f268fec9f633616070c14979141",
+      "hooks.PreToolUse .claude/hooks/acmekit/guard.mjs": "0756e129d4c903b53433a4d298181bdbd0d7ba27b022a2402967f968fcd7db77",
+      "hooks.SessionStart .claude/hooks/acmekit/guard.mjs": "4b92001ff5f53e96796aa634369b1d6b8b5a98f6ccaa804ef73539d6da16d0ca",
+      "permissions.deny Bash(rm -rf:*)": "8dd3b1a58515b0c193982a408b39ffa017372a95e8a2d4a4c44636f35c6eedf6",
+      "permissions.deny Read(**/.env)": "faa65e889d1039367ab48c8d3a7e1e036bce64129a0b964fc982e35018e57726"
+    },
+    ".mcp.json": {
+      "mcpServers docs": "eb9d1b0e590e6bffb6273e8a8423e99f45d5693fcbf936a68d2ce1b4bf64ca6b",
+      "mcpServers graph": "bed4bf8f945ea7f0a7cd144bfa5eebe4a7544a878eacd5ab14d2fae9cd744ed4"
+    }
+  },
+  "removed": []
+}
+=== .claude/hooks/acmekit/guard.mjs
+export const guard = 'guard';
+=== .claude/rules/acmekit/guard.md
+---
+paths:
+  - '**/*.sh'
+---
+
+# Shell scripts
+
+Run shell scripts through the guard in `.claude/hooks/acmekit/guard.mjs`.
+=== .claude/rules/acmekit/python.md
+---
+paths:
+  - '**/*.py'
+---
+
+# Python
+
+Format with the project's own tools.
+=== .claude/settings.json
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/guard.mjs"
+            ],
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/guard.mjs"
+            ],
+            "timeout": 10,
+            "if": "Bash(git *)"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Read(**/.env)",
+      "Bash(rm -rf:*)"
+    ]
+  }
+}
+=== .claude/skills/why/SKILL.md
+---
+name: why
+description: Explain why something is the way it is by searching the recorded decisions.
+---
+
+Search `docs/decisions.md` and `docs/adr/` for the topic, then answer with links.
+=== .gitattributes
+# acmekit:begin base-blobs
+.acmekit/base/** binary linguist-generated
+# acmekit:end base-blobs
+=== .gitignore
+# acmekit:begin core-docs
+CLAUDE.local.md
+.acmekit/local/
+# acmekit:end core-docs
+=== .mcp.json
+{
+  "mcpServers": {
+    "graph": {
+      "type": "stdio",
+      "command": "graph-mcp",
+      "args": [
+        "--root",
+        "${CLAUDE_PROJECT_DIR:-.}"
+      ],
+      "env": {
+        "ALPHA": "${ALPHA_HOME}",
+        "ZETA": "${ZETA_HOME}"
+      }
+    },
+    "docs": {
+      "type": "http",
+      "url": "https://example.com/mcp",
+      "headers": {
+        "X-Team": "${TEAM_ID}"
+      }
+    }
+  }
+}
+=== AGENTS.md
+<!-- acmekit:begin guard -->
+## Safety
+
+`acmekit` blocks destructive commands before they run.
+<!-- acmekit:end guard -->
+
+<!-- acmekit:begin principles -->
+## Working with Acme Kit
+
+Hooks live in `.claude/hooks/acmekit/`, and the kit keeps its state in `.acmekit/`.
+Write {{name}} in a template to show a literal pair of braces.
+<!-- acmekit:end principles -->
+=== CLAUDE.md
+<!-- acmekit:begin imports -->
+@AGENTS.md
+@Design\ Docs/api.md
+<!-- acmekit:end imports -->
+=== docs/notes.md
+# Notes
+
+Created once by Acme Kit; edit freely.
