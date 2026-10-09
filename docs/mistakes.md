@@ -4,6 +4,8 @@ Record approaches that failed, so no session repeats them. Newest first.
 
 Format: `- YYYY-MM-DD — <what we tried> → <what went wrong> → <what to do instead>`
 
+- 2026-10-10 — Checking template values for `@` imports only after a space or at the start, and only for outside paths → Claude Code also imports right after inline markdown (`` `a`@~/x ``) and loads project files such as `@.env` with no prompt and no Read deny rule → check every `@` in each word for outside and private paths, and check rendered markdown again.
+- 2026-10-10 — Splitting MCP flag names only at `-` and `_` → `--accessToken`, `--clientSecret`, `--env=API_KEY=…` and `Authorization: Bearer …` passed with literal values → split at camelCase too, check a pair's value as a pair, and treat `Name: value` and Bearer/Basic values as credentials.
 - 2026-10-10 — Letting an MCP value hold `${VAR:-default}` and checking only the text around the reference → Claude Code uses the default when the variable is unset, so a key or a `./` path in a default ships in every project's `.mcp.json` → allow only plain `${NAME}`, and `${CLAUDE_PROJECT_DIR:-.}` as the one default.
 - 2026-10-10 — Listing inlined packages from rolldown's `chunk.moduleIds` (or its `//#region` comments) → a package whose constant rolldown folded into another module vanished from the list, though its code still ships → collect each build's whole module graph with `this.getModuleIds()` in a plugin.
 - 2026-10-10 — Linting a module's `permissions.allow` rules by shape → `Bash(node:*)`, `Bash(sh -c:*)`, `Edit(.claude/**)` and `Read(**/.en*)` each passed and skip the prompt for a shell, the guards' own files or `.env` reads → accept no allow rule until a module needs one.
