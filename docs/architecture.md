@@ -29,8 +29,8 @@ flowchart LR
 
 | Path                      | Purpose                                                                                                       | Status           |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------- |
-| `src/cli/`                | npx entry: `init`, `update`, `doctor`, `uninstall`; prompts, output, exit codes                               | _planned v0.1_   |
-| `src/core/`               | Module loader, manifest schema, stack detection, renderer, merge planner, lockfile                            | _planned v0.1_   |
+| `src/cli/`                | npx entry: Node version check, `--version`, `--help`; commands, prompts and output from v0.1                  | active           |
+| `src/core/`               | Brand constants; from v0.1 the module loader, manifest schema, detection, renderer, merge planner, lockfile   | active           |
 | `src/hooks/`              | Hook sources (one self-contained bundle each) and the shared hook runtime in `src/hooks/runtime/`             | _planned v0.1_   |
 | `modules/<id>/`           | One switchable feature: `module.json` and `files/`                                                            | _planned v0.1_   |
 | `packs/languages/<lang>/` | Language rules, linter configs, detection (TS/JS, Python first)                                               | _planned v0.1–2_ |
@@ -52,9 +52,12 @@ Add a row whenever something is created. Keep one line per item.
 
 ### Source layers
 
-| Path                | Purpose                                                                                 | Key exports      |
-| ------------------- | --------------------------------------------------------------------------------------- | ---------------- |
-| `src/core/brand.ts` | The only place the product slug is written; every name, path and marker derives from it | `BRAND`, `Brand` |
+| Path                      | Purpose                                                                                                 | Key exports                                           |
+| ------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `src/core/brand.ts`       | The only place the product slug is written; every name, path and marker derives from it                 | `BRAND`, `Brand`                                      |
+| `src/cli/bin.ts`          | Bundle entry (`dist/cli.mjs`): rejects Node.js below 22.12 before it imports the program                | none (entry)                                          |
+| `src/cli/node-version.ts` | The published Node.js floor and the upgrade message                                                     | `MIN_NODE_VERSION`, `nodeVersionProblem`              |
+| `src/cli/main.ts`         | Argument parsing with `node:util` `parseArgs`: `--version` and `--help` until commander arrives in v0.1 | `main`, `readPackageInfo`, `CliOutput`, `PackageInfo` |
 
 ### Modules
 
@@ -73,6 +76,7 @@ Add a row whenever something is created. Keep one line per item.
 | `.claude/hooks/env-files.mjs`                                                                               | `.env` secrets-file and template matching shared by both guards                                                            |
 | `.claude/hooks/attribution.mjs`                                                                             | AI-attribution pattern shared by `guard-bash` and `commitlint.config.mjs`                                                  |
 | `scripts/check-comments.mjs`                                                                                | Comment-policy checker (TypeScript AST): commented-out code, dividers, untracked TODOs, comment ratio                      |
+| `scripts/third-party-licenses.mjs`                                                                          | Writes `dist/THIRD_PARTY_LICENSES.md` from the `node_modules` paths in the bundles' `//#region` markers                    |
 | `scripts/check-brand.mjs`                                                                                   | Brand check: no slug literal outside `src/core/brand.ts` and the allowlist; `package.json` `name` and `bin` match `BRAND`  |
 | `test/helpers.ts`                                                                                           | `runScript`, `tempDir`, `tempRepo`, `writeFiles` for hook and script tests                                                 |
 
@@ -92,6 +96,18 @@ Add a row whenever something is created. Keep one line per item.
 | `.claude/rules/*.md`              | Path-scoped rules: TypeScript, generated files, hooks, tests                                                               |
 | `.claude/skills/*`                | `/new-feature`, `/handoff`, `/update-map`, `/adr`, `/why`, `/demo-gif`                                                     |
 | `.claude/agents/*`                | `reviewer`, `security-reviewer`                                                                                            |
+
+## Build
+
+`npm run build` runs tsdown (`tsdown.config.mts`, tsdown pinned exactly) and then `scripts/third-party-licenses.mjs`. `dist/` is gitignored.
+
+| Output                         | Source                     | Notes                                                             |
+| ------------------------------ | -------------------------- | ----------------------------------------------------------------- |
+| `dist/cli.mjs`                 | `src/cli/bin.ts`           | One ESM file with a shebang; the target comes from `engines.node` |
+| `dist/hooks/<name>.mjs`        | each `src/hooks/<name>.ts` | One self-contained build per hook; it may inline no npm package   |
+| `dist/THIRD_PARTY_LICENSES.md` | the bundles                | Licenses of every inlined package                                 |
+
+Every bundle may import only `node:` built-ins (tsdown `deps.onlyImport`), so the package needs no runtime dependency. `jsonc-parser` is aliased to its ESM build (reference §7.1). CI builds twice and compares sha256 sums.
 
 ## Conventions
 

@@ -31,6 +31,7 @@ Commits are authored by people. Do not add AI co-author trailers or "generated w
 | Comment policy | `npm run comments`           | See [Comments](#comments)                                                                      |
 | Brand          | `npm run brand`              | The product slug appears only in `src/core/brand.ts`; `package.json` `name` and `bin` match it |
 | Tests          | `npm test`                   | Vitest: Linux on Node 22/24/26, macOS + Windows on 24                                          |
+| Build          | `npm run build`              | tsdown bundle in `dist/`, licenses of inlined code; CI checks that two builds are identical    |
 | Commits        | commitlint                   | Conventional Commits, no AI attribution trailers                                               |
 | PR title       | action-semantic-pull-request | Conventional Commits title (it becomes the squash message)                                     |
 | Security       | CodeQL, dependency review    | Code scanning; no new dependency with a known vulnerability of moderate severity or higher     |
