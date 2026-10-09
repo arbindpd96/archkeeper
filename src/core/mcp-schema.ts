@@ -138,7 +138,7 @@ function stdioValueRefusal(value: string, name: string | undefined): Refusal | u
 // A URL query in an argument, such as ?api_key=..., or a JSON argument, such as {"apiKey": "..."}.
 function queryCredential(value: string): string | undefined {
   const query = value.slice(value.indexOf('?') + 1).split('#')[0] ?? '';
-  for (const part of query.split('&')) {
+  for (const part of query.split(/[&;]/)) {
     const [name = '', literal = ''] = part.split('=');
     if (namesCredential(name) && !isReference(literal)) return name;
   }
@@ -153,8 +153,8 @@ function jsonCredential(value: string): string | undefined {
 }
 
 function embeddedCredential(value: string): string | undefined {
-  if (value.includes('?')) return queryCredential(value);
-  return value.trimStart().startsWith('{') ? jsonCredential(value) : undefined;
+  const query = value.includes('?') ? queryCredential(value) : undefined;
+  return query ?? (/^\s*[{[]/.test(value) ? jsonCredential(value) : undefined);
 }
 
 const PAIR = /^(--?[\w-]+|[A-Za-z_]\w*)=(.*)$/s;
