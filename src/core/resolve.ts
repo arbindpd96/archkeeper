@@ -223,8 +223,9 @@ function leaveOutFix({ origins, request }: Context, id: string): string {
   const [label, root = id] = chainOf(id, origins);
   const named = root === id ? root : `${root}, which needs ${id},`;
   if (label === 'modules.add') return `drop ${named} from modules.add`;
-  if ((request.add ?? []).includes(root))
+  if ((request.add ?? []).includes(root)) {
     return `drop ${named} from modules.add and list it in modules.remove`;
+  }
   return `list ${named} in modules.remove`;
 }
 

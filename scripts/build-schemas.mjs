@@ -38,8 +38,9 @@ function render(schema) {
 const args = process.argv.slice(2);
 const check = args.includes('--check');
 const positionals = args.filter((arg) => !arg.startsWith('--'));
-if (positionals.length > 1 || args.some((arg) => arg.startsWith('--') && arg !== '--check'))
+if (positionals.length > 1 || args.some((arg) => arg.startsWith('--') && arg !== '--check')) {
   exitWith(USAGE, 2);
+}
 const root = path.resolve(positionals[0] ?? '.');
 
 const stale = [];
@@ -53,5 +54,6 @@ for (const [file, schema] of Object.entries(SCHEMAS)) {
   mkdirSync(path.dirname(target), { recursive: true });
   writeFileSync(target, text);
 }
-if (stale.length > 0)
+if (stale.length > 0) {
   exitWith(`build-schemas: ${stale.join(', ')} differ from the zod schemas in src/core.\n${FIX}`, 1);
+}

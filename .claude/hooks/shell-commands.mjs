@@ -30,8 +30,9 @@ function innerScript(command) {
   if (script !== null) return script;
   if (program === 'eval') return args.join(' ');
   if (program === 'trap') return args[0] ?? '';
-  if (program === 'alias')
+  if (program === 'alias') {
     return args.map((definition) => definition.slice(definition.indexOf('=') + 1)).join('\n');
+  }
   return isShell(program) ? shellScript(command) : null;
 }
 

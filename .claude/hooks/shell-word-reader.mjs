@@ -122,8 +122,9 @@ export class WordReader {
   markUnquotedExpansion(word) {
     word.splits = true;
     const assignment = isAssignment(word.text);
-    if (!assignment && UNQUOTED_IFS.test(this.src.slice(this.pos, this.pos + 6)))
+    if (!assignment && UNQUOTED_IFS.test(this.src.slice(this.pos, this.pos + 6))) {
       this.fail('an unquoted $IFS');
+    }
   }
 
   readSubstitution(seq) {

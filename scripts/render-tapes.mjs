@@ -125,8 +125,9 @@ function requireVhs() {
 function installCli(root, work, tarball) {
   let packed = tarball === undefined ? undefined : path.resolve(tarball);
   if (packed === undefined) {
-    if (!existsSync(path.join(root, 'dist')))
+    if (!existsSync(path.join(root, 'dist'))) {
       exitWith('render-tapes: dist/ is missing. Run npm run build first.', 1);
+    }
     const args = ['pack', '--ignore-scripts', '--json', '--pack-destination', work];
     const nextStep = 'Run it from the repository root after npm run build.';
     packed = path.join(work, JSON.parse(npm(args, { cwd: root, nextStep }))[0].filename);
@@ -182,8 +183,9 @@ function render(tape, { root, work, env, settings, out }) {
 const options = readOptions();
 const root = process.cwd();
 const settingsFile = path.join(root, TAPES, SETTINGS);
-if (!existsSync(settingsFile))
+if (!existsSync(settingsFile)) {
   exitWith(`render-tapes: ${TAPES}/${SETTINGS} is missing; run it from the repo root.`, 1);
+}
 const settings = readFileSync(settingsFile, 'utf8');
 const tapes = selectTapes(root, options);
 const problems = [...settingsProblems(settings), ...tapes.flatMap((tape) => tapeProblems(root, tape))];
