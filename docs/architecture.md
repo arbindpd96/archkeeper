@@ -33,7 +33,7 @@ flowchart LR
 | `plugin/`                 | Generated Claude Code plugin (`.claude-plugin/plugin.json`, skills, agents, hooks)     | _planned v0.1_   |
 | `benchmarks/`             | With-vs-without-kit harness                                                            | _planned v0.2_   |
 | `examples/`               | Fixture projects for tests and demo GIFs                                               | _planned v0.1_   |
-| `scripts/`                | Repo tooling (comment-policy check, release helpers)                                   | _planned v0.1_   |
+| `scripts/`                | Repo tooling (comment-policy check; release helpers later)                             | active           |
 | `docs/`                   | This map, decisions/ADRs, roadmap, feature memories, research                          | active           |
 | `.claude/`                | This repo's own Claude Code setup (dogfooding)                                         | active           |
 
@@ -55,26 +55,32 @@ Add a row whenever something is created. Keep one line per item.
 
 ### Shared utilities
 
-| Path                    | Purpose                                                                     |
-| ----------------------- | --------------------------------------------------------------------------- |
-| `.claude/hooks/lib.mjs` | Hook helpers: stdin payload, git, feature-memory lookup, `.claude/state` IO |
+| Path                                                                                                        | Purpose                                                                                                                    |
+| ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `.claude/hooks/lib.mjs`                                                                                     | Hook helpers: stdin payload, git, feature-memory lookup, symlink-safe `.claude/state` IO, `isProjectFile`                  |
+| `.claude/hooks/shell-words.mjs`, `shell-word-reader.mjs`, `ansi-c-quote.mjs`, `brace-expansion.mjs`         | Linear-time shell tokenizer: quotes, escapes, heredocs, substitutions, brace expansion with a work budget                  |
+| `.claude/hooks/shell-commands.mjs`, `command-wrappers.mjs`                                                  | Turn tokens into simple commands with pipelines; strip env assignments and wrappers (`sudo`, `env`, `xargs`, `bash -c`, …) |
+| `.claude/hooks/bash-rules.mjs`, `git-rules.mjs`, `dangerous-paths.mjs`, `cli-options.mjs`, `glob-match.mjs` | Guard rules per program (`rm`, `find`, `git`, `chmod`, `gh`, publish, `.env` reads, download-into-interpreter)             |
+| `.claude/hooks/attribution.mjs`                                                                             | AI-attribution pattern shared by `guard-bash` and `commitlint.config.mjs`                                                  |
+| `scripts/check-comments.mjs`                                                                                | Comment-policy checker (TypeScript AST): commented-out code, dividers, untracked TODOs, comment ratio                      |
+| `test/helpers.ts`                                                                                           | `runScript`, `tempDir`, `tempRepo`, `writeFiles` for hook and script tests                                                 |
 
 ## This repo's Claude Code setup
 
-| File                              | Role                                                                                       |
-| --------------------------------- | ------------------------------------------------------------------------------------------ |
-| `AGENTS.md`                       | Shared rules for every AI tool                                                             |
-| `CLAUDE.md`                       | Imports `AGENTS.md`, adds Claude-specific notes                                            |
-| `.claude/settings.json`           | Permissions, attribution off, hook registration (exec form)                                |
-| `.claude/hooks/session-start.mjs` | Injects in-progress feature "Next step" (and the pre-compaction snapshot after compaction) |
-| `.claude/hooks/pre-compact.mjs`   | Saves a branch/changes snapshot to `.claude/state/` before compaction                      |
-| `.claude/hooks/guard-bash.mjs`    | Denies or asks on dangerous shell commands, AI attribution, `--no-verify`                  |
-| `.claude/hooks/guard-secrets.mjs` | Denies writes containing secrets; asks before editing `.env*`                              |
-| `.claude/hooks/format-lint.mjs`   | Prettier, ESLint and comment check on each edited file (when installed)                    |
-| `.claude/hooks/stop-guard.mjs`    | Runs `check:quick` on changed code and asks for a feature-memory update                    |
-| `.claude/rules/*.md`              | Path-scoped rules: TypeScript, generated files, hooks, tests                               |
-| `.claude/skills/*`                | `/new-feature`, `/handoff`, `/update-map`, `/adr`, `/why`, `/demo-gif`                     |
-| `.claude/agents/*`                | `reviewer`, `security-reviewer`                                                            |
+| File                              | Role                                                                                                    |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `AGENTS.md`                       | Shared rules for every AI tool                                                                          |
+| `CLAUDE.md`                       | Imports `AGENTS.md`, adds Claude-specific notes                                                         |
+| `.claude/settings.json`           | Permissions, attribution off, hook registration (exec form)                                             |
+| `.claude/hooks/session-start.mjs` | Injects in-progress feature "Next step" (and the pre-compaction snapshot after compaction)              |
+| `.claude/hooks/pre-compact.mjs`   | Saves a branch/changes snapshot to `.claude/state/` before compaction                                   |
+| `.claude/hooks/guard-bash.mjs`    | Parses the command, then denies or asks on dangerous commands, AI attribution, hook skips; fails closed |
+| `.claude/hooks/guard-secrets.mjs` | Denies writes containing secrets; asks before editing `.env*`                                           |
+| `.claude/hooks/format-lint.mjs`   | Prettier, ESLint and comment check on each edited file (when installed)                                 |
+| `.claude/hooks/stop-guard.mjs`    | Runs `check:quick` on changed code and asks for a feature-memory update                                 |
+| `.claude/rules/*.md`              | Path-scoped rules: TypeScript, generated files, hooks, tests                                            |
+| `.claude/skills/*`                | `/new-feature`, `/handoff`, `/update-map`, `/adr`, `/why`, `/demo-gif`                                  |
+| `.claude/agents/*`                | `reviewer`, `security-reviewer`                                                                         |
 
 ## Conventions
 
