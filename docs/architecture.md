@@ -45,6 +45,7 @@ flowchart LR
 | `test/`                   | Vitest suites for hooks, scripts and lint rules, plus `helpers.ts`; `fixtures/` is kept out of `npm run lint` | active           |
 | `.github/`                | CI, CodeQL, PR-title workflows; issue forms; Dependabot                                                       | active           |
 | `.husky/`                 | Git hooks: lint-staged on commit, commitlint on message                                                       | active           |
+| `.changeset/`             | Changesets config and pending changesets; the maintainer versions locally (ADR-0013)                          | active           |
 
 ## Index
 

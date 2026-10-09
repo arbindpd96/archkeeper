@@ -100,6 +100,14 @@ Use it only in tests, and never on real secrets.
 - Made a project-wide decision? Add an ADR (`docs/adr/`, copy the template) and a row in `docs/decisions.md`.
 - Shipped a user-facing feature? Add its README section and a demo GIF (`docs/media/tapes/<feature>.tape`).
 
+## Changesets
+
+The maintainer versions releases locally with [changesets](https://github.com/changesets/changesets) (ADR-0013). No bot opens version PRs or commits.
+
+- Every user-facing PR adds a changeset: run `npm run changeset`, pick the bump, and write the changelog line. Commit the generated `.changeset/*.md` with the change.
+- Before tagging, the maintainer runs `npm run version-packages`, which applies the changesets to `package.json` and `CHANGELOG.md`.
+- Release candidates use pre mode: `npx changeset pre enter rc` first, and `npx changeset pre exit` before the final release.
+
 ## Working with AI agents
 
 This repo dogfoods its own Claude Code setup (`CLAUDE.md`, `AGENTS.md`, `.claude/`). AI-assisted contributions are welcome

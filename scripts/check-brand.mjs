@@ -6,8 +6,9 @@ import { exitWith, repositoryFiles } from './lib.mjs';
 
 const BRAND_SOURCE = 'src/core/brand.ts';
 
-// The slug may appear only in the brand itself, package metadata, generated output and docs, plus this
-// repo's own dogfood setup: .claude/, the guard tests, and the two tools that recognise its pragma.
+// The slug may appear only in the brand itself, package and release metadata (.changeset/ names the
+// package), generated output and docs, plus this repo's own dogfood setup: .claude/, the guard tests,
+// and the two tools that recognise its pragma.
 const ALLOWED_FILES = new Set([
   BRAND_SOURCE,
   'package.json',
@@ -17,7 +18,13 @@ const ALLOWED_FILES = new Set([
   'scripts/check-comments.mjs',
   'test/guards.test.ts',
 ]);
-const ALLOWED_DIRECTORIES = [/^plugin\//, /^docs\//, /^\.claude\//, /^\.github\/ISSUE_TEMPLATE\//];
+const ALLOWED_DIRECTORIES = [
+  /^plugin\//,
+  /^docs\//,
+  /^\.claude\//,
+  /^\.changeset\//,
+  /^\.github\/ISSUE_TEMPLATE\//,
+];
 const ROOT_MARKDOWN = /^[^/]+\.md$/;
 
 /** Returns true for files where the slug is allowed to appear. */

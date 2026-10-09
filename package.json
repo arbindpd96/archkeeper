@@ -43,6 +43,8 @@
     "coverage": "vitest run --coverage",
     "check:quick": "npm run typecheck && npm test",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run comments && npm run brand && npm test && npm run build && npm run package",
+    "changeset": "changeset",
+    "version-packages": "changeset version && npm install --package-lock-only --ignore-scripts --no-audit --no-fund",
     "prepare": "husky"
   },
   "lint-staged": {
@@ -54,6 +56,8 @@
     "*.{json,md,yml,yaml}": "prettier --write"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^1.0.1",
+    "@changesets/cli": "^3.0.3",
     "@commitlint/cli": "^21.2.3",
     "@commitlint/config-conventional": "^21.2.3",
     "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",

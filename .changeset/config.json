@@ -1,0 +1,12 @@
+{
+  "$schema": "../node_modules/@changesets/config/schema.json",
+  "changelog": ["@changesets/changelog-github", { "repo": "arbindpd96/archkeeper" }],
+  "commit": false,
+  "access": "public",
+  "baseBranch": "main",
+  "fixed": [],
+  "linked": [],
+  "ignore": [],
+  "updateInternalDependencies": "patch",
+  "privatePackages": { "version": true, "tag": false }
+}
