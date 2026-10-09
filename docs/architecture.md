@@ -43,7 +43,7 @@ flowchart LR
 | `docs/`                   | This map, decisions/ADRs, roadmap, feature memories, research                                                 | active           |
 | `.claude/`                | This repo's own Claude Code setup (dogfooding)                                                                | active           |
 | `test/`                   | Vitest suites for hooks, scripts and lint rules, plus `helpers.ts`; `fixtures/` is kept out of `npm run lint` | active           |
-| `.github/`                | CI, CodeQL, PR-title workflows; issue forms; Dependabot                                                       | active           |
+| `.github/`                | CI, release (tag-triggered staged publish), CodeQL and PR-title workflows; issue forms; Dependabot            | active           |
 | `.husky/`                 | Git hooks: lint-staged on commit, commitlint on message                                                       | active           |
 | `.changeset/`             | Changesets config and pending changesets; the maintainer versions locally (ADR-0013)                          | active           |
 
@@ -92,6 +92,7 @@ Add a row whenever something is created. Keep one line per item.
 | `scripts/check-brand.mjs`                                                                                   | Brand check: no slug literal outside `src/core/brand.ts` and the allowlist; `package.json` `name` and `bin` match `BRAND`  |
 | `scripts/check-changeset.mjs`                                                                               | Changeset gate: a PR that changes `src/` or `modules/` adds a `.changeset/*.md`, unless labelled `no-release`              |
 | `scripts/check-release.mjs`                                                                                 | Release guards: npm ≥ 11.15, tag = `v<version>`, CHANGELOG section, not private; step outputs and notes; `--dry-run`       |
+| `scripts/stage-summary.mjs`                                                                                 | Reads `npm stage publish --json` and prints the exact `npm stage approve <id>` command to the job summary                  |
 | `test/helpers.ts`                                                                                           | `runScript`, hook verdict helpers, `tempDir`, `tempRepo`, `git`, `commitFiles`, `writeFiles`, `fixtureCopy` (own HOME)     |
 
 ## This repo's Claude Code setup
