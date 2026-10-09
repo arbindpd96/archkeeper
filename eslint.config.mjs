@@ -160,4 +160,6 @@ export default defineConfig(
   },
   ...layerBoundaries,
   prettier,
+  // After eslint-config-prettier, which turns curly off: a body that spans lines gets braces (7977805).
+  { rules: { curly: ['error', 'multi-line'] } },
 );

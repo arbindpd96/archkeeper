@@ -173,8 +173,9 @@ export function gitRule(command) {
   if (skipsHooks) return HOOKS_PATH;
   if (configs.some((setting) => ALIAS_SETTING.test(setting))) return GIT_ALIAS;
   if (configs.some(hasExpansion)) return UNCHECKED;
-  if (subcommand === 'clean' && configs.some((setting) => CLEAN_UNGUARDED.test(setting)))
+  if (subcommand === 'clean' && configs.some((setting) => CLEAN_UNGUARDED.test(setting))) {
     return DISCARDS_WORK;
+  }
   const rule = SUBCOMMANDS.get(subcommand);
   const options = parseOptions(rest, rule?.values);
   if (hasLong(options, '--no-verify', 6)) return NO_VERIFY;

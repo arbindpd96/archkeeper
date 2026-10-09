@@ -7,8 +7,9 @@ export type ManifestData = Record<string, unknown>;
 export function entry(manifest: ManifestData, field: string, key: number | string): Record<string, unknown> {
   const container = manifest[field] as Record<number | string, unknown> | undefined;
   const value = container?.[key];
-  if (typeof value !== 'object' || value === null)
+  if (typeof value !== 'object' || value === null) {
     throw new Error(`No ${field}[${String(key)}] in the manifest.`);
+  }
   return value as Record<string, unknown>;
 }
 
@@ -103,7 +104,8 @@ export function kitFiles(
   extra: Record<string, string> = {},
 ): Record<string, string> {
   const files: Record<string, string> = { 'modules/presets.json': JSON.stringify(PRESETS), ...extra };
-  for (const manifest of manifests)
+  for (const manifest of manifests) {
     files[`modules/${String(manifest.id)}/module.json`] = JSON.stringify(manifest);
+  }
   return files;
 }
