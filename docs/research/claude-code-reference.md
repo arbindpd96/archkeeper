@@ -323,7 +323,7 @@ Load order: managed > project > plugin > user.
 - `description`: when Claude should use the skill
 - `disable-model-invocation`
 - `user-invocable`: `false` means only Claude can invoke it
-- `allowed-tools`
+- `allowed-tools`: tools Claude may use **without a prompt** during the turn that invokes the skill. It restricts nothing; deny and ask rules still override it.
 - `context`: `fork` runs it as a subagent
 - `model`
 - `effort`
@@ -331,10 +331,10 @@ Load order: managed > project > plugin > user.
 - `paths`: glob activation
 
 **Body features** [src](https://code.claude.com/docs/en/skills):
-- `` !`cmd` `` runs at load time and embeds the output.
+- `` !`cmd` `` runs at load time and embeds the output. It never prompts: outside auto mode, a command that the permission rules or `allowed-tools` do not allow aborts the invocation. `"disableSkillShellExecution": true` replaces each command with a placeholder [src](https://code.claude.com/docs/en/skills).
 - `$ARGUMENTS`, `$0`, `$1` and `$name` are substituted.
 - `@file` references are resolved.
-- Frontmatter can define `hooks`. `once` works here only [src](https://code.claude.com/docs/en/hooks).
+- Frontmatter can define `hooks`, which stay registered for the rest of the session. `once` works here only [src](https://code.claude.com/docs/en/hooks).
 
 **Slash commands are skill names**, invoked as `/skill-name args` or by asking in natural language. Skills are the unified extension point [src](https://code.claude.com/docs/en/skills).
 
@@ -363,10 +363,10 @@ disable-model-invocation: true
 **Frontmatter** [src](https://code.claude.com/docs/en/sub-agents):
 - `name`
 - `description` (15k-token combined limit)
-- `tools` (comma-separated or a YAML list)
+- `tools` (comma-separated or a YAML list): the tools the subagent can use. Omitted, it inherits every tool.
 - `disallowedTools`
 - `model` (`sonnet|haiku|opus|inherit|<full-id>`)
-- `permissionMode` (`default|acceptEdits|auto|dontAsk|plan`)
+- `permissionMode` (`default|acceptEdits|auto|dontAsk|bypassPermissions|plan`); unset, it inherits the main conversation's mode
 - `maxTurns`
 - `effort`
 - `memory` (`user|project|local`)
@@ -376,6 +376,8 @@ disable-model-invocation: true
 - `omitClaudeMd`
 - `isolation` (`worktree`)
 - `hooks`
+
+**Plugin subagents** ignore `hooks`, `mcpServers` and `permissionMode` "for security reasons" [src](https://code.claude.com/docs/en/sub-agents).
 
 **Memory.** `memory:` gives the agent its own persistent store in `.claude/agent-memory/<name>/`. The main session's auto memory is *not* loaded into subagents, except in a fork [src](https://code.claude.com/docs/en/sub-agents).
 
