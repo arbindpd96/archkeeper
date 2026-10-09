@@ -7,7 +7,7 @@
 
 ## Context
 
-The kit writes into existing repos and must never lose a user byte (handoff §3, differentiator 6; feature #19). Whatever the first release writes into users' repos is effectively permanent, so this contract has to be right before 0.1.0.
+The kit writes into existing repos and must never lose a user byte (handoff §3, differentiator 6; roadmap feature 19, safe updates). Whatever the first release writes into users' repos is effectively permanent, so this contract has to be right before 0.1.0.
 
 Relevant inputs:
 
@@ -63,7 +63,7 @@ Everything the kit keeps lives in `.archkeeper/` (`BRAND.stateDir`):
 - A managed `.gitattributes` block marks `.archkeeper/base/**` as `binary linguist-generated`.
 - A blob is valid when its decompressed sha256 matches its name. Either side of a git conflict on a blob is therefore correct, and `doctor` checks integrity.
 
-**`local/`** is gitignored through the base module's `.gitignore` block. It holds the active-feature pointer (`local/active-feature`), the pre-compact snapshot (`local/snapshots/latest.json`), caches, hook state ([ADR-0015](0015-hook-runtime.md)) and per-run backups. A backup is a set of blobs plus a `manifest.json` that maps paths to blobs, under `local/backup/<runId>/`. The last 3 runs are kept.
+**`local/`** is gitignored through the base module's `.gitignore` block. It holds the active-feature pointer (`local/active-feature`), the pre-compact snapshot (`local/snapshots/latest.json`), caches, hook state ([ADR-0015](0015-hook-runtime.md)) and per-run backups. A backup is a set of compressed, content-addressed blobs, named like the bases, plus a `manifest.json` that maps paths to blobs, under `local/backup/<runId>/`. The last 3 runs are kept.
 
 **Not discoverable.** Nothing under `.archkeeper/` is named `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md` or `SKILL.md`, sits under a `.claude/` folder, or ends in `.md`. Bases and backups are compressed, so a ripgrep search for template text finds nothing there. A test enforces both (#24). The map seeder and, from v0.2, the duplicate checker skip `.archkeeper/`.
 
@@ -124,7 +124,7 @@ The command-line contract (#40):
 - Base and backup copies cannot be loaded as instructions or matched by Grep.
 - The setup answers move from the lock (reference §7.2) to `config.json`, where users can read and edit them.
 - A file the user deleted stays deleted until they ask for it back.
-- The fast-check property "no user byte lost" (at least 1,000 runs) and the two-version e2e (#43) exercise this contract on the real tarball before 0.1.0 freezes it.
+- The fast-check property "no user byte lost" (at least 1,000 runs) and the two-version e2e on the real tarball (#43) exercise this contract before 0.1.0 freezes it.
 - After 0.1.0, every schema change costs a migration.
 
 ## Alternatives considered
