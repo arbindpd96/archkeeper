@@ -184,6 +184,10 @@ describe('@ imports the kit never writes', () => {
     expect(() => toImport('.claude/\u017Fettings.local.json')).toThrow(RenderError);
   });
 
+  it('refuses an @ import with a ~, which Windows can read as an 8.3 short name', () => {
+    expect(importProblem('@ENV~1')).toContain('short name');
+  });
+
   it('finds an outside import that an HTML comment splits', () => {
     expect(importProblem('<!---->@.<!---->./.ssh/id_rsa')).toContain('outside the project');
   });
