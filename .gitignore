@@ -1,0 +1,26 @@
+# dependencies & build output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.turbo/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+
+# personal Claude Code files (never committed)
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/state/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# test scratch
+tmp/
+.tmp/
