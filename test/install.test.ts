@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -21,6 +22,20 @@ const USER_SETTINGS = [
   '}',
   '',
 ].join('\n');
+
+// The files ripgrep finds holding `text` when it searches everything, ignored, hidden and binary files included.
+// Where ripgrep is not installed, the byte scan of each state file in the same test covers the same ground.
+function ripgrepMatches(dir: string, text: string): string[] | undefined {
+  const run = spawnSync('rg', ['-uuu', '--files-with-matches', '--fixed-strings', text, '.'], {
+    cwd: dir,
+    encoding: 'utf8',
+  });
+  if (run.error !== undefined) return undefined;
+  return run.stdout
+    .split('\n')
+    .filter((line) => line !== '')
+    .map((line) => line.replace(/^\.[/\\]/, '').replaceAll('\\', '/'));
+}
 
 function backups(dir: string): string[] {
   return readdirSync(path.join(dir, STATE, 'local/backup')).sort();
@@ -121,6 +136,11 @@ describe('the state folder', () => {
     expect(readFileSync(path.join(dir, '.claude/rules/acmekit/guard.md'), 'utf8')).toContain(unique);
     for (const file of state) {
       expect(readFileSync(path.join(dir, STATE, file)).includes(unique), file).toBe(false);
+    }
+    const found = ripgrepMatches(dir, unique);
+    if (found !== undefined) {
+      expect(found).toContain('.claude/rules/acmekit/guard.md');
+      expect(found.filter((file) => file.startsWith(STATE))).toEqual([]);
     }
   });
 
