@@ -1,6 +1,6 @@
 import { BRAND, type Brand } from './brand.js';
 import { planBlocks } from './blocks-plan.js';
-import { RenderError } from './errors.js';
+import { PathSafetyError, RenderError } from './errors.js';
 import { planFile } from './file-plan.js';
 import { contentHash } from './hash.js';
 import { planJson } from './json-plan.js';
@@ -14,6 +14,7 @@ import {
   serializeLock,
 } from './lock.js';
 import { assertSafePath } from './path-safety.js';
+import { foldedPath } from './paths.js';
 import type { Ownable, PathOutcome, PlanOp, Snapshot } from './plan-types.js';
 import type { RenderedEntry, RenderTree, Strategy } from './render-tree.js';
 import { sidecarPath } from './sidecar.js';
@@ -94,6 +95,20 @@ interface Planning {
   readonly kitScript: (path: string) => boolean;
 }
 
+// The lock is untrusted, so a lock entry may not name the kit's own state, such as the lock or a blob.
+function assertPlannable(path: string, rendered: boolean, brand: Brand): void {
+  assertSafePath(path, rendered ? 'rendered by the kit' : 'listed in the lock');
+  const state = foldedPath(brand.stateDir);
+  const folded = foldedPath(path);
+  if (rendered || (folded !== state && !folded.startsWith(`${state}/`))) return;
+  throw new PathSafetyError({
+    file: JSON.stringify(path),
+    location: 'listed in the lock',
+    problem: `is refused: it is inside ${brand.stateDir}, which only the kit manages`,
+    hint: 'restore lock.json from git; no lock entry names the kit state folder',
+  });
+}
+
 function strategyOf({ tree, lock }: Planning, path: string): Strategy {
   return (
     tree.get(path)?.[0]?.strategy ??
@@ -104,7 +119,7 @@ function strategyOf({ tree, lock }: Planning, path: string): Strategy {
 
 function planPath(input: Planning, path: string): PathOutcome {
   const { tree, snapshot, lock, brand, ownable, removed } = input;
-  assertSafePath(path, tree.has(path) ? 'rendered by the kit' : 'listed in the lock');
+  assertPlannable(path, tree.has(path), brand);
   const entries = tree.get(path) ?? [];
   const strategy = strategyOf(input, path);
   const state = snapshot.get(path);

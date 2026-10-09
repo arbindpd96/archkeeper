@@ -127,6 +127,16 @@ describe('planInstall', () => {
     expect(run).toThrow('".GIT/hooks/pre-commit": listed in the lock: is refused');
   });
 
+  it('refuses a lock entry that names the kit state folder', () => {
+    const lock: Lock = {
+      ...emptyLock(TEST_KIT),
+      files: new Map([['.ACMEKIT/lock.json', { module: 'm', strategy: 'owned', base: null }]]),
+    };
+    expect(() => planInstall(TREE, snapshotOf(), lock, { ...CONTEXT, ownable: () => true })).toThrow(
+      'is inside .acmekit, which only the kit manages',
+    );
+  });
+
   it('deletes what the tree no longer renders only where the caller says the current kit could own it', () => {
     const first = planInstall(TREE, snapshotOf(), undefined, CONTEXT);
     const state = applied(snapshotOf(), first);
