@@ -1,13 +1,13 @@
 import { expandBraces } from './brace-expansion.mjs';
 import { unwrap } from './command-wrappers.mjs';
 import { readFindExpression } from './find-expression.mjs';
+import { isShell } from './interpreters.mjs';
 import { ShellSyntaxError, tokenize } from './shell-words.mjs';
 
 const MAX_SCRIPT_DEPTH = 8;
 const MAX_ARGV = 4096;
 const MAX_SCRIPT_TEXT = 64_000;
 const MAX_BRACE_WORK = 1_000_000;
-const SHELLS = new Set(['bash', 'sh', 'zsh', 'dash', 'ksh', 'mksh', 'fish']);
 const SHELL_VALUE_OPTIONS = new Set(['-o', '+o', '-O', '+O', '--rcfile', '--init-file']);
 const TOP_LEVEL = { assignments: [], wrappers: [], pipes: [] };
 
@@ -33,13 +33,13 @@ function innerScript(command) {
   if (program === 'trap') return args[0] ?? '';
   if (program === 'alias')
     return args.map((definition) => definition.slice(definition.indexOf('=') + 1)).join('\n');
-  return SHELLS.has(program) ? shellScript(command) : null;
+  return isShell(program) ? shellScript(command) : null;
 }
 
-const findExecSegments = (args) =>
+const findExecSegments = ({ args, expands }) =>
   readFindExpression(args)
     .tokens.filter((token) => typeof token === 'object')
-    .map((token) => token.exec);
+    .map(({ exec, start }) => ({ argv: exec, expands: expands.slice(start, start + exec.length) }));
 
 // Brace expansion and nested scripts can multiply the text to inspect, so one budget caps the total work.
 function workBudget() {
@@ -50,13 +50,14 @@ function workBudget() {
   };
 }
 
-function expandArgv({ argv, braces, splits }, charge) {
-  const expanded = { argv: [], splits: [] };
+function expandArgv({ argv, braces, splits, expands }, charge) {
+  const expanded = { argv: [], splits: [], expands: [] };
   const chargeBraces = (amount) => charge('braces', amount);
   argv.forEach((word, index) => {
     for (const alternative of expandBraces(word, braces[index] ?? [], chargeBraces)) {
       expanded.argv.push(alternative);
       expanded.splits.push(splits[index] ?? false);
+      expanded.expands.push(expands[index] ?? false);
     }
     if (expanded.argv.length > MAX_ARGV) throw new ShellSyntaxError('a brace expansion too large to inspect');
   });
@@ -64,7 +65,7 @@ function expandArgv({ argv, braces, splits }, charge) {
 }
 
 function normalize(raw, outer, charge) {
-  const { argv, splits } = expandArgv(raw, charge);
+  const { argv, splits, expands } = expandArgv(raw, charge);
   const { programIndex, ...command } = unwrap(argv);
   return {
     ...command,
@@ -73,6 +74,7 @@ function normalize(raw, outer, charge) {
     dynamicProgram: /[$`]/.test(argv[programIndex] ?? ''),
     splitProgram: splits[programIndex] ?? false,
     splitArgs: splits.slice(programIndex + 1).some(Boolean),
+    expands: expands.slice(programIndex + 1),
     redirects: raw.redirects,
     heredocs: raw.heredocs,
     pipes: [...raw.pipes, ...outer.pipes],
@@ -86,8 +88,8 @@ function nestedCommands(command, depth, charge) {
   const nested = script === null ? [] : parseScript(script, command, depth + 1, charge);
   if (command.program !== 'find') return nested;
   const outer = { ...command, wrappers: [...command.wrappers, 'find'] };
-  for (const argv of findExecSegments(command.args)) {
-    const raw = { argv, braces: [], splits: [], redirects: [], heredocs: [], subs: [], pipes: [] };
+  for (const { argv, expands } of findExecSegments(command)) {
+    const raw = { argv, braces: [], splits: [], expands, redirects: [], heredocs: [], subs: [], pipes: [] };
     const exec = normalize(raw, outer, charge);
     nested.push(exec, ...nestedCommands(exec, depth + 1, charge));
   }
@@ -106,9 +108,9 @@ function parseScript(source, outer, depth, charge) {
 }
 
 /**
- * Parses shell source into simple commands with `program` (basename), `args`, `assignments`, `wrappers`,
- * `redirects`, `heredocs`, `pipes`, `subs`, and whether the program or its arguments come from an unquoted
- * expansion. Braces are expanded, and code run by `sh -c`, `eval`, `env -S`, `trap`, `alias`, `watch`, `su -c`,
+ * Parses shell source into simple commands with `program` (lower-cased basename), `args`, `expands` (whether each
+ * arg holds an expansion), `assignments`, `wrappers`, `redirects`, `heredocs`, `pipes`, `subs`, and whether the
+ * program or its arguments come from an unquoted expansion. Braces are expanded, and code run by `sh -c`, `eval`, `env -S`, `trap`, `alias`, `watch`, `su -c`,
  * `find -exec` or a here-document fed to a shell is parsed too, inheriting the outer assignments, wrappers and pipes.
  */
 export function parseCommands(source) {
