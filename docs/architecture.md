@@ -70,7 +70,7 @@ Add a row whenever something is created. Keep one line per item.
 
 | Path                                                                                                        | Purpose                                                                                                                    |
 | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `.claude/hooks/lib.mjs`                                                                                     | Hook helpers: stdin payload, git, feature-memory lookup, symlink-safe `.claude/state` IO, `isProjectFile`                  |
+| `.claude/hooks/lib.mjs`                                                                                     | Hook helpers: stdin payload, git, feature memory, symlink-safe state IO, `isProjectFile`, `readRegularFile`                |
 | `.claude/hooks/shell-words.mjs`, `shell-word-reader.mjs`, `ansi-c-quote.mjs`, `brace-expansion.mjs`         | Linear-time shell tokenizer: quotes, escapes, heredocs, substitutions, brace expansion with a work budget                  |
 | `.claude/hooks/shell-commands.mjs`, `command-wrappers.mjs`                                                  | Turn tokens into simple commands with pipelines; strip env assignments and wrappers (`sudo`, `env`, `xargs`, `bash -c`, …) |
 | `.claude/hooks/shell-syntax.mjs`                                                                            | Import-free shell vocabulary shared by the parser and rules: shell names, value options, `hasExpansion`, `isAssignment`    |
