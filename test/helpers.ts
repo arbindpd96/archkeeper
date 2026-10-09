@@ -82,20 +82,37 @@ export function tempDir(): string {
   return dir;
 }
 
+/** Runs git in `dir` with an isolated global config and the test identity, returning stdout. */
+export function git(dir: string, ...args: string[]): string {
+  return execFileSync('git', [...TEST_GIT_CONFIG, ...args], {
+    cwd: dir,
+    encoding: 'utf8',
+    timeout: SCRIPT_TIMEOUT_MS,
+    env: { ...process.env, ...ISOLATED_GIT_ENV },
+  });
+}
+
 /** Creates a throwaway git repository whose first commit contains the given files. */
 export function tempRepo(files: Record<string, string> = {}): string {
   const dir = tempDir();
-  const git = (...args: string[]) =>
-    execFileSync('git', args, {
-      cwd: dir,
-      timeout: SCRIPT_TIMEOUT_MS,
-      env: { ...process.env, ...ISOLATED_GIT_ENV },
-    });
   writeFiles(dir, files);
-  git('init', '-q', '-b', 'main');
-  git('add', '-A');
-  git(...TEST_GIT_CONFIG, 'commit', '-q', '--allow-empty', '-m', 'init');
+  git(dir, 'init', '-q', '-b', 'main');
+  git(dir, 'add', '-A');
+  git(dir, 'commit', '-q', '--allow-empty', '-m', 'init');
   return dir;
+}
+
+/** Writes and commits files in a temp repo, as `author` ("Name <email>") when given; returns the commit SHA. */
+export function commitFiles(
+  dir: string,
+  files: Record<string, string>,
+  commit: { message: string; author?: string },
+): string {
+  writeFiles(dir, files);
+  git(dir, 'add', '-A');
+  const author = commit.author === undefined ? [] : ['--author', commit.author];
+  git(dir, 'commit', '-q', '--allow-empty', '-m', commit.message, ...author);
+  return git(dir, 'rev-parse', 'HEAD').trim();
 }
 
 /** Writes files (creating parent folders) relative to `dir`. */

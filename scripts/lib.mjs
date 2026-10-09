@@ -1,6 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
+const REVISION = /^(?!-)[\w./^~@{}-]+$/;
+
 /** Prints a message to stderr and exits with the given code. */
 export function exitWith(message, code) {
   process.stderr.write(`${message}\n`);
@@ -21,6 +23,12 @@ export function git(args, { cwd = process.cwd(), action, nextStep }) {
     const reason = error instanceof Error ? error.message.trim() : String(error);
     return exitWith(`${tool}: git could not ${action} in ${cwd}.\n${reason}\n${nextStep}`, 2);
   }
+}
+
+/** Returns `value` when it is a plain git revision that cannot be read as an option, else exits 2 with `usage`. */
+export function gitRevision(value, usage) {
+  if (typeof value === 'string' && REVISION.test(value)) return value;
+  return exitWith(usage, 2);
 }
 
 /** Lists tracked and untracked (not ignored) files under `root`, or exits with git's error and `nextStep`. */
