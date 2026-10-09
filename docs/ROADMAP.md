@@ -334,7 +334,7 @@ Each section ships in its feature's PR. `live` tapes are recorded locally; CI re
 M9 adds three more things:
 
 - the presets and Lightness tables, generated from `budgets.json`
-- Requirements: node 22.12 or later on PATH for hooks, and Claude Code 2.1.277 or later
+- Requirements: Node.js `^22.17.1 || ^24.4.1 || >=26` on PATH (ADR-0011; the same range runs the hooks), and Claude Code 2.1.277 or later
 - the pre-release banner replaced with v0.1 status
 
 ### Risks and mitigations
