@@ -27,6 +27,7 @@ v0.1 milestone M2 (issues #21, #22, #23, #24): turn M1's render tree, a snapshot
 - 2026-10-10: Path safety (#23) is lexical in core (`pathSafetyProblem`: UNC, absolute, drive, `..`, `\`, `:`, control characters, `.git` and `GIT~<n>` in any case, device names with any extension or before a space, trailing dot or space, then portable ASCII) and real in the CLI (`confinedPath`: the realpath of the deepest existing ancestor must lie inside the real root, and the resolved path must pass the same checks, so a symlink into `.git` is refused too). A symlinked folder that stays inside the project may be written through; a symlinked target never is. Refusals throw PathSafetyError before any write. Why: ADR-0014 refuses only links that leave the project or reach `.git`.
 - 2026-10-10: The snapshot reads with `lstat` and `O_NOFOLLOW | O_NONBLOCK`; a symlink, folder, FIFO or file that is not UTF-8 text counts as not a text file and gets a sidecar. Why: such a file cannot be merged without changing its bytes, and a FIFO must not hang the run.
 - 2026-10-10: The apply runs: backup (creating `local/` with its `.gitignore` first), absent blobs, files in plan order, then the lock only when its bytes differ; after the lock it removes unreferenced blobs and all but the last 3 backup runs, reporting failures as warnings. Any failure restores every path from the in-memory backup (file, symlink or absent), removes the folders the run created and throws ApplyError naming the file and the backup; a failure before the backup is complete changes nothing in the project. Why: #24 and ADR-0014; pruning after the lock means a crash never leaves a lock that names a deleted blob.
+- 2026-10-10: A plan records `expected`, the sha256 of the exact bytes (or null when absent) of each path it writes as the snapshot saw it, and the apply refuses with ApplyError, writing nothing, when a path no longer matches. Why: M3's `init` shows the plan and waits for a yes, and a file the user saves in between would otherwise get bytes merged from its older content.
 - 2026-10-10: Backups: blobs named by the sha256 of the exact bytes (not LF content), gzip, mode 0600, in a 0700 run folder `<UTC stamp>-<8 hex>`; `manifest.json` records each path's type, blob and mode, or symlink target. Why: a restore must be byte-identical, which LF names cannot promise for two files that differ only in CR.
 - 2026-10-10: Base blobs are gzip with the header's OS byte set to 0xff, decompressed with `maxOutputLength` 1 MiB and checked against their name (`readBlob`). Why: the same blob bytes on every OS, and ADR-0014's gzip-bomb rule.
 - 2026-10-10: Writes go to `.<name>.<12 hex>.tmp` opened `O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW` (where defined), flushed and renamed; the mode of a replaced file is kept; rename retries EPERM and EBUSY six times with backoff (10 to 320 ms) on every platform. Why: #24 and ADR-0014; one tested path rather than a Windows-only branch.
@@ -60,13 +61,17 @@ No command imports the engine yet, so `dist/cli.mjs` barely moves; the probe (bu
 - [x] #21 pure planner, idempotency and no-user-line-lost properties (6b26b9d)
 - [x] Conflicted lock rebuild (0655203); hooks only for kit scripts (3efd30c); no lock entry in the state folder (f81a0cf); `node:zlib` lint (2f18e43)
 - [x] #23/#24 CLI: confined paths, atomic writes with retries, blobs, backups, transactional apply, rollback at every rename, snapshots of a fresh and a first-contact install, second run writes nothing (cc2bf62); ripgrep check (d5eea67); only `local/` private (b1f13bd)
-- [x] `docs/architecture.md` (0dce695), `docs/decisions.md`, `docs/mistakes.md`, ROADMAP M2 ticked (6e13aad), changeset (02fbcf4). `npm run check` green on every commit, verified with `git rebase --exec 'npm run check' origin/main`.
+- [x] `docs/architecture.md` (0dce695), `docs/decisions.md`, `docs/mistakes.md`, ROADMAP M2 ticked (6e13aad), changeset (02fbcf4).
+- [x] Stale plans refused: the apply writes nothing over a file edited since planning.
+- [ ] Per-commit `npm run check`, each commit checked out in a plain shell.
 
 ## Next step
 
 Run the `reviewer` and `security-reviewer` agents on the full diff (`git diff origin/main...feat/v0.1-m2-apply`) and answer every finding; the coordinator then pushes and opens the M2 PR (closes #21, #22, #23, #24). Confirm the Windows leg of CI runs the symlink, CRLF and rename tests green. Then start M3 with `/new-feature v0.1-m3-init`: `init` calls `install(root, render(...), {kit, modules})` from `src/cli/install.ts` and prints `plan.ops`.
 
 ## Gotchas / don't try again
+
+- Never run the test suite under `git rebase --exec` (or from a git hook). Git exports `GIT_DIR` and friends to the command; on 2026-10-10 a test's `git init` inherited them, re-initialised this repository and set `core.bare = true` in the shared `.git/config` (restored to `false`; no ref moved). The coordinator's subagent changed the test helpers so no child git gets the caller's git variables. To check every commit, check each one out in a plain shell and run `npm run check` there.
 
 - Prettier splits a long `if (x) return y;` over two lines, and then ESLint's `curly: multi-line` fails: run `eslint --fix` after Prettier, or write the braces.
 - ESLint's `complexity` counts `?.` and `??`: copy a lock entry into plain values (`base`, `pending`) before branching on them.
