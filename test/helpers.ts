@@ -49,10 +49,27 @@ export function permissionDecision(stdout: string): string {
   return output.hookSpecificOutput?.permissionDecision ?? 'allow';
 }
 
+/** A PreToolUse hook's permission decision and its reason (empty when it allowed without output). */
+export interface HookVerdict {
+  decision: string;
+  reason: string;
+}
+
+/** Runs a `.claude/hooks/` PreToolUse hook on a tool input and returns its decision and reason. */
+export function hookVerdict(hook: string, toolInput: unknown, env: NodeJS.ProcessEnv = {}): HookVerdict {
+  const { stdout } = runScript(`.claude/hooks/${hook}`, { payload: { tool_input: toolInput }, env });
+  if (!stdout) return { decision: 'allow', reason: '' };
+  const output = JSON.parse(stdout) as {
+    hookSpecificOutput?: { permissionDecision?: string; permissionDecisionReason?: string };
+  };
+  const { permissionDecision: decision = 'allow', permissionDecisionReason: reason = '' } =
+    output.hookSpecificOutput ?? {};
+  return { decision, reason };
+}
+
 /** Runs a `.claude/hooks/` PreToolUse hook on a tool input and returns its permission decision. */
 export function hookDecision(hook: string, toolInput: unknown, env: NodeJS.ProcessEnv = {}): string {
-  const { stdout } = runScript(`.claude/hooks/${hook}`, { payload: { tool_input: toolInput }, env });
-  return permissionDecision(stdout);
+  return hookVerdict(hook, toolInput, env).decision;
 }
 
 /** Creates an empty temporary directory that is deleted when the current test finishes. */
