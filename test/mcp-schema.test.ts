@@ -67,6 +67,24 @@ describe('module manifest MCP servers', () => {
       'pass the key from the environment',
     ],
     [
+      'a stdio arg relative to where Claude Code started',
+      (m) => (server(m, 1).args = ['--root', '.']),
+      'mcpServers[1].args[1]',
+      '${CLAUDE_PROJECT_DIR:-.}/<path>',
+    ],
+    [
+      'a stdio --flag= path relative to where Claude Code started',
+      (m) => (server(m, 1).args = ['--config=./mcp.json']),
+      'mcpServers[1].args[0]',
+      '${CLAUDE_PROJECT_DIR:-.}/<path>',
+    ],
+    [
+      'a stdio command relative to where Claude Code started',
+      (m) => (server(m, 1).command = './bin/graph-mcp'),
+      'mcpServers[1].command',
+      '${CLAUDE_PROJECT_DIR:-.}/<path>',
+    ],
+    [
       'an MCP URL with credentials',
       (m) => (server(m, 0).url = 'https://me:pw@example.com/mcp'),
       'mcpServers[0].url',
