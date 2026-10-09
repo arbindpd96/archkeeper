@@ -1,6 +1,6 @@
 # ADR-0001: Project and package name is `claude-codekit`
 
-- Status: accepted
+- Status: superseded by [ADR-0010](0010-rename-to-archkeeper.md)
 - Date: 2026-10-09
 - Deciders: arbindpd96 (owner)
 
