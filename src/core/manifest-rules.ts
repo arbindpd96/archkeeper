@@ -122,15 +122,16 @@ const blocksDeclared: Rule = (manifest) => {
   );
 };
 
+function hasRules({ permissions }: ModuleManifest): boolean {
+  return [permissions.allow, permissions.ask, permissions.deny].some((list) => (list ?? []).length > 0);
+}
+
 function undeclaredJson(manifest: ModuleManifest): { field: string; file: string } | undefined {
-  const { hooks, permissions, mcpServers } = manifest;
-  const hasRules = [permissions.allow, permissions.ask, permissions.deny].some(
-    (list) => (list ?? []).length > 0,
-  );
+  const { hooks, mcpServers } = manifest;
   if (hooks.length > 0 && !declares(manifest, 'json', SETTINGS_FILE)) {
     return { field: 'hooks', file: SETTINGS_FILE };
   }
-  if (hasRules && !declares(manifest, 'json', SETTINGS_FILE)) {
+  if (hasRules(manifest) && !declares(manifest, 'json', SETTINGS_FILE)) {
     return { field: 'permissions', file: SETTINGS_FILE };
   }
   if (mcpServers.length > 0 && !declares(manifest, 'json', MCP_FILE)) {
@@ -146,6 +147,28 @@ const jsonDeclared: Rule = (manifest) => {
     [missing.field],
     `needs ${missing.file} declared in files with the json strategy`,
     `add {to: "${missing.file}", strategy: "json", target: "project"} to files`,
+  );
+};
+
+function getsContent(manifest: ModuleManifest, { strategy, to }: ModuleManifest['files'][number]): boolean {
+  if (strategy === 'blocks') {
+    return (
+      manifest.blocks.some((block) => block.file === to) ||
+      (to === GITIGNORE_FILE && manifest.gitignore.length > 0)
+    );
+  }
+  if (strategy !== 'json') return true;
+  return to === MCP_FILE ? manifest.mcpServers.length > 0 : manifest.hooks.length > 0 || hasRules(manifest);
+}
+
+// A declared blocks or json file with nothing for it would render an empty block or a bare {} entry.
+const declaredFilesFilled: Rule = (manifest) => {
+  const index = manifest.files.findIndex((entry) => !getsContent(manifest, entry));
+  if (index === -1) return undefined;
+  return finding(
+    ['files', index],
+    'declares a file this module puts nothing into',
+    'remove the entry, or add the blocks, gitignore lines, hooks, permissions or mcpServers it holds',
   );
 };
 
@@ -224,6 +247,7 @@ const RULES: readonly Rule[] = [
   jsonDeclared,
   gitignoreDeclared,
   whenOptions,
+  declaredFilesFilled,
 ];
 
 /** Returns the first cross-field rule a schema-valid manifest breaks, or undefined when it breaks none. */
