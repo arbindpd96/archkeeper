@@ -43,7 +43,7 @@ flowchart LR
 | `docs/`                   | This map, decisions/ADRs, roadmap, release runbook (`releasing.md`), feature memories, research               | active           |
 | `.claude/`                | This repo's own Claude Code setup (dogfooding)                                                                | active           |
 | `test/`                   | Vitest suites for hooks, scripts and lint rules, plus `helpers.ts`; `fixtures/` is kept out of `npm run lint` | active           |
-| `.github/`                | CI, release (tag-triggered staged publish), CodeQL and PR-title workflows; issue forms; Dependabot            | active           |
+| `.github/`                | CI, release (staged publish), demo-gifs, CodeQL and PR-title workflows; issue forms; Dependabot               | active           |
 | `.husky/`                 | Git hooks: lint-staged on commit, commitlint on message                                                       | active           |
 | `.changeset/`             | Changesets config and pending changesets; the maintainer versions locally (ADR-0013)                          | active           |
 
