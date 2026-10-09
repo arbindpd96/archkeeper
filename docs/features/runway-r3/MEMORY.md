@@ -23,26 +23,25 @@ v0.0 Runway milestone R3 (issues #14, #15): ADR-0012, 0014, 0015, 0016 and 0018 
 
 ## Done
 
-- [x] Feature memory (9f5403d)
-- [x] ADR-0012 brand constants and its decisions row (77991e1), for #14
-- [x] ADR-0014 on-disk contract and merge-safe lifecycle (ef5e7ec), for #15
-- [x] ADR-0015 hook runtime and per-hook failure policy (e953e08), for #15
-- [x] ADR-0016 delivery split; ADR-0002 status line and decisions row (98c3711), for #15
-- [x] ADR-0018 no telemetry, offline by default, benchmarks (5ab28be), for #15
-- [x] `.claude/rules/generated-files.md` points at ADR-0014, 0015 and 0016 (3a2d71e)
-- [x] Architecture map: "In a user's project" section and ADR links (a82eecd)
-- [x] ROADMAP R3 items ticked (ff61fd7)
-- [x] Review pass: guard-bash history credited to 72efe48 (PR #1), wording fixes (3279466)
-- `npm run check` green before every commit.
+- [x] Feature memory (77917fa)
+- [x] ADR-0012 brand constants and its decisions row (32b6371), for #14
+- [x] ADR-0014 on-disk contract and merge-safe lifecycle (0ee8c89), for #15
+- [x] ADR-0015 hook runtime and per-hook failure policy (90782e4), for #15
+- [x] ADR-0016 delivery split; ADR-0002 status line and decisions row (8016ae3), for #15
+- [x] ADR-0018 no telemetry, offline by default, benchmarks (af62fea), for #15
+- [x] `.claude/rules/generated-files.md` points at ADR-0014, 0015 and 0016 (3891710)
+- [x] Architecture map: "In a user's project" section and ADR links (2fd8ed1)
+- [x] ROADMAP R3 items ticked (08f6371)
+- [x] Review pass: guard-bash history credited to 72efe48 (PR #1), wording fixes (8bfdc65)
+- [x] Rebased onto `main` after R2 (PR #75) merged; every relative link resolves, ADR-0016's link to ADR-0013 included. `npm run check` green before every commit and after the rebase.
 
 ## Next step
 
-Coordinator: run the `reviewer` and `security-reviewer` agents on `git diff origin/main...docs/runway-r3`, then open the R3 PR after R2 (PR #75) merges, because ADR-0016 links `0013-release-process.md`. Then align the issue texts listed under Open questions, and start v0.1 M1 (#18–#20).
+Coordinator: run the `reviewer` and `security-reviewer` agents on `git diff origin/main...docs/runway-r3`, then open the R3 PR (closes #14 and #15). Then align the issue texts listed under Open questions, and start v0.1 M1 (#18–#20).
 
 ## Gotchas / don't try again
 
-- R2 (PR #75) also rewrites the `docs/decisions.md` table, and Prettier re-pads every row, so rebasing R3 onto R2 conflicts there. Keep both sets of rows (0013 from R2; 0012, 0014–0016, 0018 and the 0002 status from R3), then run Prettier.
-- Until R2 merges, the only broken relative link is ADR-0016's link to ADR-0013.
+- R2 rewrote the `docs/decisions.md` table, and Prettier re-pads every row when a cell grows, so any branch that adds a row conflicts with any other that does. Resolve by keeping every row from both sides, then run Prettier.
 - This repo's `.claude/settings.json` denies `Bash(git push --force *)`; the safety module will emit the `:*` form (reference §1.9). After the M8 migration (#45) the old entries stay as user entries; drop them then.
 
 ## Open questions
