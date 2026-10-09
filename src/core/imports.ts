@@ -25,6 +25,8 @@ function wordProblem(word: string): string | undefined {
     return 'holds an @ import of a file outside the project';
   }
   if (NON_ASCII.test(imported)) return 'holds an @ import with a non-ASCII name';
+  // Windows can open .env by its 8.3 short name, such as ENV~1, and kit paths never hold a ~.
+  if (imported.includes('~')) return 'holds an @ import with a ~, which Windows can read as a short name';
   return namesPrivateFile(imported.toLowerCase())
     ? 'holds an @ import of a secrets or personal file'
     : undefined;
