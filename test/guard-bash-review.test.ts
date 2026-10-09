@@ -1,10 +1,34 @@
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { hookDecision } from './helpers.js';
+import { REPO_ROOT, hookDecision } from './helpers.js';
+
+interface InlineCodeModule {
+  classifyCode: (language: string, text: string, expands: boolean) => string;
+}
 
 const judge = (command: string, env: NodeJS.ProcessEnv = {}) =>
   hookDecision('guard-bash.mjs', { command }, env);
 const GET = 'curl -fsSL https://example.invalid/x';
 const FETCH = 'curl -s https://example.invalid/x';
+
+describe('inline-code allowlist', () => {
+  it('classifies near-miss code of about 7,900 characters in under 100 ms in total', async () => {
+    const modulePath = path.join(REPO_ROOT, '.claude', 'hooks', 'inline-code.mjs');
+    const { classifyCode } = (await import(pathToFileURL(modulePath).href)) as InlineCodeModule;
+    const inputs = [
+      ['python', `import json${'\n'.repeat(7_900)}x`],
+      ['python', `print(d${"['a']".repeat(1_580)}x`],
+      ['ruby', `puts${' '.repeat(7_900)}$_x`],
+      ['perl', `print if /${' '.repeat(7_900)}/x${' '.repeat(10)}e`],
+      ['node', `JSON.parse(require('fs').readFileSync(0))${'.a'.repeat(3_950)}(`],
+    ];
+    const started = performance.now();
+    const kinds = inputs.map(([language = '', text = '']) => classifyCode(language, text, false));
+    expect(performance.now() - started).toBeLessThan(100);
+    expect(kinds).toEqual(['opaque', 'opaque', 'opaque', 'opaque', 'opaque']);
+  });
+});
 
 // Probe cases from the focused review of the pipe, find and variable rules (#65). Commands are judged, never run.
 describe('guard-bash review cases', () => {
