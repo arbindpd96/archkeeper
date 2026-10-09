@@ -3,12 +3,13 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { onTestFinished } from 'vitest';
+import { BRAND } from '../src/core/brand.js';
 
 export const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 
 const SCRIPT_TIMEOUT_MS = 15_000;
 const ISOLATED_GIT_ENV = {
-  GIT_CONFIG_GLOBAL: path.join(tmpdir(), 'archkeeper-empty-gitconfig'),
+  GIT_CONFIG_GLOBAL: path.join(tmpdir(), `${BRAND.npmName}-empty-gitconfig`),
   GIT_CONFIG_NOSYSTEM: '1',
 };
 const TEST_GIT_CONFIG = [
@@ -43,7 +44,7 @@ export function runScript(
 
 /** Creates an empty temporary directory that is deleted when the current test finishes. */
 export function tempDir(): string {
-  const dir = mkdtempSync(path.join(tmpdir(), 'archkeeper-test-'));
+  const dir = mkdtempSync(path.join(tmpdir(), `${BRAND.npmName}-test-`));
   onTestFinished(() => {
     rmSync(dir, { recursive: true, force: true });
   });
