@@ -36,6 +36,7 @@ The `Commit authors` CI job checks every commit in a PR. It fails on a bot autho
 | Tests          | `npm test`                   | Vitest: Linux on Node 22/24/26, macOS + Windows on 24                                          |
 | Build          | `npm run build`              | tsdown bundle in `dist/`, licenses of inlined code; CI checks that two builds are identical    |
 | Package        | `npm run package`            | publint, pack snapshot, 0 runtime deps, no install scripts, budgets; CI adds publish dry run   |
+| Release        | CI only                      | Dry run: release guards (reported), prepare strip, release package checks, `npm stage publish` |
 | Install smoke  | CI only                      | The packed tarball installs under a path with a space and runs on ubuntu, macOS and Windows    |
 | Node.js gate   | CI only                      | The built bin rejects Node.js 18, 20, 22.17.0 and 23 and runs on 22.17.1                       |
 | Commits        | commitlint                   | Conventional Commits, no AI attribution trailers                                               |
