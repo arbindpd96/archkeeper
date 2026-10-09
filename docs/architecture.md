@@ -111,7 +111,7 @@ Add a row whenever something is created. Keep one line per item.
 | `.claude/hooks/session-start.mjs` | Injects in-progress feature "Next step" (and the pre-compaction snapshot after compaction)                                 |
 | `.claude/hooks/pre-compact.mjs`   | Saves a branch/changes snapshot to `.claude/state/` before compaction                                                      |
 | `.claude/hooks/guard-bash.mjs`    | Parses the command, then denies or asks on dangerous commands, AI attribution, hook skips; asks if it cannot load or parse |
-| `.claude/hooks/guard-secrets.mjs` | Denies writes containing secrets; asks before editing `.env*`                                                              |
+| `.claude/hooks/guard-secrets.mjs` | Denies writes containing secrets; asks before editing `.env*` and before adding a new allow-secret line                    |
 | `.claude/hooks/format-lint.mjs`   | Prettier, ESLint and comment check on each edited file (when installed)                                                    |
 | `.claude/hooks/stop-guard.mjs`    | Runs `check:quick` on changed code and asks for a feature-memory update                                                    |
 | `.claude/rules/*.md`              | Path-scoped rules: TypeScript, generated files, hooks, tests                                                               |
