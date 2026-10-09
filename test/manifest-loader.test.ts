@@ -142,6 +142,36 @@ describe('loadModule cross-field rules', () => {
     expect(loadRich((m) => (entry(m, 'files', 2).to = '.mcp.json')).location).toBe('files[2].to');
   });
 
+  it.each<[string, string]>([
+    ['Bash', 'allows every use of Bash'],
+    ['Bash(*)', 'allows every use of Bash'],
+    ['Bash(:*)', 'allows every use of Bash'],
+    ['Read(**)', 'allows every use of Read'],
+    ['Edit(/**)', 'allows every use of Edit'],
+    ['Read(~/**)', 'allows every use of Read'],
+    ['mcp__docs', 'allows every use of mcp__docs'],
+    ['Read(**/.env)', 'can hold secrets'],
+    ['Read(./.env.*)', 'can hold secrets'],
+    ['Read(~/.ssh/**)', 'can hold secrets'],
+    ['Edit(config/secrets.yml)', 'can hold secrets'],
+    ['Read(certs/server.pem)', 'can hold secrets'],
+  ])('rejects the broad allow rule %s', (rule, problem) => {
+    const error = loadRich((m) => (m.permissions = { allow: [rule] }));
+    expect(error.location).toBe('permissions.allow[0]');
+    expect(error.message).toContain(problem);
+    expect(error.hint).toContain('allow one command or path');
+  });
+
+  it('accepts narrow allow rules and keeps secret paths in deny', () => {
+    const manifest = richManifest();
+    manifest.permissions = {
+      allow: ['Bash(npm test)', 'Edit(src/**/*.ts)', 'Read(docs/**)', 'mcp__docs__search'],
+      deny: ['Read(**/.env)', 'Bash(rm -rf:*)'],
+    };
+    const read = memoryReader({ 'modules/rich/module.json': JSON.stringify(manifest), ...richSources() });
+    expect(loadModule('rich', read).manifest.permissions.allow).toHaveLength(4);
+  });
+
   it.each(['.github/notes.md', '.claude/settings.md', `${BRAND.stateDir}-notes/x.md`, 'docs/.gitkeep'])(
     'accepts %s, which only looks like a reserved target',
     (to) => {
