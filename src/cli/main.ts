@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { BRAND } from '../core/brand.js';
+import { ArchkeeperError } from '../core/errors.js';
 import type { Catalog } from '../core/loader.js';
 import { packageRoot, readKit } from './kit.js';
 
@@ -63,6 +64,13 @@ function reasonOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+// Reinstalling is the fix for a damaged kit file, so the error's own Try line would offer a second one.
+function damageOf(error: unknown): string {
+  if (!(error instanceof ArchkeeperError)) return reasonOf(error);
+  const [problem = error.message] = error.message.split('\n');
+  return problem;
+}
+
 /** Runs the CLI with the given arguments and returns the process exit code. */
 export function main(
   args: readonly string[],
@@ -84,7 +92,7 @@ export function main(
     loadKit();
   } catch (error) {
     output.stderr(
-      `${reasonOf(error)}\nThe ${BRAND.displayName} install looks damaged. Reinstall it and try again.\n`,
+      `${damageOf(error)}\nThe ${BRAND.displayName} install looks damaged. Reinstall it and try again.\n`,
     );
     return 1;
   }
