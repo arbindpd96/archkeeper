@@ -87,7 +87,7 @@ Add a row whenever something is created. Keep one line per item.
 | `.claude/hooks/attribution.mjs`                                                                             | AI-attribution pattern shared by `guard-bash`, `commitlint.config.mjs` and `scripts/check-commit-authors.mjs`              |
 | `scripts/lib.mjs`                                                                                           | Shared script helpers: `exitWith`, shell-free `git` and `npm` runners, `gitRevision`, `repositoryFiles`                    |
 | `scripts/check-comments.mjs`                                                                                | Comment-policy checker (TypeScript AST): commented-out code, dividers, untracked TODOs, comment ratio                      |
-| `scripts/third-party-licenses.mjs`                                                                          | Writes `dist/THIRD_PARTY_LICENSES.md` from the `node_modules` paths in the bundles' `//#region` markers                    |
+| `scripts/third-party-licenses.mjs`                                                                          | Writes `dist/THIRD_PARTY_LICENSES.md` from the `<bundle>.inlined.json` lists the build writes from its module graph        |
 | `scripts/check-package.mjs`                                                                                 | Package gates: publint, pack-list snapshot, runtime dependencies, install scripts, size budgets, bin smoke                 |
 | `scripts/check-brand.mjs`                                                                                   | Brand check: no slug literal outside `src/core/brand.ts` and the allowlist; `package.json` `name` and `bin` match `BRAND`  |
 | `scripts/check-changeset.mjs`                                                                               | Changeset gate: a PR that changes `src/`, `modules/`, `packs/` or `schema/` adds a changeset, unless labelled `no-release` |
@@ -126,9 +126,10 @@ Add a row whenever something is created. Keep one line per item.
 | ------------------------------ | -------------------------- | ----------------------------------------------------------------- |
 | `dist/cli.mjs`                 | `src/cli/bin.ts`           | One ESM file with a shebang; the target comes from `engines.node` |
 | `dist/hooks/<name>.mjs`        | each `src/hooks/<name>.ts` | One self-contained build per hook; it may inline no npm package   |
-| `dist/THIRD_PARTY_LICENSES.md` | the bundles                | Licenses of every inlined package                                 |
+| `dist/<bundle>.inlined.json`   | each build's module graph  | The `node_modules` files a bundle inlines; never published        |
+| `dist/THIRD_PARTY_LICENSES.md` | the `.inlined.json` lists  | Licenses of every inlined package                                 |
 
-Every bundle may import only `node:` built-ins (tsdown `deps.onlyImport`), so the package needs no runtime dependency. `jsonc-parser` is aliased to its ESM build (reference §7.1). CI builds twice, the second time from a fresh copy in another directory, and compares sha256 sums. Its `node-gate` job runs `dist/cli.mjs` on Node.js 18, 20, 22.17.0 and 23 (upgrade message, exit 1) and on 22.17.1 (`--version` works).
+Every bundle may import only `node:` built-ins (tsdown `deps.onlyImport`), so the package needs no runtime dependency. The `inlinedModules` plugin in `tsdown.config.mts` lists every `node_modules` file in each build's module graph (#71); package.json `files` excludes the lists. `jsonc-parser` is aliased to its ESM build (reference §7.1). CI builds twice, the second time from a fresh copy in another directory, and compares sha256 sums. Its `node-gate` job runs `dist/cli.mjs` on Node.js 18, 20, 22.17.0 and 23 (upgrade message, exit 1) and on 22.17.1 (`--version` works).
 
 ## Package gates
 
