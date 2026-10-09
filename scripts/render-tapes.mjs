@@ -11,7 +11,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { exitWith, npm } from './lib.mjs';
@@ -28,7 +28,8 @@ import {
 const VHS_VERSION = '0.12.1';
 const FIXTURE = /^#\s*fixture:\s*(\S+)\s*$/m;
 const LIVE = /^#\s*live\s*$/m;
-const SECRET_ENV = /TOKEN|SECRET|PASSWORD|^npm_config_/i;
+// Everything else, such as tokens, SSH_AUTH_SOCK, cloud keys and npm config, stays out of the tape's shell.
+const PASSED_ENV = /^(?:PATH|TERM|COLORTERM|LANG|LC_\w+|TZ|TMPDIR|VHS_\w+)$/;
 const USAGE =
   'Usage: node scripts/render-tapes.mjs [<feature>...] [--out <dir>] [--tarball <file>]\n' +
   '       node scripts/render-tapes.mjs --live <feature> [--out <dir>] [--tarball <file>]';
@@ -112,7 +113,23 @@ function installCli(root, work, tarball) {
   return prefix;
 }
 
-/** Builds the tape vhs runs: its output path, the shared settings, then the tape, with placeholders filled. */
+/**
+ * The environment for vhs, which hands it on to the tape's shell: only allowlisted variables, the packed
+ * CLI first on PATH (npm_config_prefix lets `npx <bin>` find it offline too), and the given HOME.
+ */
+function tapeEnv(prefix, home) {
+  const passed = Object.entries(process.env).filter(([name]) => PASSED_ENV.test(name));
+  return {
+    ...Object.fromEntries(passed),
+    HOME: home,
+    // fontconfig still finds the fonts vhs-action installs under the real HOME's ~/.local/share.
+    XDG_DATA_HOME: process.env.XDG_DATA_HOME ?? path.join(homedir(), '.local', 'share'),
+    PATH: `${path.join(prefix, 'bin')}${path.delimiter}${process.env.PATH ?? ''}`,
+    npm_config_prefix: prefix,
+  };
+}
+
+/** Builds the tape vhs runs:its output path, the shared settings, then the tape, with placeholders filled. */
 function renderedTape(settings, tape, gif) {
   const header = `# Rendered from ${TAPES}/${tape.feature}.tape by scripts/render-tapes.mjs.`;
   return fillPlaceholders([header, `Output ${JSON.stringify(gif)}`, settings, tape.text].join('\n'));
@@ -156,11 +173,7 @@ requireVhs();
 const work = mkdtempSync(path.join(tmpdir(), 'render-tapes-'));
 process.on('exit', () => rmSync(work, { recursive: true, force: true }));
 const prefix = installCli(root, work, options.tarball);
-// The tape's shell gets no tokens or npm config. The packed CLI comes first on PATH, and
-// npm_config_prefix lets `npx <bin>` find it offline too.
-const env = {
-  ...Object.fromEntries(Object.entries(process.env).filter(([name]) => !SECRET_ENV.test(name))),
-  PATH: `${path.join(prefix, 'bin')}${path.delimiter}${process.env.PATH ?? ''}`,
-  npm_config_prefix: prefix,
-};
+const home = options.live === undefined ? path.join(work, 'home') : homedir();
+mkdirSync(home, { recursive: true });
+const env = tapeEnv(prefix, home);
 for (const tape of tapes) render(tape, { root, work, env, settings, out: path.resolve(options.out) });
