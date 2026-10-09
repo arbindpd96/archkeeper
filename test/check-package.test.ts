@@ -82,6 +82,20 @@ describe('check-package', () => {
     expect(result.stderr).toContain('remove prepare (npm pkg delete scripts.prepare)');
   });
 
+  it('fails a release whose package.json has publishConfig', () => {
+    const manifest = { publishConfig: { registry: 'https://registry.example.com/' } };
+    const result = checkPackage(fixture(manifest), '--release');
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('publishConfig can override the registry');
+  });
+
+  it('fails a release with an .npmrc in the package root', () => {
+    const files = { '.npmrc': 'registry=https://registry.example.com/\n' };
+    const result = checkPackage(fixture({}, files), '--release');
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('.npmrc in the package root can redirect the registry');
+  });
+
   it('passes a release manifest once prepare is stripped', () => {
     const result = checkPackage(fixture({ scripts: { test: 'vitest run' } }), '--release');
     expect(result.stderr).toBe('');

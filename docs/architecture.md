@@ -137,7 +137,7 @@ Every bundle may import only `node:` built-ins (tsdown `deps.onlyImport`), so th
 - publint passes, with warnings treated as errors.
 - The `npm pack --dry-run` file list matches the committed `scripts/package-files.txt` (`npm run package -- --update` after an intended change).
 - `dependencies`, `optionalDependencies` and `peerDependencies` stay within the runtime-dependency budget (0), and there is no `preinstall`, `install` or `postinstall` script.
-- With `--release`, `prepare` counts as an install script too. The release workflow deletes husky's dev-only `prepare` (`npm pkg delete scripts.prepare`) and then checks the manifest it publishes this way.
+- With `--release`, `prepare` counts as an install script too, and `publishConfig` or a package-root `.npmrc` fails the check, since either could override the registry, tag, access or auth the workflow passes. The release workflow deletes husky's dev-only `prepare` (`npm pkg delete scripts.prepare`) and then checks the manifest it publishes this way.
 - The tarball and each `dist/hooks/*.mjs` bundle stay within their size budgets.
 - The built bin answers `--version` with the package version, and `--help`.
 - `budgets.json` itself defines every budget as a non-negative number.
