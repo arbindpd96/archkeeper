@@ -4,7 +4,7 @@ import { isEnvFileName, isEnvTemplateName } from './env-files.mjs';
 import { gitRule, HOOKS_PATH, HUSKY_OFF } from './git-rules.mjs';
 import { globMatches } from './glob-match.mjs';
 import { interpreterVerdict } from './interpreter-rules.mjs';
-import { isShell, readInterpreter } from './interpreters.mjs';
+import { PIPED_SCRIPT, pipedScriptVerdict } from './piped-scripts.mjs';
 import { parseCommands } from './shell-commands.mjs';
 import { ask, deny, strictest } from './verdicts.mjs';
 
@@ -15,9 +15,6 @@ const UNCHECKED_VALUE = ask(
 const GITHUB_DELETE = deny('Deleting repositories, releases or other GitHub resources is blocked.');
 const WORLD_WRITABLE = deny('World-writable permissions are blocked.');
 const SECRETS_FILE = ask('This command touches a secrets file (.env). Confirm with the user.');
-const PIPED_SCRIPT = ask(
-  'This pipes generated text into a shell, so it cannot be checked. Confirm with the user.',
-);
 const PUBLISH = ask('Publishing to a package registry is outward-facing. Confirm with the user.');
 const SUDO = ask('sudo needs explicit user approval.');
 
@@ -82,37 +79,7 @@ const secretsFileRule = (command) =>
 const sudoRule = ({ wrappers }) => (wrappers.some((wrapper) => PRIVILEGED.has(wrapper)) ? SUDO : null);
 const unknownProgramRule = ({ splitProgram }) => (splitProgram ? UNKNOWN_PROGRAM : null);
 
-// A shell whose script is stdin, or a name that may not be a file, runs whatever a pipe feeds it.
-const readsPipedScript = (command) => {
-  const interpreter = isShell(command.program) ? readInterpreter(command) : null;
-  return interpreter !== null && (interpreter.stdin || interpreter.unknownScript);
-};
-
 const MAX_SCRIPT_DEPTH = 3;
-const sameStage = (pipe, pipeline, stage) => pipe.pipeline === pipeline && pipe.stage === stage;
-const producerOf = (commands, { pipeline, stage }) =>
-  commands.find((command) => command.pipes.some((pipe) => sameStage(pipe, pipeline, stage - 1)));
-
-function scriptFedBy(producer) {
-  if (producer.heredocs.length > 0) return producer.heredocs.join('\n');
-  return ['echo', 'printf'].includes(producer.program) ? producer.args.join(' ') : null;
-}
-
-// A shell that reads its program from a pipe runs whatever the previous stage prints, so judge that text too.
-function pipedScriptVerdict(commands, depth) {
-  const shells = commands.filter(readsPipedScript);
-  const verdicts = shells.flatMap((shell) =>
-    shell.pipes
-      .filter((pipe) => pipe.stage > 0)
-      .map((pipe) => {
-        const producer = producerOf(commands, pipe);
-        const script = producer ? scriptFedBy(producer) : null;
-        if (script === null || depth >= MAX_SCRIPT_DEPTH) return PIPED_SCRIPT;
-        return judgeAt(parseCommands(script), depth + 1);
-      }),
-  );
-  return strictest(verdicts);
-}
 
 const PROGRAM_RULES = new Map([
   ['rm', rmRule],
@@ -134,7 +101,14 @@ function rulesFor(command) {
 
 function judgeAt(commands, depth) {
   const verdicts = commands.flatMap((command) => rulesFor(command).map((rule) => rule(command)));
-  verdicts.push(interpreterVerdict(commands), pipedScriptVerdict(commands, depth), findPipedToRm(commands));
+  // A shell that reads its program from a pipe runs whatever the previous stage prints, so judge that text too.
+  const judgeScript = (script) =>
+    depth >= MAX_SCRIPT_DEPTH ? PIPED_SCRIPT : judgeAt(parseCommands(script), depth + 1);
+  verdicts.push(
+    interpreterVerdict(commands),
+    pipedScriptVerdict(commands, judgeScript),
+    findPipedToRm(commands),
+  );
   return strictest(verdicts);
 }
 
