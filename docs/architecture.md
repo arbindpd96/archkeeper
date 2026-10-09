@@ -70,6 +70,11 @@ Add a row whenever something is created. Keep one line per item.
 | `src/core/when.ts`            | Evaluates a manifest `when` against the stack and option values, returning the reason it fails                 | `whenMismatch`, `When`                                                                      |
 | `src/core/resolve.ts`         | Resolves a preset plus `modules.add`/`remove` into modules, adding requirements and leaving out failed `when`s | `resolveModules`, `ResolveRequest`, `Resolution`                                            |
 | `src/core/install-order.ts`   | Topological install order with ties broken by id; a cycle throws `ResolveError` showing it                     | `installOrder`                                                                              |
+| `src/core/text.ts`            | Locale-independent string order and LF normalisation, shared by the resolver and the renderer                  | `compareText`, `asLfText`                                                                   |
+| `src/core/template.ts`        | Logic-less `{{a.b}}` templates with `\{{` for a literal `{{`; `toImport` writes unquoted `@path` imports       | `renderTemplate`, `brandScope`, `toImport`, `TemplateScope`                                 |
+| `src/core/render-json.ts`     | Builds `.claude/settings.json` (exec-form hooks, permissions) and `.mcp.json` entries from objects             | `settingsPart`, `mcpPart`, `hookScriptPath`, `toJson`                                       |
+| `src/core/render-tree.ts`     | Groups rendered entries by path in sorted order and refuses two modules writing one file, block or JSON entry  | `collectEntries`, `RenderTree`, `RenderedEntry`                                             |
+| `src/core/render.ts`          | Renders modules for a stack, options and brand into a deterministic virtual tree (#20)                         | `render`, `RenderContext`                                                                   |
 | `src/cli/bin.ts`              | Bundle entry (`dist/cli.mjs`): rejects unsupported Node.js before it imports the program                       | none (entry)                                                                                |
 | `src/cli/node-version.ts`     | The supported Node.js range (equal to `engines.node`) and the upgrade message                                  | `SUPPORTED_NODE_RANGE`, `nodeVersionProblem`                                                |
 | `src/cli/main.ts`             | Argument parsing with `node:util` `parseArgs`: `--version` and `--help` until commander arrives in v0.1        | `main`, `readPackageInfo`, `CliOutput`, `PackageInfo`                                       |
@@ -125,6 +130,7 @@ Every module is a manifest only, marked `internal`, until its milestone adds fil
 | `scripts/pull-gifs.mjs`                                                                                     | `npm run gifs:pull -- <run-id>`: copies a demo-gifs run's feature GIFs into `docs/media/` for the maintainer to commit     |
 | `test/helpers.ts`                                                                                           | Test helpers: `runScript`, hook verdicts, temp dirs and repos, `git`, `commitFiles`, `fixtureCopy`, `fakeBin`, `gifBytes`  |
 | `test/kit-fixtures.ts`                                                                                      | Core test data: an in-memory `ReadKitFile`, a manifest that uses every field, and the v0.1 preset chain                    |
+| `test/fixtures/render/`                                                                                     | Three fixture modules for the renderer's snapshot, property and brand tests; hook bundles live in `hook-bundles/`          |
 
 ## This repo's Claude Code setup
 

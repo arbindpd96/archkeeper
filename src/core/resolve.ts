@@ -5,6 +5,7 @@ import { installOrder } from './install-order.js';
 import type { Catalog, KitModule, Preset } from './loader.js';
 import { optionDefaults, type ResolvedOptions } from './options.js';
 import type { Stack } from './schema-parts.js';
+import { compareText } from './text.js';
 import { whenMismatch } from './when.js';
 
 /** What to install: a preset adjusted by `add` and `remove`, for a stack, with resolved option values. */
@@ -229,7 +230,7 @@ export function resolveModules(request: ResolveRequest, catalog: Catalog, brand:
   );
   checkConflicts(context, kept);
   const reasons = [...dropped]
-    .sort(([left], [right]) => (left < right ? -1 : 1))
+    .sort(([left], [right]) => compareText(left, right))
     .map(([id, reason]) => ({ id, reason }));
   return { preset, modules: installOrder(kept), dropped: reasons };
 }

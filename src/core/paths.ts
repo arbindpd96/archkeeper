@@ -1,6 +1,7 @@
 const WINDOWS_DRIVE = /^[A-Za-z]:/;
 
-function hasControlCharacter(path: string): boolean {
+/** True when the text holds a control character, such as a newline or NUL, that no kit path may contain. */
+export function hasControlCharacter(path: string): boolean {
   for (let index = 0; index < path.length; index += 1) {
     const code = path.charCodeAt(index);
     if (code < 0x20 || code === 0x7f) return true;

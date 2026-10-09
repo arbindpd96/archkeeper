@@ -1,3 +1,7 @@
 * text=auto eol=lf
 *.sh text eol=lf
 *.mjs text eol=lf
+# Templates and render snapshots are compared byte for byte on every OS (#20).
+modules/**/files/** text eol=lf
+test/fixtures/render/** text eol=lf
+test/__snapshots__/** text eol=lf
