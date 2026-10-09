@@ -151,7 +151,7 @@ The command-line contract (#40):
   - In a json file, only the removed entries are re-added, through the same edits `update` makes.
 - `update` exits 2 when it wrote sidecars, and lists them with a hint to commit them with `lock.json`.
 
-`uninstall` (#41) removes only what is still exactly as the kit wrote it, and backs up everything it touches first:
+`uninstall` (#41) removes only what is still exactly as the kit wrote it, except the kit's own state in `.archkeeper/`, which goes even when edited (the last item below). It backs up everything it touches first:
 
 - It deletes unmodified kit files listed in the lock, unmodified managed blocks, unmodified kit-owned JSON entries, and sidecars that still match `pending`. A file the kit created that holds nothing else afterwards, such as a `settings.json` with only kit entries, goes too.
 - It keeps and lists everything else: files and blocks the user modified, diverged JSON entries, and any file the user added to a kit folder. `--force` also removes the modified kit files and blocks it listed, after confirmation, and still backs them up first.
