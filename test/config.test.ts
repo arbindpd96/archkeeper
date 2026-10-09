@@ -71,7 +71,13 @@ describe('parseConfig', () => {
       'an option value that is an object',
       { preset: 'small', options: { safety: { optOut: {} } } },
       'options.safety.optOut',
-      'see schema/config.schema.json',
+      'true or false, a string, or a list of strings',
+    ],
+    [
+      'an option list that holds a number',
+      { preset: 'small', options: { safety: { optOut: [1] } } },
+      'options.safety.optOut',
+      'true or false, a string, or a list of strings',
     ],
     [
       'a compose choice that is not a boolean',
