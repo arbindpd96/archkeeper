@@ -42,6 +42,19 @@ export function runScript(
   return { status: run.status, stdout: run.stdout, stderr: run.stderr };
 }
 
+/** Reads the permission decision a PreToolUse hook printed; no output means the tool call is allowed. */
+export function permissionDecision(stdout: string): string {
+  if (!stdout) return 'allow';
+  const output = JSON.parse(stdout) as { hookSpecificOutput?: { permissionDecision?: string } };
+  return output.hookSpecificOutput?.permissionDecision ?? 'allow';
+}
+
+/** Runs a `.claude/hooks/` PreToolUse hook on a tool input and returns its permission decision. */
+export function hookDecision(hook: string, toolInput: unknown, env: NodeJS.ProcessEnv = {}): string {
+  const { stdout } = runScript(`.claude/hooks/${hook}`, { payload: { tool_input: toolInput }, env });
+  return permissionDecision(stdout);
+}
+
 /** Creates an empty temporary directory that is deleted when the current test finishes. */
 export function tempDir(): string {
   const dir = mkdtempSync(path.join(tmpdir(), `${BRAND.npmName}-test-`));
