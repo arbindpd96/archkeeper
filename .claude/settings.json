@@ -7,17 +7,26 @@
   },
   "permissions": {
     "allow": [
-      "Bash(npm run *)",
-      "Bash(npm test *)",
-      "Bash(npx vitest *)",
-      "Bash(npx tsc *)",
-      "Bash(npx eslint *)",
-      "Bash(npx prettier *)",
+      "Bash(npm run check)",
+      "Bash(npm run check:quick)",
+      "Bash(npm run lint)",
+      "Bash(npm run lint:fix)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run comments)",
+      "Bash(npm run format)",
+      "Bash(npm run format:check)",
+      "Bash(npm test)",
+      "Bash(npm run coverage)",
+      "Bash(git status)",
       "Bash(git status *)",
+      "Bash(git diff)",
       "Bash(git diff *)",
       "Bash(git log *)",
       "Bash(git show *)",
-      "Bash(git branch *)",
+      "Bash(git branch)",
+      "Bash(git branch --show-current)",
+      "Bash(git branch -a)",
+      "Bash(git branch --list *)",
       "Bash(gh pr view *)",
       "Bash(gh pr checks *)",
       "Bash(gh pr diff *)",
@@ -26,7 +35,13 @@
       "Bash(gh run view *)",
       "Bash(gh run list *)"
     ],
-    "deny": ["Read(./.env)", "Read(./.env.*)", "Bash(git push --force *)", "Bash(git push -f *)"]
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/.envrc)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)"
+    ]
   },
   "hooks": {
     "SessionStart": [
