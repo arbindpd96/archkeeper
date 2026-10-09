@@ -96,6 +96,27 @@ describe('planInstall', () => {
     expect(second.lockText).toBe(first.lockText);
   });
 
+  it('registers a hook only when the kit wrote or adopted its script', () => {
+    const script = '.claude/hooks/acmekit/guard.mjs';
+    const group = {
+      hooks: [{ type: 'command', command: 'node', args: [`\${CLAUDE_PROJECT_DIR}/${script}`] }],
+    };
+    const settings = {
+      strategy: 'json',
+      module: 'm',
+      content: `${JSON.stringify({ hooks: { Stop: [group] } })}\n`,
+      keys: [`hooks.Stop ${script}`],
+    } as const;
+    const tree = treeOf([script, fileEntry('export {};\n')], ['.claude/settings.json', settings]);
+    const theirs = planInstall(tree, snapshotOf({ [script]: '// not the kit script\n' }), undefined, CONTEXT);
+    expect(theirs.writes.get('.claude/settings.json')).not.toContain('hooks');
+    expect(theirs.ops.find((op) => op.entry === `hooks.Stop ${script}`)?.reason).toContain(
+      'does not register it',
+    );
+    const ours = planInstall(tree, snapshotOf(), undefined, CONTEXT);
+    expect(ours.writes.get('.claude/settings.json')).toContain(script);
+  });
+
   it('checks every path the lock names, since the lock is untrusted', () => {
     const lock: Lock = {
       ...emptyLock(TEST_KIT),
