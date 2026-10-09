@@ -7,7 +7,7 @@ import { type KitFolders, reservedTarget } from './targets.js';
 type Rule = (manifest: ModuleManifest) => Finding | undefined;
 
 const PLUGIN_FOLDERS = ['.claude/skills/', '.claude/agents/'];
-// A target can name a kit folder through a brand variable; render checks the folders of the brand it is given.
+// A target can name a kit folder through a brand variable, spaced or not; render checks the brand it is given.
 const TEMPLATED_FOLDERS: KitFolders = { stateDir: '{{brand.stateDir}}', hookDir: '{{brand.hookDir}}' };
 
 function finding(path: readonly PropertyKey[], problem: string, hint: string): Finding {
@@ -86,7 +86,8 @@ const pluginTargets: Rule = ({ files }) => {
 const reservedTargets: Rule = ({ files }) => {
   for (const [index, entry] of files.entries()) {
     if (entry.strategy === 'json') continue;
-    const reserved = reservedTarget(entry.to, BRAND) ?? reservedTarget(entry.to, TEMPLATED_FOLDERS);
+    const to = entry.to.replaceAll(/\{\{\s*([^{}]*?)\s*\}\}/g, '{{$1}}');
+    const reserved = reservedTarget(to, BRAND) ?? reservedTarget(to, TEMPLATED_FOLDERS);
     if (reserved !== undefined) return finding(['files', index, 'to'], reserved.problem, reserved.hint);
   }
   return undefined;
