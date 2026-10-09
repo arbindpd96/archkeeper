@@ -19,6 +19,7 @@ function load(change: Change): ManifestError {
 }
 
 const server = (m: ManifestData, index: number): Record<string, unknown> => entry(m, 'mcpServers', index);
+const HEX_KEY = '0123456789abcdef'.repeat(2);
 
 describe('module manifest MCP servers', () => {
   it.each<[string, Change, string, string]>([
@@ -35,6 +36,36 @@ describe('module manifest MCP servers', () => {
       'never hold',
     ],
     ['an MCP server without a type', (m) => delete server(m, 0).type, 'mcpServers[0].type', '"stdio"'],
+    [
+      'a literal key in an MCP URL path',
+      (m) => (server(m, 0).url = `https://mcp.example.com/api/mcp/s/${HEX_KEY}/mcp`),
+      'mcpServers[0].url',
+      'keep keys out of the URL',
+    ],
+    [
+      'a literal key in an MCP host name',
+      (m) => (server(m, 0).url = `https://${HEX_KEY}.mcp.example.com/mcp`),
+      'mcpServers[0].url',
+      'keep keys out of the URL',
+    ],
+    [
+      'a literal value after a key flag in stdio args',
+      (m) => (server(m, 1).args = ['--api-key', 'hunter2']),
+      'mcpServers[1].args[1]',
+      'such as --token ${GITHUB_TOKEN}',
+    ],
+    [
+      'a literal value in a --token= stdio arg',
+      (m) => (server(m, 1).args = ['--token=hunter2']),
+      'mcpServers[1].args[0]',
+      'such as --token ${GITHUB_TOKEN}',
+    ],
+    [
+      'a key-like stdio arg',
+      (m) => (server(m, 1).args = ['--profile', HEX_KEY]),
+      'mcpServers[1].args[1]',
+      'pass the key from the environment',
+    ],
     [
       'an MCP URL with credentials',
       (m) => (server(m, 0).url = 'https://me:pw@example.com/mcp'),
@@ -135,6 +166,22 @@ describe('module manifest MCP servers', () => {
       expect(loadModule('rich', read).manifest.mcpServers[0]).toMatchObject({ url: address });
     },
   );
+
+  it('accepts stdio args that reference keys and project paths, and plain names and versions', () => {
+    const manifest = richManifest();
+    server(manifest, 1).command = 'npx';
+    server(manifest, 1).args = [
+      '-y',
+      '@modelcontextprotocol/server-filesystem@2026.1.14',
+      '--token',
+      '${GITHUB_TOKEN}',
+      '--root=${CLAUDE_PROJECT_DIR:-.}/docs',
+      '--author',
+      'Acme Docs Team',
+    ];
+    const read = memoryReader({ 'modules/rich/module.json': JSON.stringify(manifest), ...richSources() });
+    expect(loadModule('rich', read).manifest.mcpServers[1]).toMatchObject({ args: server(manifest, 1).args });
+  });
 
   it('accepts referenced query values, a project headers script and credential variables for stdio', () => {
     const manifest = richManifest();
