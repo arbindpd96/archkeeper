@@ -19,11 +19,19 @@ const noCredentialVariable = refusing((value) => {
 });
 
 const QUERY_PART = String.raw`[^\s=&#]+=${REFERENCE}`;
-const URL_SHAPE = String.raw`^https?:\/\/[^\s/?#@]+(?:\/[^\s?#]*)?(?:\?${QUERY_PART}(?:&${QUERY_PART})*)?$`;
+// Plain http is only for a server on this machine, so headers and helper output never cross a network in clear.
+const ORIGIN = String.raw`(?:https:\/\/[^\s/?#@]+|http:\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?)`;
+const URL_SHAPE = String.raw`^${ORIGIN}(?:\/[^\s?#]*)?(?:\?${QUERY_PART}(?:&${QUERY_PART})*)?$`;
 const URL_HINT =
-  'use an http(s) URL with no user:password@ and no #fragment, whose query values are ${NAME} references';
+  'use an https URL (http only for localhost, 127.0.0.1 or [::1]) with no user:password@ and no #fragment, ' +
+  'whose query values are ${NAME} references';
 const url = z.string().check(z.regex(new RegExp(URL_SHAPE), { error: URL_HINT }), noCredentialVariable);
 const remoteReference = envReference.check(noCredentialVariable);
+const headerName = z
+  .string()
+  .check(
+    z.regex(/^[\w!#$%&'*+.^`|~-]+$/, { error: 'use the letters, digits and symbols of an HTTP header name' }),
+  );
 const HELPER_HINT =
   'name a script in the project, such as ${CLAUDE_PROJECT_DIR:-.}/scripts/mcp-headers.sh, with no arguments: ' +
   'it prints the headers, so .mcp.json holds no secret and no command line';
@@ -45,7 +53,7 @@ export const mcpServerSchema = z.discriminatedUnion('type', [
     name: serverName,
     type: z.enum(['http', 'sse']),
     url,
-    headers: z.optional(z.record(z.string(), remoteReference)),
+    headers: z.optional(z.record(headerName, remoteReference)),
     headersHelper: z.optional(headersHelper),
   }),
 ]);
