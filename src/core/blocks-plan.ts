@@ -7,6 +7,7 @@ import type { BlockEntry, Removal } from './lock.js';
 import type { OpKind, Ownable, PathOutcome, PathState, PlanOp } from './plan-types.js';
 import type { RenderedEntry } from './render-tree.js';
 import { keptSidecarReason, sidecarAction, sidecarPath } from './sidecar.js';
+import { toLf } from './text.js';
 
 /** Everything the planner knows about one blocks path. */
 export interface BlocksJob {
@@ -171,16 +172,21 @@ function edits(decisions: readonly Decision[], withSidecar: boolean): BlockEdits
   };
 }
 
-// A sidecar the kit wrote holds, in each block with a pending hash, exactly that pending content.
-function uneditedSidecar(job: BlocksJob, text: string): boolean {
+// The kit's sidecar is the file as it is now with each pending block holding its pending content. Any other
+// byte, in a block or between blocks, is the user's, and a sidecar that holds one is never rewritten (ADR-0014).
+function uneditedSidecar(job: BlocksJob, file: BlocksFile, text: string): boolean {
   const pending = [...(job.lock ?? [])].filter(([, entry]) => entry.pending !== undefined);
   if (pending.length === 0) return false;
   try {
     const parts = blockParts(parseBlocks(job.path, text, job.brand));
-    return pending.every(([id, entry]) => {
+    const replace = new Map<string, string>();
+    for (const [id, entry] of pending) {
       const part = parts.get(id);
-      return part !== undefined && contentHash(part.body) === entry.pending;
-    });
+      if (part === undefined || contentHash(part.body) !== entry.pending) return false;
+      replace.set(id, toLf(part.body));
+    }
+    const kit = editBlocks(file, { replace, remove: new Set(), insert: [] }, job.brand.markerPrefix);
+    return toLf(kit) === toLf(text);
   } catch (error) {
     if (error instanceof MergeError) return false;
     throw error;
@@ -194,7 +200,7 @@ function withSidecar(
 ): { decisions: Decision[]; sidecar?: string } {
   if (!decisions.some((decision) => decision.op === 'sidecar')) return { decisions };
   const text = editBlocks(file, edits(decisions, true), job.brand.markerPrefix);
-  const action = sidecarAction(job.sidecar, text, (existing) => uneditedSidecar(job, existing));
+  const action = sidecarAction(job.sidecar, text, (existing) => uneditedSidecar(job, file, existing));
   const sidecar = sidecarPath(job.path, job.brand);
   if (action === 'write') {
     const reason = (why: string): string =>
