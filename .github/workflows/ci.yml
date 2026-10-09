@@ -170,21 +170,38 @@ jobs:
           check-latest: true
           cache: npm
       - run: npm ci --ignore-scripts
-      # The same steps as release.yml, without a token: the tag, CHANGELOG and private guards are
-      # reported rather than enforced, and npm stage publish runs with --dry-run.
+      # The same steps as release.yml, without a token: the release guards report rather than enforce,
+      # and npm stage publish runs with --dry-run on the packed tarball.
       - name: Release guards (dry run)
         id: guards
         run: node scripts/check-release.mjs --dry-run
+      - name: Check whether this version is already on npm
+        id: registry
+        env:
+          SPEC: ${{ steps.guards.outputs.name }}@${{ steps.guards.outputs.version }}
+          VERSION: ${{ steps.guards.outputs.version }}
+        run: |
+          if [ "$(npm view "$SPEC" version 2>/dev/null)" = "$VERSION" ]; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Strip dev-only lifecycle scripts, as a release does
         run: npm pkg delete scripts.prepare
       - run: npm run build
       - name: Package checks on the stripped manifest
         run: npm run package -- --release
+      - name: Pack the commit (only prepare removed)
+        id: pack
+        run: node scripts/pack-release.mjs "$RUNNER_TEMP/release"
+      # A version already on npm would only be verified by a release, and npm refuses even a dry run of it.
       - name: Stage publish dry run (with the explicit dist-tag a release passes)
+        if: steps.registry.outputs.published != 'true'
         env:
           DIST_TAG: ${{ steps.guards.outputs.dist-tag }}
+          TARBALL: ${{ runner.temp }}/release/${{ steps.pack.outputs.tarball }}
         run: |
-          npm stage publish --dry-run --access public --ignore-scripts --json --tag "$DIST_TAG" > "$RUNNER_TEMP/stage.json"
+          npm stage publish "$TARBALL" --dry-run --access public --ignore-scripts --json --tag "$DIST_TAG" > "$RUNNER_TEMP/stage.json"
           node scripts/stage-summary.mjs "$RUNNER_TEMP/stage.json" --dist-tag "$DIST_TAG" --dry-run
 
   install-smoke:

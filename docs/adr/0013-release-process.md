@@ -26,9 +26,9 @@ ADR-0009 deferred release automation and assumed trusted publishing with provena
 **Every later release.** A `v*` tag push triggers `release.yml`, which:
 
 1. Asserts npm 11.15 or later.
-2. Checks that the tag matches the `package.json` version, that the CHANGELOG has a matching section, and that the package is not `private`.
-3. Strips dev-only lifecycle scripts (`prepare`) from the manifest, then runs check, build and the package checks on the stripped manifest.
-4. Runs `npm stage publish` with `NPM_STAGE_TOKEN`, a stage-only token that expires in 90 days or less and has a rotation issue.
+2. Checks that the tag matches the `package.json` version and points at a commit on `main`, that the CHANGELOG has a matching section, and that the package is not `private`.
+3. Strips dev-only lifecycle scripts (`prepare`) from the manifest, then runs check, build and the package checks on the stripped manifest, and packs the tarball. This build job holds no secret.
+4. Runs `npm stage publish` on that tarball in a separate job that installs nothing, with `NPM_STAGE_TOKEN`: a stage-only token that expires in 90 days or less, has a rotation issue, and is a secret of the `npm-stage` environment, which admits only `v*` tags.
 
 **Dist-tags.** Every stage passes an explicit `--tag`: `next` for prereleases and `latest` for releases. The name is held by a notice-only `0.0.1` placeholder on `latest`, so npm refuses an implicit `latest` for any version at or below it. The first real version is above it (planned: `0.1.0-rc.0`). An explicit tag also turns off npm's refusal to move `latest` backwards, so the release guards refuse any version below the one `latest` points at.
 
