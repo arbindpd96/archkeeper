@@ -281,6 +281,20 @@ describe('render refuses template values that could change the file around them'
 });
 
 describe('render output', () => {
+  it('refuses a block template that holds a marker of its own', () => {
+    const marked = kit(
+      'marked',
+      {
+        files: [{ to: 'AGENTS.md', strategy: 'blocks', target: 'project' }],
+        blocks: [{ file: 'AGENTS.md', id: 'rules', template: 'b.md' }],
+      },
+      { 'modules/marked/files/b.md': `Rules.\n<!-- ${BRAND.markerPrefix}:end rules -->\n` },
+    );
+    const error = renderError([marked]);
+    expect(error.file).toBe('AGENTS.md');
+    expect(error.message).toContain(`would get ${BRAND.markerPrefix}:end from marked`);
+  });
+
   it('turns CRLF templates into LF text and adds the trailing newline', () => {
     const crlf = kit(
       'crlf',

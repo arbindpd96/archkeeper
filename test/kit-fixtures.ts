@@ -1,3 +1,4 @@
+import type { Brand } from '../src/core/brand.js';
 import type { ReadKitFile } from '../src/core/loader.js';
 
 /** A module manifest as plain JSON data, for tests to change before loading. */
@@ -109,3 +110,19 @@ export function kitFiles(
   }
   return files;
 }
+
+/** A brand for install tests, so no snapshot or path holds the real slug and a rename changes nothing here. */
+export const TEST_BRAND: Brand = Object.freeze({
+  npmName: 'acmekit',
+  binName: 'acmekit',
+  displayName: 'Acme Kit',
+  pluginName: 'acmekit',
+  marketplaceName: 'acmekit',
+  markerPrefix: 'acmekit',
+  stateDir: '.acmekit',
+  hookDir: '.claude/hooks/acmekit',
+  rulesDir: '.claude/rules/acmekit',
+  sidecarSuffix: '.acmekit-new',
+  disclaimer: 'Acme Kit is a test brand.',
+  legacySlugs: Object.freeze(['oldkit']),
+});
