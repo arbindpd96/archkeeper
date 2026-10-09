@@ -69,7 +69,7 @@ flowchart LR
 | ADR  | Decision                                                                                                                                                   | Filed in |
 | ---- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
 | 0011 | One published package, zero runtime deps, tsdown bundle, no workspaces. Supersedes ADR-0009's workspace clause                                             | v0.0 R1  |
-| 0012 | Brand constants: the slug lives in one file, with `legacySlugs` for any future rename. The name itself is decided (ADR-0010)                               | v0.0 R1  |
+| 0012 | Brand constants: the slug lives in one file, with `legacySlugs` for any future rename. The name itself is decided (ADR-0010)                               | v0.0 R3  |
 | 0013 | Release: maintainer-run changesets, npm staged publishing, no provenance until npm/cli#9969 is fixed. Supersedes ADR-0009's release-automation consequence | v0.0 R2  |
 | 0014 | On-disk contract and merge-safe lifecycle: config, lock v1, compressed base blobs, four strategies                                                         | v0.0 R3  |
 | 0015 | Hook runtime and per-hook failure policy                                                                                                                   | v0.0 R3  |
