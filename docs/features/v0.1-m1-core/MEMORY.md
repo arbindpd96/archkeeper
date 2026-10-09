@@ -52,16 +52,16 @@ v0.1 milestone M1 (issues #18, #19, #20, #71): modules are validated data (manif
 
 | Item                            | Before M1 | After M1                | Budget |
 | ------------------------------- | --------- | ----------------------- | ------ |
-| `dist/cli.mjs`                  | 5.2 kB    | 127.4 kB (31.2 kB gzip) | none   |
+| `dist/cli.mjs`                  | 5.2 kB    | 130.3 kB (32.0 kB gzip) | none   |
 | of which zod (`zod/mini`)       | 0         | 58.8 kB                 |        |
 | of which jsonc-parser           | 0         | 24.1 kB                 |        |
-| of which `src/core` + `src/cli` | 5.2 kB    | 43.1 kB                 |        |
-| Tarball                         | 6.5 kB    | 39.7 kB                 | 300 kB |
-| Unpacked                        | 15.7 kB   | 166.4 kB                |        |
+| of which `src/core` + `src/cli` | 5.2 kB    | 47.4 kB                 |        |
+| Tarball                         | 6.5 kB    | 40.5 kB                 | 300 kB |
+| Unpacked                        | 15.7 kB   | 169.3 kB                |        |
 | Files in the package            | 5         | 15                      |        |
 | Runtime dependencies            | 0         | 0                       | 0      |
 
-Bundle parts are the unminified `//#region` sizes, measured again after the review fixes (the stricter manifest schema and rules and `src/core/targets.ts` added 6.6 kB, and the second review's MCP, target-path and catalog checks 3.1 kB more; `render()` and the secret scan are not in the CLI bundle yet). `THIRD_PARTY_LICENSES.md` lists `jsonc-parser@3.3.1` and `zod@4.6.5`, in name order.
+Bundle parts are the unminified `//#region` sizes, measured again after the review fixes (the stricter manifest schema and rules and `src/core/targets.ts` added 6.6 kB, the second review's MCP, target-path and catalog checks 3.1 kB more, and the third review's MCP and target checks 2.9 kB more, by total bundle size; `render()` and the secret scan are not in the CLI bundle yet). `THIRD_PARTY_LICENSES.md` lists `jsonc-parser@3.3.1` and `zod@4.6.5`, in name order.
 
 ## Demo flips (ROADMAP v0.1 "README and demo")
 
