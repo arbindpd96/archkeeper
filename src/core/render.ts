@@ -104,12 +104,25 @@ function jsonDraft(id: string, path: string, part: JsonPart): Draft {
   return { path, strategy: 'json', module: id, content: toJson(part.value), keys: part.keys };
 }
 
+function installedHookPath(job: ModuleRender, script: string): string {
+  const path = hookScriptPath(script, job.brand);
+  const problem = relativePathProblem(path);
+  if (problem === undefined) return path;
+  const index = job.kit.manifest.hooks.findIndex((hook) => hook.script === script);
+  throw new RenderError({
+    file: job.kit.file,
+    location: `hooks[${String(index)}].script`,
+    problem: `installs to "${path}", which ${problem}`,
+    hint: 'fix the hookDir of the brand',
+  });
+}
+
 function jsonDrafts(job: ModuleRender, file: ManifestFile, path: string): Draft[] {
   const { manifest } = job.kit;
   if (file.to === MCP_FILE) return [jsonDraft(manifest.id, path, mcpPart(manifest))];
   const unique = [...new Set(manifest.hooks.map((hook) => hook.script))];
   const scripts: Draft[] = unique.map((script) => ({
-    path: hookScriptPath(script, job.brand),
+    path: installedHookPath(job, script),
     strategy: 'owned',
     module: manifest.id,
     content: asLfText(source(job.kit, script)),
