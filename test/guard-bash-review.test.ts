@@ -79,6 +79,30 @@ describe('guard-bash review cases', () => {
   });
 
   it.each([
+    ['echo "rm -rf ~ $(echo ls)" | sh', 'deny'],
+    ["{ echo ls; echo 'rm -rf ~'; } | sh", 'deny'],
+    ["(echo ls; echo 'rm -rf ~') | sh", 'deny'],
+    ["printf '\\162m -rf ~' | sh", 'deny'],
+    ["printf '\\x72m -rf ~' | sh", 'deny'],
+    ["echo -e '\\x72m -rf ~' | sh", 'deny'],
+    ["echo -e '\\0162m -rf ~' | sh", 'deny'],
+    ['echo \'rm -rf ~\' | "$SH"', 'deny'],
+    ["echo 'rm -rf ~' | tcsh", 'deny'],
+    ["echo 'rm -rf ~' | sh", 'deny'],
+    ["echo 'rm -rf ~' | bash -e", 'deny'],
+    ["echo 'rm -rf ~' | xargs sh -c", 'deny'],
+    ['{ echo ls; echo pwd; } | sh', 'ask'],
+    ['echo "ls $(pwd)" | sh', 'ask'],
+    ['echo "$X" | sh', 'ask'],
+    ['echo -n ls | sh', 'ask'],
+    ["printf '%s\\n' ls | sh", 'ask'],
+    ['ls | "$PAGER"', 'ask'],
+    ['echo ls | sh', 'allow'],
+  ])('piped scripts: %s → %s', (command, expected) => {
+    expect(judge(command)).toBe(expected);
+  });
+
+  it.each([
     [`${GET} | tcsh`, 'deny'],
     [`${GET} | csh`, 'deny'],
     [`${GET} | osascript`, 'deny'],

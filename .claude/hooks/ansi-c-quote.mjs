@@ -19,6 +19,20 @@ function decodeEscape(tail) {
   return { decoded, length: 1 };
 }
 
+/** Decodes backslash escapes (`\n`, `\x72`, `\162`, `\u…`) the way printf and `echo -e` print them. */
+export function decodeEscapes(text) {
+  let decoded = '';
+  let pos = 0;
+  while (pos < text.length) {
+    const backslash = text.indexOf('\\', pos);
+    if (backslash === -1) return decoded + text.slice(pos);
+    const escape = decodeEscape(text.slice(backslash + 1, backslash + 10));
+    decoded += text.slice(pos, backslash) + escape.decoded;
+    pos = backslash + 1 + escape.length;
+  }
+  return decoded;
+}
+
 /**
  * Decodes a bash/zsh `$'...'` string whose `$` is at `start`. Returns `{ text, end }` (end is the index after the
  * closing quote) or `{ problem }` when the string is unterminated or ambiguous.
