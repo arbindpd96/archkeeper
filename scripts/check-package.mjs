@@ -145,9 +145,9 @@ function report(rows) {
 const args = process.argv.slice(2);
 const root = path.resolve(args.find((arg) => !arg.startsWith('--')) ?? '.');
 const manifest = readJson(path.join(root, 'package.json'));
-// npm 10 can still print lifecycle-script output before the JSON, so parse from the first line that opens the array.
+// npm 10 can print lifecycle-script output (with no trailing newline) before the JSON, so find where the array opens.
 function parsePackOutput(stdout) {
-  const start = stdout.search(/^\[/m);
+  const start = stdout.search(/\[\s*[{\]]/);
   if (start === -1) exitWith(`check-package: npm pack printed no JSON:\n${stdout.slice(0, 500)}`, 1);
   return JSON.parse(stdout.slice(start));
 }
