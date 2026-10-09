@@ -1,0 +1,206 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "lockfileVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "kit": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?(?:\\+[0-9A-Za-z.-]+)?$"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "modules": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+      },
+      "description": "Module ids in install order."
+    },
+    "files": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "module": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+          },
+          "strategy": {
+            "type": "string",
+            "enum": [
+              "owned",
+              "create-only"
+            ]
+          },
+          "base": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The hash of the content the kit last wrote, or null where it never wrote."
+          },
+          "pending": {
+            "description": "The hash of the kit content waiting in a sidecar for the user to review.",
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "required": [
+          "module",
+          "strategy",
+          "base"
+        ],
+        "additionalProperties": false
+      },
+      "description": "Owned and create-only files by path."
+    },
+    "blocks": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "base": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The hash of the content the kit last wrote, or null where it never wrote."
+            },
+            "pending": {
+              "description": "The hash of the kit content waiting in a sidecar for the user to review.",
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "base"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "description": "Managed blocks by file and block id."
+    },
+    "json": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string",
+          "pattern": "^(?:\\$schema|(?:permissions\\.(?:allow|ask|deny)|hooks\\.(?:SessionStart|PreToolUse|PostToolUse|PreCompact|Stop)|mcpServers) \\S.*)$"
+        },
+        "additionalProperties": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "description": "Kit-owned JSON entries by file and owned key, each with the hash of the entry the kit wrote."
+    },
+    "removed": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "path"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "blockId": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+              }
+            },
+            "required": [
+              "path",
+              "blockId"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "path": {
+                "type": "string"
+              },
+              "key": {
+                "type": "string",
+                "pattern": "^(?:\\$schema|(?:permissions\\.(?:allow|ask|deny)|hooks\\.(?:SessionStart|PreToolUse|PostToolUse|PreCompact|Stop)|mcpServers) \\S.*)$"
+              }
+            },
+            "required": [
+              "path",
+              "key"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "description": "Kit files, blocks and JSON entries the user deleted; the kit never recreates them."
+    }
+  },
+  "required": [
+    "lockfileVersion",
+    "kit",
+    "modules",
+    "files",
+    "blocks",
+    "json",
+    "removed"
+  ],
+  "additionalProperties": false,
+  "title": "Lock",
+  "description": "Machine state written only by the kit (ADR-0014). Every hash is a sha256 of LF content."
+}

@@ -12,4 +12,5 @@ modules/safety/module.json
 modules/stop-check/module.json
 package.json
 schema/config.schema.json
+schema/lock.schema.json
 schema/module.schema.json

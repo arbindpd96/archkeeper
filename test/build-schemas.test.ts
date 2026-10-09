@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { REPO_ROOT, runScript, tempDir } from './helpers.js';
 
 const SCRIPT = 'scripts/build-schemas.mjs';
-const GENERATED = ['schema/config.schema.json', 'schema/module.schema.json'];
+const GENERATED = ['schema/config.schema.json', 'schema/lock.schema.json', 'schema/module.schema.json'];
 
 describe('build-schemas', () => {
   it('finds the committed schemas current', () => {
@@ -28,7 +28,7 @@ describe('build-schemas', () => {
     const result = runScript(SCRIPT, { args: ['--check', tempDir()] });
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(
-      'schema/config.schema.json, schema/module.schema.json differ from the zod schemas in src/core',
+      'schema/config.schema.json, schema/lock.schema.json, schema/module.schema.json differ from the zod schemas in src/core',
     );
     expect(result.stderr).toContain('Run npm run schema and commit schema/.');
   });

@@ -23,10 +23,12 @@ registerHooks({
 const z = await import('zod/mini');
 const { moduleManifestSchema } = await import('../src/core/manifest-schema.ts');
 const { configSchema } = await import('../src/core/config-schema.ts');
+const { lockSchema } = await import('../src/core/lock-schema.ts');
 
 /** The generated files and the zod schemas they come from. */
 const SCHEMAS = {
   'schema/config.schema.json': configSchema,
+  'schema/lock.schema.json': lockSchema,
   'schema/module.schema.json': moduleManifestSchema,
 };
 
