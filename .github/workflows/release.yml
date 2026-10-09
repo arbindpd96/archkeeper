@@ -41,6 +41,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
+          package-manager-cache: false
           node-version-file: .nvmrc
           check-latest: true
       - run: npm ci --ignore-scripts
@@ -61,7 +62,7 @@ jobs:
           SPEC: ${{ steps.guards.outputs.name }}@${{ steps.guards.outputs.version }}
           VERSION: ${{ steps.guards.outputs.version }}
         run: |
-          if [ "$(npm view "$SPEC" version 2>/dev/null)" = "$VERSION" ]; then
+          if [ "$(npm view "$SPEC" version --registry https://registry.npmjs.org/ 2>/dev/null)" = "$VERSION" ]; then
             echo "::notice title=Already on npm::$SPEC is already published, so this run only verifies it."
             echo "published=true" >> "$GITHUB_OUTPUT"
           else
@@ -106,6 +107,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
+          package-manager-cache: false
           node-version-file: .nvmrc
           check-latest: true
           registry-url: https://registry.npmjs.org
@@ -114,20 +116,28 @@ jobs:
           name: release-tarball
           path: ${{ runner.temp }}/release
       # Always an explicit dist-tag (next for prereleases, latest otherwise): the name holds a 0.0.1
-      # placeholder on latest, and the release guards refuse any version below it.
+      # placeholder on latest, and the release guards refuse any version below it. The step runs outside
+      # the checkout with an explicit registry, so no project .npmrc can redirect it.
       - name: Stage the tarball the build job checked (no provenance until npm/cli#9969 is fixed)
+        working-directory: ${{ runner.temp }}
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_STAGE_TOKEN }}
           DIST_TAG: ${{ needs.build.outputs.dist-tag }}
-          TARBALL: ${{ runner.temp }}/release/${{ needs.build.outputs.tarball }}
+          TARBALL_NAME: ${{ needs.build.outputs.tarball }}
           INTEGRITY: ${{ needs.build.outputs.integrity }}
         run: |
-          actual="sha512-$(openssl dgst -sha512 -binary "$TARBALL" | base64 -w0)"
+          if ! [[ "$TARBALL_NAME" =~ ^[A-Za-z0-9_.-]+\.tgz$ ]] || ! [[ "$DIST_TAG" =~ ^(latest|next)$ ]]; then
+            echo "::error title=Unexpected release outputs::Refusing tarball '$TARBALL_NAME' with dist-tag '$DIST_TAG'."
+            exit 1
+          fi
+          tarball="release/$TARBALL_NAME"
+          actual="sha512-$(openssl dgst -sha512 -binary "$tarball" | base64 -w0)"
           if [ "$actual" != "$INTEGRITY" ]; then
             echo "::error title=Tarball changed::The downloaded tarball is not the one the build job packed."
             exit 1
           fi
-          npm stage publish "$TARBALL" --access public --ignore-scripts --json --tag "$DIST_TAG" > "$RUNNER_TEMP/stage.json"
+          npm stage publish "./$tarball" --registry https://registry.npmjs.org/ --access public --ignore-scripts \
+            --json --tag "$DIST_TAG" > stage.json
       - name: Print the approve command
         env:
           DIST_TAG: ${{ needs.build.outputs.dist-tag }}
@@ -150,7 +160,7 @@ jobs:
           VERSION: ${{ needs.build.outputs.version }}
         run: |
           for _ in $(seq 1 120); do
-            if [ "$(npm view "$SPEC" version 2>/dev/null)" = "$VERSION" ]; then
+            if [ "$(npm view "$SPEC" version --registry https://registry.npmjs.org/ 2>/dev/null)" = "$VERSION" ]; then
               echo "published=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
@@ -165,13 +175,22 @@ jobs:
           path: ${{ runner.temp }}/built
       - name: Require npm to serve the files this run built from the tag
         if: steps.poll.outputs.published == 'true'
+        working-directory: ${{ runner.temp }}
         env:
           SPEC: ${{ needs.build.outputs.name }}@${{ needs.build.outputs.version }}
           TARBALL: ${{ needs.build.outputs.tarball }}
+          INTEGRITY: ${{ needs.build.outputs.integrity }}
         run: |
-          cd "$RUNNER_TEMP"
+          if ! [[ "$TARBALL" =~ ^[A-Za-z0-9_.-]+\.tgz$ ]]; then
+            echo "::error title=Unexpected release outputs::Refusing tarball '$TARBALL'."
+            exit 1
+          fi
+          if [ "sha512-$(openssl dgst -sha512 -binary "built/$TARBALL" | base64 -w0)" != "$INTEGRITY" ]; then
+            echo "::error title=Tarball changed::The downloaded tarball is not the one the build job packed."
+            exit 1
+          fi
           mkdir -p registry built-files registry-files
-          npm pack "$SPEC" --ignore-scripts --pack-destination registry > /dev/null
+          npm pack "$SPEC" --registry https://registry.npmjs.org/ --ignore-scripts --pack-destination registry > /dev/null
           tar -xzf "built/$TARBALL" -C built-files
           tar -xzf "registry/$TARBALL" -C registry-files
           if ! diff -r built-files registry-files; then
@@ -192,6 +211,7 @@ jobs:
     steps:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
+          package-manager-cache: false
           node-version: 24
       - name: Install from the registry under a path with a space and run the bin
         shell: bash
@@ -222,6 +242,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
+          package-manager-cache: false
           node-version-file: .nvmrc
           check-latest: true
       - name: Release notes from the CHANGELOG section
