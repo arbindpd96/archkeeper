@@ -1,4 +1,5 @@
 import { RenderError } from './errors.js';
+import { foldedPath } from './paths.js';
 import { compareText } from './text.js';
 
 /** An ownership strategy of ADR-0014. */
@@ -29,27 +30,44 @@ function sharedKey(left: Draft, right: Draft): string | undefined {
   return left.keys?.find((key) => right.keys?.includes(key));
 }
 
+interface Shared {
+  readonly problem: string;
+  readonly hint: string;
+}
+
+function sharedEntry(draft: Draft, other: Draft): Shared | undefined {
+  if (draft.strategy === 'owned' || draft.strategy === 'create-only') {
+    return { problem: 'is written by', hint: 'give the file to one module, or make it a blocks file' };
+  }
+  if (draft.blockId !== undefined && draft.blockId === other.blockId) {
+    return { problem: `gets block "${draft.blockId}" from`, hint: 'give each block its own id' };
+  }
+  const key = sharedKey(draft, other);
+  return key === undefined
+    ? undefined
+    : { problem: `gets ${key} from`, hint: 'keep the entry in one module' };
+}
+
+function sameEntryClash(draft: Draft, other: Draft, shared: Shared): RenderError {
+  if (draft.module === other.module) {
+    const hint = 'list the file once in files: two of its targets render to this path';
+    return clash(draft.path, `${shared.problem} ${draft.module} twice`, hint);
+  }
+  return clash(draft.path, `${shared.problem} both ${other.module} and ${draft.module}`, shared.hint);
+}
+
 function checkClash(draft: Draft, existing: readonly Draft[]): void {
   for (const other of existing) {
-    const who = `${other.module} and ${draft.module}`;
+    if (other.path !== draft.path) {
+      const problem = `and ${other.path} from ${other.module} name one file on macOS and Windows`;
+      throw clash(draft.path, problem, 'spell the path the same way in every module');
+    }
     if (other.strategy !== draft.strategy) {
       const problem = `is written as ${other.strategy} by ${other.module} and as ${draft.strategy} by ${draft.module}`;
       throw clash(draft.path, problem, 'declare the file with one strategy in every module');
     }
-    if (draft.strategy === 'owned' || draft.strategy === 'create-only') {
-      throw clash(
-        draft.path,
-        `is written by both ${who}`,
-        'give the file to one module, or make it a blocks file',
-      );
-    }
-    if (draft.blockId !== undefined && draft.blockId === other.blockId) {
-      throw clash(draft.path, `gets block "${draft.blockId}" from both ${who}`, 'give each block its own id');
-    }
-    const key = sharedKey(draft, other);
-    if (key !== undefined) {
-      throw clash(draft.path, `gets ${key} from both ${who}`, 'keep the entry in one module');
-    }
+    const shared = sharedEntry(draft, other);
+    if (shared !== undefined) throw sameEntryClash(draft, other, shared);
   }
 }
 
@@ -61,14 +79,18 @@ function entryOf({ content, strategy, module, blockId }: Draft): RenderedEntry {
   return blockId === undefined ? { content, strategy, module } : { content, strategy, module, blockId };
 }
 
-/** Groups drafts by path in sorted order, refusing two modules that write one owned path, block or JSON entry. */
+/**
+ * Groups drafts by path in sorted order, refusing two writers of one owned path, block or JSON entry, and two
+ * spellings of one path that differ only in case or Unicode normalisation.
+ */
 export function collectEntries(drafts: readonly Draft[]): RenderTree {
-  const byPath = new Map<string, Draft[]>();
+  const byFile = new Map<string, Draft[]>();
   for (const draft of drafts) {
-    const existing = byPath.get(draft.path) ?? [];
+    const existing = byFile.get(foldedPath(draft.path)) ?? [];
     checkClash(draft, existing);
-    byPath.set(draft.path, [...existing, draft]);
+    byFile.set(foldedPath(draft.path), [...existing, draft]);
   }
-  const paths = [...byPath.keys()].sort(compareText);
-  return new Map(paths.map((path) => [path, (byPath.get(path) ?? []).sort(entryOrder).map(entryOf)]));
+  const files = [...byFile.values()].map((entries) => [...entries].sort(entryOrder));
+  const tree = files.map((entries) => [entries[0]?.path ?? '', entries.map(entryOf)] as const);
+  return new Map(tree.sort(([left], [right]) => compareText(left, right)));
 }
