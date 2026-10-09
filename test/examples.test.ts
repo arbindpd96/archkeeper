@@ -5,7 +5,17 @@ import path from 'node:path';
 import { ESLint } from 'eslint';
 import { getFileInfo } from 'prettier';
 import { describe, expect, it, onTestFinished, vi } from 'vitest';
-import { REPO_ROOT, fixtureCopy, runScript, tempRepo, withEnv } from './helpers.js';
+import {
+  REPO_ROOT,
+  commitFiles,
+  fixtureCopy,
+  git,
+  isCallerGitEnv,
+  runScript,
+  tempDir,
+  tempRepo,
+  withEnv,
+} from './helpers.js';
 
 const EXAMPLES = path.join(REPO_ROOT, 'examples');
 const TS_FILES = [
@@ -85,6 +95,76 @@ describe('withEnv', () => {
     const names = Object.keys(env).filter((name) => name.toLowerCase() === 'r2_case_probe');
     expect(names).toEqual(['r2_case_probe']);
     expect(env.r2_case_probe).toBe('override');
+  });
+});
+
+describe("the caller's git environment", () => {
+  /** Every file under `dir` with its bytes, to prove a repository was not touched. */
+  function contentsOf(dir: string, relative = ''): Map<string, string> {
+    const found = new Map<string, string>();
+    for (const entry of readdirSync(path.join(dir, relative), { withFileTypes: true })) {
+      const child = path.join(relative, entry.name);
+      if (entry.isDirectory()) {
+        for (const [file, bytes] of contentsOf(dir, child)) found.set(file, bytes);
+      } else {
+        found.set(child, readFileSync(path.join(dir, child)).toString('base64'));
+      }
+    }
+    return found;
+  }
+
+  // `git rebase --exec` and git hooks export these, which once let a test's `git init` re-initialise this repo.
+  function stubCallerRepository(bare: string): void {
+    vi.stubEnv('GIT_DIR', bare);
+    vi.stubEnv('GIT_WORK_TREE', tempDir());
+    vi.stubEnv('GIT_INDEX_FILE', path.join(bare, 'index'));
+    vi.stubEnv('GIT_COMMON_DIR', bare);
+    vi.stubEnv('GIT_OBJECT_DIRECTORY', path.join(bare, 'objects'));
+    vi.stubEnv('GIT_CONFIG_PARAMETERS', "'core.bare'='true'");
+    vi.stubEnv('GIT_CONFIG_COUNT', '1');
+    vi.stubEnv('GIT_CONFIG_KEY_0', 'core.bare');
+    vi.stubEnv('GIT_CONFIG_VALUE_0', 'true');
+    onTestFinished(() => {
+      vi.unstubAllEnvs();
+    });
+  }
+
+  it('never reaches the repository it names, through git, runScript or a fixture copy', () => {
+    const bare = path.join(tempDir(), 'caller.git');
+    git(tempDir(), 'init', '--bare', '-q', bare);
+    const before = contentsOf(bare);
+    stubCallerRepository(bare);
+
+    const repo = tempRepo({ 'a.md': 'A\n' });
+    commitFiles(repo, { 'b.md': 'B\n' }, { message: 'second' });
+    const listed = runScript('scripts/check-brand.mjs', { args: [repo] });
+    const { dir, env } = fixtureCopy('py-app');
+    execFileSync('git', ['init', '-q'], { cwd: dir, env });
+
+    expect(contentsOf(bare)).toEqual(before);
+    expect(git(repo, 'rev-parse', '--git-dir').trim()).toBe('.git');
+    expect(git(repo, 'config', '--get', 'core.bare').trim()).toBe('false');
+    expect(git(repo, 'log', '--format=%s')).toBe('second\ninit\n');
+    expect(listed.stderr).toContain('package.json not found');
+    expect(existsSync(path.join(dir, '.git'))).toBe(true);
+  });
+
+  it.each(['GIT_DIR', 'git_dir', 'GIT_CONFIG_PARAMETERS', 'GIT_CONFIG_KEY_12', 'GIT_PREFIX'])(
+    'is left out of a child environment: %s',
+    (name) => {
+      expect(isCallerGitEnv(name)).toBe(true);
+      vi.stubEnv(name, 'from the caller');
+      onTestFinished(() => {
+        vi.unstubAllEnvs();
+      });
+      expect(Object.keys(withEnv()).some((key) => key.toLowerCase() === name.toLowerCase())).toBe(false);
+    },
+  );
+
+  it('keeps the isolated global config the test helpers set', () => {
+    expect(isCallerGitEnv('GIT_CONFIG_GLOBAL')).toBe(false);
+    expect(isCallerGitEnv('GIT_CONFIG_NOSYSTEM')).toBe(false);
+    expect(withEnv({ GIT_CONFIG_NOSYSTEM: '1' }).GIT_CONFIG_NOSYSTEM).toBe('1');
   });
 });
 

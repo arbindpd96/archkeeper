@@ -11,6 +11,7 @@ import {
   git,
   runScript,
   tempDir,
+  withEnv,
   writeFiles,
   type RunResult,
 } from './helpers.js';
@@ -95,7 +96,7 @@ function packedCli(): string {
   const packed = execFileSync('npm', ['pack', '--json', '--pack-destination', dir], {
     cwd: dir,
     encoding: 'utf8',
-    env: { ...process.env, ...npmIsolation() },
+    env: withEnv(npmIsolation()),
   });
   return path.join(dir, (JSON.parse(packed) as { filename: string }[])[0]?.filename ?? '');
 }
