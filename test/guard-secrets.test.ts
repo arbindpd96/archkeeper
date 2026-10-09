@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, symlinkSync } from 'node:fs';
+import { copyFileSync, symlinkSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -153,8 +153,12 @@ describe('guard-secrets allow pragma', () => {
     expect(decideIn(`${line}\r\nconst x = 1;\r\n`, { content: `${line}\nconst x = 2;\n` })).toBe('allow');
   });
 
-  it('asks before a notebook cell gets a new marked line', () => {
-    const verdict = verdictIn('{}', { notebook_path: 'n.ipynb', new_source: fixtureLine('a') });
+  it('asks on a notebook edit even when the cell already holds the marked line', () => {
+    const dir = tempDir();
+    const notebook = { cells: [{ cell_type: 'code', source: [fixtureLine('a')] }] };
+    writeFiles(dir, { 'n.ipynb': JSON.stringify(notebook, null, 1) });
+    const toolInput = { notebook_path: path.join(dir, 'n.ipynb'), new_source: fixtureLine('a') };
+    const verdict = hookVerdict('guard-secrets.mjs', toolInput, { CLAUDE_PROJECT_DIR: dir });
     expect(verdict.reason).toMatch(askedForPragma);
   });
 
@@ -225,15 +229,21 @@ describe('guard-secrets edit targets', () => {
     expect(hookDecision('guard-secrets.mjs', toolInput, { CLAUDE_PROJECT_DIR: tempDir() })).toBe('deny');
   });
 
-  it.skipIf(!canSymlink())('replays an edit through a symlink to a file inside the project', () => {
+  /** Makes a project whose CLAUDE.md is a symlink to an AGENTS.md holding `content`. */
+  const linkedClaudeMd = (content: string) => {
     const dir = tempDir();
-    writeFiles(dir, { 'AGENTS.md': `const token = 'ghp_' + suffix;\n` });
+    writeFiles(dir, { 'AGENTS.md': content });
     symlinkSync(path.join(dir, 'AGENTS.md'), path.join(dir, 'CLAUDE.md'));
-    const env = { CLAUDE_PROJECT_DIR: dir };
-    const file_path = path.join(dir, 'CLAUDE.md');
-    expect(hookDecision('guard-secrets.mjs', { file_path, ...harmlessEdit, old_string: 'token' }, env)).toBe(
-      'allow',
-    );
+    return { file_path: path.join(dir, 'CLAUDE.md'), env: { CLAUDE_PROJECT_DIR: dir } };
+  };
+
+  it.skipIf(!canSymlink())('allows a harmless edit through a symlink to a project file', () => {
+    const { file_path, env } = linkedClaudeMd('x = 1\n');
+    expect(hookDecision('guard-secrets.mjs', { file_path, ...harmlessEdit }, env)).toBe('allow');
+  });
+
+  it.skipIf(!canSymlink())('asks when an edit through a symlink completes a token', () => {
+    const { file_path, env } = linkedClaudeMd("const token = 'ghp_' + suffix;\n");
     const completes = { file_path, old_string: "' + suffix", new_string: `${'d'.repeat(36)}'` };
     expect(hookVerdict('guard-secrets.mjs', completes, env).reason).toContain('possible GitHub token');
   });
@@ -251,12 +261,12 @@ describe('guard-secrets scan cost', () => {
 
   it('asks about an edit that completes a token at the end of a long line, in time', () => {
     const dir = tempDir();
-    mkdirSync(path.join(dir, 'src'));
     writeFiles(dir, { 'src/a.ts': `const k = '${'a.'.repeat(150_000)}ghp_${'f'.repeat(35)}Z';\n` });
     const toolInput = { file_path: path.join(dir, 'src', 'a.ts'), old_string: "Z'", new_string: "ff'" };
     const started = performance.now();
-    expect(hookDecision('guard-secrets.mjs', toolInput, { CLAUDE_PROJECT_DIR: dir })).toBe('ask');
+    const verdict = hookVerdict('guard-secrets.mjs', toolInput, { CLAUDE_PROJECT_DIR: dir });
     expect(performance.now() - started).toBeLessThan(budgetMs);
+    expect(verdict.reason).toContain('possible GitHub token');
   });
 
   it('asks rather than scanning written text over 1 MB', () => {
