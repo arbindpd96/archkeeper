@@ -8,7 +8,10 @@ import { exitWith, npm } from './lib.mjs';
 
 const SNAPSHOT = 'scripts/package-files.txt';
 const RUNTIME_FIELDS = ['dependencies', 'optionalDependencies', 'peerDependencies'];
-const INSTALL_SCRIPTS = ['preinstall', 'install', 'postinstall'];
+const INSTALL_SCRIPTS = ['preinstall', 'install', 'postinstall', 'prepare'];
+// husky's prepare is dev-only: release.yml deletes it from the manifest it publishes and checks that
+// manifest with --release, so local and PR runs allow it.
+const DEV_ONLY_SCRIPTS = new Set(['prepare']);
 const HOOK_BUNDLE = /^dist\/hooks\/[^/]+\.mjs$/;
 const BUDGET_KEYS = [
   ['tarball', 'maxBytes'],
@@ -40,8 +43,9 @@ function readBudgets(root) {
 }
 
 /** Fails on runtime dependencies beyond the budget and on scripts that run when users install. */
-function manifestProblems(manifest, runtime, budgets) {
-  const scripts = INSTALL_SCRIPTS.filter((name) => manifest.scripts?.[name] !== undefined);
+function manifestProblems(manifest, runtime, budgets, release) {
+  const checked = release ? INSTALL_SCRIPTS : INSTALL_SCRIPTS.filter((name) => !DEV_ONLY_SCRIPTS.has(name));
+  const scripts = checked.filter((name) => manifest.scripts?.[name] !== undefined);
   const problems = [];
   if (runtime.length > budgets.runtimeDependencies.max) {
     problems.push(
@@ -49,7 +53,8 @@ function manifestProblems(manifest, runtime, budgets) {
     );
   }
   if (scripts.length > 0) {
-    problems.push(`install scripts run on every user's machine; remove ${scripts.join(', ')}`);
+    const strip = release ? ` (npm pkg delete ${scripts.map((name) => `scripts.${name}`).join(' ')})` : '';
+    problems.push(`install scripts run on every user's machine; remove ${scripts.join(', ')}${strip}`);
   }
   return problems;
 }
@@ -140,7 +145,7 @@ const files = pack.files.map((entry) => entry.path).sort();
 const { rows, problems: budgetProblems } = measure(pack, runtime, budgets);
 report(rows);
 const problems = [
-  ...manifestProblems(manifest, runtime, budgets),
+  ...manifestProblems(manifest, runtime, budgets, args.includes('--release')),
   ...snapshotProblems(root, files, args.includes('--update')),
   ...budgetProblems,
   ...binProblems(root, manifest),
