@@ -110,6 +110,10 @@ Every generated file declares one strategy in its module manifest (#18):
   - Each write goes to a temp sibling with a random name, created exclusively and without following symlinks (`wx`, plus `O_NOFOLLOW` where the platform has it), and is renamed into place, retrying with backoff on Windows `EPERM` and `EBUSY`.
   - Any failure rolls every path back to its previous content and type, removing what the run created.
   - The lock is written last, so an interrupted run leaves the previous lock and the next run plans again.
+- **A conflicted lock is rebuilt.** Every teammate's `update` edits the committed lock, so a git merge can leave conflict markers in it. `doctor` reports them, and `update` rebuilds the lock before planning:
+  - It keeps each entry from the side written by the newer kit (either side when the versions are equal) and takes the union of both sides' `removed[]`.
+  - An entry whose content on disk hashes to an existing blob takes that blob as its base.
+  - Anything still unclear counts as a user edit, so the worst outcome is an extra sidecar, never a lost byte.
 - **Versions.** A lock with a newer `lockfileVersion`, or a config with a newer `version`, fails with "upgrade archkeeper", and a kit older than `lock.kit.version` refuses to run, so a downgrade cannot rewrite a newer install.
 
 ### Updates
