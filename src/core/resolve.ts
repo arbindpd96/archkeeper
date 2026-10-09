@@ -216,13 +216,33 @@ function checkRemovedRequirements(context: Context, kept: ReadonlyMap<string, Ki
   if (needed !== undefined) fail(needed);
 }
 
-function checkConflicts({ config, origins }: Context, kept: ReadonlyMap<string, KitModule>): void {
+// The config change that leaves `id` out: the module the preset or modules.add named, and with it `id`.
+function leaveOutFix({ origins, request }: Context, id: string): string {
+  const [label, root = id] = chainOf(id, origins);
+  const named = root === id ? root : `${root}, which needs ${id},`;
+  if (label === 'modules.add') return `drop ${named} from modules.add`;
+  if ((request.add ?? []).includes(root))
+    return `drop ${named} from modules.add and list it in modules.remove`;
+  return `list ${named} in modules.remove`;
+}
+
+function conflictHint(context: Context, id: string, other: string): string {
+  const root = chainOf(id, context.origins)[1];
+  if (root !== undefined && root === chainOf(other, context.origins)[1]) {
+    return `${leaveOutFix(context, root)} in ${context.config}: it needs both ${id} and ${other}`;
+  }
+  const [first, second] = [leaveOutFix(context, id), leaveOutFix(context, other)];
+  return `leave one of them out: ${first}, or ${second}, in ${context.config}`;
+}
+
+function checkConflicts(context: Context, kept: ReadonlyMap<string, KitModule>): void {
+  const { origins } = context;
   for (const [id, kit] of kept) {
     const index = kit.manifest.conflicts.findIndex((other) => kept.has(other));
     if (index === -1) continue;
     const other = kit.manifest.conflicts[index] ?? '';
     const problem = `conflicts with "${other}" (${chainOf(other, origins).join(' → ')}), and both are selected`;
-    const hint = `leave one of them out with modules.remove in ${config}`;
+    const hint = conflictHint(context, id, other);
     fail({
       file: kit.file,
       location: `conflicts[${String(index)}]`,
