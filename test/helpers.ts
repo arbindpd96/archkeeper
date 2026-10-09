@@ -7,6 +7,10 @@ import { onTestFinished } from 'vitest';
 export const REPO_ROOT = path.resolve(import.meta.dirname, '..');
 
 const SCRIPT_TIMEOUT_MS = 15_000;
+const ISOLATED_GIT_ENV = {
+  GIT_CONFIG_GLOBAL: path.join(tmpdir(), 'archkeeper-empty-gitconfig'),
+  GIT_CONFIG_NOSYSTEM: '1',
+};
 const TEST_GIT_CONFIG = [
   '-c',
   'user.name=test',
@@ -49,7 +53,12 @@ export function tempDir(): string {
 /** Creates a throwaway git repository whose first commit contains the given files. */
 export function tempRepo(files: Record<string, string> = {}): string {
   const dir = tempDir();
-  const git = (...args: string[]) => execFileSync('git', args, { cwd: dir, timeout: SCRIPT_TIMEOUT_MS });
+  const git = (...args: string[]) =>
+    execFileSync('git', args, {
+      cwd: dir,
+      timeout: SCRIPT_TIMEOUT_MS,
+      env: { ...process.env, ...ISOLATED_GIT_ENV },
+    });
   writeFiles(dir, files);
   git('init', '-q', '-b', 'main');
   git('add', '-A');
