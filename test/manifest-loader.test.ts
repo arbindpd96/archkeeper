@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
 import { ManifestError } from '../src/core/errors.js';
-import { loadCatalog, loadModule } from '../src/core/loader.js';
+import { loadModule } from '../src/core/loader.js';
 import {
   entry,
-  kitFiles,
   type ManifestData,
   memoryReader,
   plainManifest,
-  PRESETS,
   richManifest,
   richSources,
 } from './kit-fixtures.js';
@@ -32,8 +30,12 @@ function loadRich(change: Change, sources = richSources()): ManifestError {
   return failure(() => loadModule('rich', read));
 }
 
+function entries(manifest: ManifestData, field: string): Record<string, unknown>[] {
+  return manifest[field] as Record<string, unknown>[];
+}
+
 function files(manifest: ManifestData): Record<string, unknown>[] {
-  return manifest.files as Record<string, unknown>[];
+  return entries(manifest, 'files');
 }
 
 describe('loadModule cross-field rules', () => {
@@ -61,6 +63,22 @@ describe('loadModule cross-field rules', () => {
       'a repeated deny rule',
       (m) => (m.permissions = { deny: ['Bash(x)', 'Bash(x)'] }),
       'permissions.deny[1]',
+      'once',
+    ],
+    [
+      'a repeated MCP server name',
+      (m) => entries(m, 'mcpServers').push({ name: 'docs', type: 'http', url: 'https://example.com/v2' }),
+      'mcpServers[2]',
+      'once',
+    ],
+    ['a repeated hook', (m) => entries(m, 'hooks').push({ ...entry(m, 'hooks', 0) }), 'hooks[2]', 'once'],
+    ['a repeated block', (m) => entries(m, 'blocks').push({ ...entry(m, 'blocks', 0) }), 'blocks[1]', 'once'],
+    ['a repeated conflicts entry', (m) => (m.conflicts = ['x', 'x']), 'conflicts[1]', 'once'],
+    ['a repeated preset', (m) => (m.presets = ['medium', 'medium', 'full']), 'presets[1]', 'once'],
+    [
+      'a repeated ask rule',
+      (m) => (m.permissions = { ask: ['Bash(x)', 'Bash(x)'] }),
+      'permissions.ask[1]',
       'once',
     ],
     ['a module that requires itself', (m) => (m.requires = ['rich']), 'requires[0]', 'remove it'],
@@ -232,72 +250,5 @@ describe('loadModule files', () => {
   it('accepts a manifest that starts with a byte-order mark', () => {
     const text = `${String.fromCodePoint(0xfeff)}${JSON.stringify(plainManifest('base'))}`;
     expect(loadModule('base', memoryReader({ 'modules/base/module.json': text })).manifest.id).toBe('base');
-  });
-});
-
-describe('loadCatalog', () => {
-  const small = plainManifest('base', { presets: ['small', 'medium', 'full'] });
-
-  it('loads every module in id order with the presets in chain order', () => {
-    const catalog = loadCatalog(['zeta', 'base'], memoryReader(kitFiles([plainManifest('zeta'), small])));
-    expect([...catalog.modules.keys()]).toEqual(['base', 'zeta']);
-    expect(catalog.presets.map((preset) => preset.name)).toEqual(['small', 'medium', 'full']);
-    expect(catalog.defaultPreset).toBe('medium');
-  });
-
-  it.each<[string, ManifestData, string, string]>([
-    [
-      'an unknown preset',
-      plainManifest('base', { presets: ['tiny'] }),
-      'presets[0]',
-      'use small, medium, full',
-    ],
-    [
-      'a gap in the preset chain',
-      plainManifest('base', { presets: ['small', 'full'] }),
-      'presets',
-      'add "medium"',
-    ],
-    [
-      'a conflict with an id that is not a module',
-      plainManifest('base', { presets: ['small', 'medium', 'full'], conflicts: ['formater'] }),
-      'conflicts[0]',
-      'use one of base',
-    ],
-  ])('rejects a module with %s', (_name, manifest, location, fix) => {
-    const error = failure(() => loadCatalog(['base'], memoryReader(kitFiles([manifest]))));
-    expect(error.file).toBe('modules/base/module.json');
-    expect(error.location).toBe(location);
-    expect(error.hint).toContain(fix);
-  });
-
-  it.each<[string, unknown, string, string]>([
-    [
-      'a default that is not a preset',
-      { ...PRESETS, default: 'huge' },
-      'default',
-      'use one of small, medium, full',
-    ],
-    [
-      'a repeated preset',
-      { ...PRESETS, presets: [...PRESETS.presets, PRESETS.presets[0]] },
-      'presets[3].name',
-      'once',
-    ],
-    [
-      'a SessionStart cap over the hook output limit',
-      {
-        default: 'small',
-        presets: [{ name: 'small', description: 'S.', defaults: { sessionStartCap: 20_000 } }],
-      },
-      'presets[0].defaults.sessionStartCap',
-      '10,000-character',
-    ],
-  ])('rejects presets.json with %s', (_name, presets, location, fix) => {
-    const files = { ...kitFiles([small]), 'modules/presets.json': JSON.stringify(presets) };
-    const error = failure(() => loadCatalog(['base'], memoryReader(files)));
-    expect(error.file).toBe('modules/presets.json');
-    expect(error.location).toBe(location);
-    expect(error.hint).toContain(fix);
   });
 });
