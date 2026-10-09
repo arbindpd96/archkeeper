@@ -8,7 +8,11 @@ type Rule = (manifest: ModuleManifest) => Finding | undefined;
 
 const PLUGIN_FOLDERS = ['.claude/skills/', '.claude/agents/'];
 // A target can name a kit folder through a brand variable, spaced or not; render checks the brand it is given.
-const TEMPLATED_FOLDERS: KitFolders = { stateDir: '{{brand.stateDir}}', hookDir: '{{brand.hookDir}}' };
+const TEMPLATED_FOLDERS: KitFolders = {
+  stateDir: '{{brand.stateDir}}',
+  hookDir: '{{brand.hookDir}}',
+  sidecarSuffix: '{{brand.sidecarSuffix}}',
+};
 
 function finding(path: readonly PropertyKey[], problem: string, hint: string): Finding {
   return { location: jsonPath(path), problem, hint };
