@@ -1,8 +1,7 @@
 import { existsSync } from 'node:fs';
 import { hasLong, parseOptions } from './cli-options.mjs';
-
-const deny = (reason) => Object.freeze({ decision: 'deny', reason });
-const ask = (reason) => Object.freeze({ decision: 'ask', reason });
+import { hasExpansion } from './shell-syntax.mjs';
+import { ask, deny } from './verdicts.mjs';
 
 const NO_VERIFY = deny('--no-verify skips the quality gates. Fix the failing check instead.');
 /** Verdict for turning husky off with HUSKY=0. */
@@ -19,8 +18,8 @@ const UNCHECKED = ask(
   'A variable or command output decides what this git command does. Confirm with the user.',
 );
 
-const hasExpansion = (word) => /[$`]/.test(word);
-const HOOKS_PATH_SETTING = /core\.hookspath/i;
+/** Matches a `core.hooksPath` setting in any case, which would point git away from the project's hooks. */
+export const HOOKS_PATH_SETTING = /core\.hookspath/i;
 const ALIAS_SETTING = /^alias\./i;
 const CLEAN_UNGUARDED = /clean\.requireforce/i;
 const GLOBAL_VALUE_OPTIONS = new Set(['-C', '-c', '--git-dir', '--work-tree', '--namespace', '--config-env']);
@@ -84,7 +83,8 @@ function judgePush(options) {
 function judgeCommit(options, command) {
   if (options.short.has('n')) return NO_VERIFY;
   if (command.assignments.includes('HUSKY=0')) return HUSKY_OFF;
-  return command.assignments.some((assignment) => /^HUSKY=.*[$`]/.test(assignment)) ? UNCHECKED : null;
+  const huskyFromExpansion = (assignment) => assignment.startsWith('HUSKY=') && hasExpansion(assignment);
+  return command.assignments.some(huskyFromExpansion) ? UNCHECKED : null;
 }
 
 function setsKey(operands, key) {

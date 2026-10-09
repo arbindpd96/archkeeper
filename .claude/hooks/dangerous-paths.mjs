@@ -1,5 +1,6 @@
 import { homedir } from 'node:os';
 import { globMatches } from './glob-match.mjs';
+import { hasExpansion } from './shell-syntax.mjs';
 
 const HOME_ANCHORS = new Set(['~', '$HOME', '$PWD', '$CLAUDE_PROJECT_DIR', '$(pwd)', '`pwd`']);
 const HOME_PARENTS = ['home', 'users'];
@@ -59,7 +60,7 @@ function isProtectedAbsolute(segments) {
 
 /** Tells whether a path is decided at run time by a variable or command, beyond a known home or project prefix. */
 export function isUncheckedPath(path) {
-  return /[$`]/.test(path.replace(/^(?:~|\$\{?(?:HOME|PWD|CLAUDE_PROJECT_DIR)\}?)\//, ''));
+  return hasExpansion(path.replace(/^(?:~|\$\{?(?:HOME|PWD|CLAUDE_PROJECT_DIR)\}?)\//, ''));
 }
 
 /** Tells whether deleting `path` recursively would remove a root, system, home or project directory or a parent of one. */

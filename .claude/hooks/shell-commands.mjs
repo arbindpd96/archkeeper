@@ -1,7 +1,7 @@
 import { expandBraces } from './brace-expansion.mjs';
 import { unwrap } from './command-wrappers.mjs';
 import { readFindExpression } from './find-expression.mjs';
-import { isShell, SHELL_VALUE_OPTIONS } from './shell-syntax.mjs';
+import { hasExpansion, isShell, SHELL_VALUE_OPTIONS } from './shell-syntax.mjs';
 import { ShellSyntaxError, tokenize } from './shell-words.mjs';
 
 const MAX_SCRIPT_DEPTH = 8;
@@ -70,7 +70,7 @@ function normalize(raw, outer, charge) {
     ...command,
     assignments: [...outer.assignments, ...command.assignments],
     wrappers: [...outer.wrappers, ...command.wrappers],
-    dynamicProgram: /[$`]/.test(argv[programIndex] ?? ''),
+    dynamicProgram: hasExpansion(argv[programIndex] ?? ''),
     splitProgram: splits[programIndex] ?? false,
     splitArgs: splits.slice(programIndex + 1).some(Boolean),
     expands: expands.slice(programIndex + 1),

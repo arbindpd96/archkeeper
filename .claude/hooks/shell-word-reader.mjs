@@ -1,4 +1,5 @@
 import { readAnsiCQuote } from './ansi-c-quote.mjs';
+import { isAssignment } from './shell-syntax.mjs';
 
 const METACHARACTERS = new Set([' ', '\t', '\n', ';', '&', '|', '(', ')', '<', '>']);
 const WORD_PART_READERS = new Map([
@@ -17,7 +18,6 @@ const BRACE_DEPTH = new Map(Object.entries({ '{': 1, '}': -1 }));
 const BRACE_SYNTAX = new Set(['{', ',', '}']);
 const UNQUOTED_IFS = /^\$\{?IFS\b/;
 const EXPANSION_START = /^[\w({@*#?$!-]/;
-const ASSIGNMENT_PREFIX = /^[A-Za-z_]\w*\+?=/;
 
 /** Raised when a command is malformed or parses differently across shells, so it cannot be judged. */
 export class ShellSyntaxError extends Error {
@@ -121,7 +121,7 @@ export class WordReader {
   // An unquoted expansion is split into words at run time; `rm${IFS}-rf${IFS}/` would hide its real arguments.
   markUnquotedExpansion(word) {
     word.splits = true;
-    const assignment = ASSIGNMENT_PREFIX.test(word.text);
+    const assignment = isAssignment(word.text);
     if (!assignment && UNQUOTED_IFS.test(this.src.slice(this.pos, this.pos + 6)))
       this.fail('an unquoted $IFS');
   }
