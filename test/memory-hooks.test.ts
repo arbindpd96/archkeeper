@@ -80,11 +80,13 @@ describe.skipIf(process.platform === 'win32')('hook state symlink safety', () =>
 
   it('never writes through a committed symlink', () => {
     const { dir, outside } = repoWithStateLink();
-    runScript('.claude/hooks/pre-compact.mjs', {
+    const run = runScript('.claude/hooks/pre-compact.mjs', {
       payload: { trigger: 'auto' },
       env: { CLAUDE_PROJECT_DIR: dir },
     });
     expect(readFileSync(outside, 'utf8')).toBe('original secret\n');
+    expect(run.status).toBe(0);
+    expect(run.stdout).toContain('skipped the pre-compaction snapshot');
   });
 
   it('never injects a symlinked file into the session context', () => {

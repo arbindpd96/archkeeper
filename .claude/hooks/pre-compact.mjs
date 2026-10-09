@@ -17,7 +17,9 @@ const snapshot = [
   truncate(changed.map((file) => `- ${file}`).join('\n') || '- (none)', 2000),
 ].join('\n');
 
-writeState('compact-snapshot.md', snapshot);
+const saved = writeState('compact-snapshot.md', snapshot);
 respond({
-  systemMessage: 'claude-codekit: saved a pre-compaction snapshot. It is re-injected after compaction.',
+  systemMessage: saved
+    ? 'archkeeper: saved a pre-compaction snapshot. It is re-injected after compaction.'
+    : 'archkeeper: skipped the pre-compaction snapshot because .claude/state is not a safe project folder.',
 });

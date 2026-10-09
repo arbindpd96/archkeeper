@@ -114,15 +114,20 @@ export function readState(name, fallback) {
   }
 }
 
-/** Writes a file into the gitignored `.claude/state/` directory without following symlinks. */
+/** Writes a file into `.claude/state/` without following symlinks; returns false when the write is refused. */
 export function writeState(name, content) {
   const data = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
   const flags = constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | NO_FOLLOW;
-  const fd = openSync(statePath(name), flags, 0o600);
   try {
-    writeSync(fd, data);
-  } finally {
-    closeSync(fd);
+    const fd = openSync(statePath(name), flags, 0o600);
+    try {
+      writeSync(fd, data);
+    } finally {
+      closeSync(fd);
+    }
+    return true;
+  } catch {
+    return false;
   }
 }
 
