@@ -1,11 +1,39 @@
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, realpathSync } from 'node:fs';
 import path from 'node:path';
-import { defineConfig, type UserConfig } from 'tsdown';
+import { defineConfig, type Rolldown, type UserConfig } from 'tsdown';
 
-const HOOK_SOURCES = path.join(import.meta.dirname, 'src/hooks');
+const ROOT = import.meta.dirname;
+const HOOK_SOURCES = path.join(ROOT, 'src/hooks');
+const NODE_MODULES = /(?:^|\/)node_modules\//;
 
-// The target comes from engines.node. Output stays unminified: scripts/third-party-licenses.mjs reads its
-// //#region markers, and onlyImport fails the build if a bundle would import anything but node: built-ins.
+/**
+ * Writes `<bundle>.inlined.json` beside each bundle, listing the `node_modules` files in its build's module
+ * graph, relative to `root` and sorted. scripts/third-party-licenses.mjs reads these lists, so the license file
+ * comes from the bundler rather than from comments in the output (#71). package.json `files` leaves them out.
+ */
+export function inlinedModules(root: string): Rolldown.Plugin {
+  // Module ids are real paths, so a root reached through a symlink (macOS /var, for one) must be resolved too.
+  const realRoot = realpathSync.native(root);
+  return {
+    name: 'inlined-modules',
+    generateBundle(_options, bundle) {
+      // The whole graph, not chunk.moduleIds: a module whose constants were folded into another module drops
+      // out of moduleIds, yet its code still ships. Listing a package that tree-shaking emptied costs nothing.
+      const files = [...this.getModuleIds()]
+        .filter((id) => !id.startsWith('\0'))
+        .map((id) => path.relative(realRoot, id).replaceAll('\\', '/'))
+        .filter((file) => NODE_MODULES.test(file));
+      const source = `${JSON.stringify([...new Set(files)].sort(), null, 2)}\n`;
+      const chunks = Object.values(bundle).filter((output) => output.type === 'chunk');
+      for (const chunk of chunks) {
+        this.emitFile({ type: 'asset', fileName: chunk.fileName.replace(/\.mjs$/, '.inlined.json'), source });
+      }
+    },
+  };
+}
+
+// The target comes from engines.node, and onlyImport fails the build if a bundle would import anything but
+// node: built-ins. Output stays unminified, so a stack trace from a user's machine points at readable code.
 const shared = {
   platform: 'node',
   format: 'esm',
@@ -13,6 +41,7 @@ const shared = {
   sourcemap: false,
   alias: { 'jsonc-parser': 'jsonc-parser/lib/esm/main.js' },
   outputOptions: { codeSplitting: false },
+  plugins: [inlinedModules(ROOT)],
 } satisfies UserConfig;
 
 function hookFiles(): string[] {

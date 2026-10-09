@@ -4,9 +4,10 @@ import path from 'node:path';
 import { exitWith } from './lib.mjs';
 
 const OUTPUT = 'THIRD_PARTY_LICENSES.md';
-const REGION = /^\/\/#region (.+)$/gm;
+const LIST_SUFFIX = '.inlined.json';
 const LICENSE_FILE = /^(licen[cs]e|copying|notice)([-_.][\w.-]+)?$/i;
 const NODE_MODULES = 'node_modules/';
+const REBUILD = 'Run npm run build: tsdown.config.mts writes the list beside each bundle.';
 
 /** Lists every bundle under dist/, sorted so the output never depends on directory order. */
 function bundles(dist) {
@@ -16,29 +17,31 @@ function bundles(dist) {
     .sort();
 }
 
-/** Maps a rolldown region path such as `node_modules/@scope/pkg/lib/x.js` to its package folder. */
-function packageFolder(regionPath) {
-  const normalized = regionPath.replaceAll('\\', '/');
-  const start = normalized.lastIndexOf(NODE_MODULES);
+/** Maps an inlined file such as `node_modules/@scope/pkg/lib/x.js` to its package folder. */
+function packageFolder(file) {
+  const start = file.lastIndexOf(NODE_MODULES);
   if (start === -1) return undefined;
-  const segments = normalized.slice(start + NODE_MODULES.length).split('/');
+  const segments = file.slice(start + NODE_MODULES.length).split('/');
   const nameLength = segments[0]?.startsWith('@') ? 2 : 1;
-  return normalized.slice(0, start + NODE_MODULES.length) + segments.slice(0, nameLength).join('/');
+  return file.slice(0, start + NODE_MODULES.length) + segments.slice(0, nameLength).join('/');
 }
 
-/** Collects the package folders that rolldown inlined into one bundle. */
-function inlinedFolders(bundle, root) {
-  const regions = [...readFileSync(bundle, 'utf8').matchAll(REGION)].map((match) => match[1]);
-  if (regions.length === 0) {
-    exitWith(
-      `${path.relative(root, bundle)} has no //#region markers; keep minify off so licenses can be listed.`,
-      1,
-    );
+/** Reads the files the bundler inlined into one bundle, from the list the build wrote beside it. */
+function inlinedFiles(bundle, root) {
+  const list = path.relative(root, bundle.replace(/\.mjs$/, LIST_SUFFIX));
+  let files;
+  try {
+    files = JSON.parse(readFileSync(path.join(root, list), 'utf8'));
+  } catch (error) {
+    return exitWith(`third-party-licenses: cannot read ${list} (${error.message}).\n${REBUILD}`, 1);
   }
-  return regions.map(packageFolder).filter(Boolean);
+  if (!Array.isArray(files) || !files.every((file) => typeof file === 'string')) {
+    exitWith(`third-party-licenses: ${list} is not a list of file paths.\n${REBUILD}`, 1);
+  }
+  return files.map((file) => file.replaceAll('\\', '/'));
 }
 
-/** Resolves a region's package folder, refusing any folder outside `<root>/node_modules`. */
+/** Resolves a package folder, refusing any folder outside `<root>/node_modules`. */
 function resolvePackageFolder(root, folder) {
   const nodeModules = path.join(root, 'node_modules');
   const resolved = path.resolve(root, folder);
@@ -102,7 +105,8 @@ const dist = path.join(root, 'dist');
 const files = existsSync(dist) ? bundles(dist) : [];
 if (files.length === 0) exitWith('third-party-licenses: no bundles in dist/. Run tsdown first.', 1);
 
-const folders = new Set(files.flatMap((bundle) => inlinedFolders(bundle, root)));
+const inlined = files.flatMap((bundle) => inlinedFiles(bundle, root));
+const folders = new Set(inlined.map(packageFolder).filter(Boolean));
 const byId = new Map(
   [...folders].map((folder) => readPackage(resolvePackageFolder(root, folder))).map((pkg) => [pkg.id, pkg]),
 );
