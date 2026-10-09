@@ -6,7 +6,25 @@ const ENV_HINT =
 const REFERENCE = String.raw`\$\{[A-Za-z_][A-Za-z0-9_]*\}`;
 const REFERENCE_ONLY = new RegExp(`^${REFERENCE}$`);
 const envReference = z.string().check(z.regex(REFERENCE_ONLY, { error: ENV_HINT }));
-const serverName = z.string().check(z.regex(/^[A-Za-z0-9_-]+$/, { error: 'use letters, digits, _ and -' }));
+const OBJECT_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const serverName = z.string().check(
+  z.regex(/^[A-Za-z0-9_-]+$/, { error: 'use letters, digits, _ and -' }),
+  refusing((value) =>
+    OBJECT_KEYS.has(value)
+      ? { problem: 'is a JavaScript object key', hint: 'choose another name' }
+      : undefined,
+  ),
+);
+
+const PROJECT_DIR = '${CLAUDE_PROJECT_DIR:-.}';
+const DEFAULT_HINT = `write \${NAME} with no default: only ${PROJECT_DIR} may carry one`;
+// Claude Code reads ${VAR:-default} as its default when VAR is unset (reference §5.1), so a default ships as is.
+const noLiteralDefault = (value: string): Refusal | undefined => {
+  const fallback = [...value.matchAll(/\$\{[^}]*\}/g)]
+    .map(([reference]) => reference)
+    .find((reference) => !REFERENCE_ONLY.test(reference) && reference !== PROJECT_DIR);
+  return fallback === undefined ? undefined : { problem: `holds ${fallback}`, hint: DEFAULT_HINT };
+};
 
 // A run of 20 or more letters and digits that mixes both, such as a 32-character hex key, is a literal key.
 function holdsLiteralKey(text: string): boolean {
@@ -38,7 +56,12 @@ const URL_HINT =
   'whose query values are ${NAME} references';
 const url = z
   .string()
-  .check(z.regex(new RegExp(URL_SHAPE), { error: URL_HINT }), noCredentialVariable, noLiteralKey);
+  .check(
+    z.regex(new RegExp(URL_SHAPE), { error: URL_HINT }),
+    refusing(noLiteralDefault),
+    noCredentialVariable,
+    noLiteralKey,
+  );
 const remoteReference = envReference.check(noCredentialVariable);
 const headerName = z
   .string()
@@ -54,32 +77,47 @@ const headersHelper = z
     z.regex(/^\$\{CLAUDE_PROJECT_DIR:-\.\}(?:\/(?!\.\.?(?:\/|$))[\w.][\w.-]*)+$/, { error: HELPER_HINT }),
   );
 
-const CREDENTIAL_FLAG = /^--?(?:[a-z0-9]+[-_])*(?:key|token|secret|password|auth)(?:[-_][a-z0-9]+)*$/i;
+const CREDENTIAL_WORD =
+  /^(?:[a-z0-9]*key|token|secret|pass(?:word|wd)?|pwd|auth|cred(?:ential)?s?|bearer|pat)$/i;
+// A flag or variable name is a credential when one of its - or _ separated words is, so --author is not.
+const namesCredential = (name: string): boolean =>
+  name
+    .replace(/^--?/, '')
+    .split(/[-_]/)
+    .some((word) => CREDENTIAL_WORD.test(word));
 const ARG_KEY_HINT =
   'pass the key from the environment as ${NAME}, such as --token ${GITHUB_TOKEN}: the kit never writes a secret ' +
   '(ADR-0007)';
 const PROJECT_HINT =
   'write ${CLAUDE_PROJECT_DIR:-.}/<path>: a project .mcp.json names project paths that way (reference §5.1)';
 
-function stdioValueRefusal(value: string, flag: string | undefined): Refusal | undefined {
+const STARTED_IN = 'is a path relative to the folder Claude Code started in';
+
+function stdioValueRefusal(value: string, name: string | undefined): Refusal | undefined {
+  const fallback = noLiteralDefault(value);
+  if (fallback !== undefined) return fallback;
   if (value === '.' || value === '..' || value.startsWith('./') || value.startsWith('../')) {
-    return { problem: 'is a path relative to the folder Claude Code started in', hint: PROJECT_HINT };
+    return { problem: STARTED_IN, hint: PROJECT_HINT };
   }
-  if (flag !== undefined && CREDENTIAL_FLAG.test(flag) && !REFERENCE_ONLY.test(value)) {
-    return { problem: `gives ${flag} a literal value`, hint: ARG_KEY_HINT };
+  if (name !== undefined && namesCredential(name) && !REFERENCE_ONLY.test(value)) {
+    return { problem: `gives ${name} a literal value`, hint: ARG_KEY_HINT };
   }
   return holdsLiteralKey(value) ? { problem: LITERAL_KEY, hint: ARG_KEY_HINT } : undefined;
 }
 
-// An argument is a --flag=value pair, or a value for the flag before it.
+// An argument is a --flag=value or NAME=value pair, or a value for the flag before it.
 function argRefusal(arg: string, previous: string | undefined): Refusal | undefined {
-  const pair = /^(--?[\w-]+)=(.*)$/.exec(arg);
+  const pair = /^(--?[\w-]+|[A-Za-z_]\w*)=(.*)$/.exec(arg);
   return pair === null ? stdioValueRefusal(arg, previous) : stdioValueRefusal(pair[2] ?? '', pair[1]);
 }
 
+// A command with a slash is a path, so it is absolute or starts at the project (reference §5.1).
 const command = z.string().check(
   z.minLength(1),
-  refusing((value) => stdioValueRefusal(value, undefined)),
+  refusing((value) => {
+    const relative = value.includes('/') && !value.startsWith('/') && !value.startsWith('${');
+    return relative ? { problem: STARTED_IN, hint: PROJECT_HINT } : stdioValueRefusal(value, undefined);
+  }),
 );
 const args = z.array(z.string()).check(
   z.superRefine((values: string[], context) => {
