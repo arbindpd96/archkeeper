@@ -65,6 +65,21 @@ function refuseUnwritable(backup: Backup): void {
   });
 }
 
+// A path edited between planning and applying, say while init waits for a yes, would lose that edit.
+function refuseChanged(backup: Backup, expected: ReadonlyMap<string, string | null>): void {
+  const changed = backup.paths.find(({ relative, saved }) => {
+    if (!expected.has(relative)) return false;
+    return expected.get(relative) !== (saved.type === 'file' ? saved.blob : null);
+  });
+  if (changed === undefined) return;
+  throw new ApplyError({
+    file: changed.relative,
+    location: '',
+    problem: 'changed after the plan was made, so the kit wrote nothing',
+    hint: 'run again to plan against the file as it is now',
+  });
+}
+
 function applyChange(change: Change, saved: SavedPath | undefined, created: string[]): void {
   if (change.data === null) {
     removeFile(change.absolute);
@@ -180,6 +195,7 @@ export function applyPlan(root: string, plan: Plan, brand: Brand = BRAND): Apply
   if (pending.length === 0) return { changed: false, warnings: [] };
   const backup = backUpOrFail(rootReal, pending, brand);
   refuseUnwritable(backup);
+  refuseChanged(backup, plan.expected);
   const created: string[] = [];
   let current: Change | undefined;
   try {
