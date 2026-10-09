@@ -12,8 +12,13 @@ const NODE_MODULES = /(?:^|\/)node_modules\//;
  * comes from the bundler rather than from comments in the output (#71). package.json `files` leaves them out.
  */
 export function inlinedModules(root: string): Rolldown.Plugin {
-  // Module ids are real paths, so a root reached through a symlink (macOS /var, for one) must be resolved too.
-  const realRoot = realpathSync.native(root);
+  // Module ids may be real paths (macOS /var is a symlink) or keep the root as given (a Windows 8.3 short
+  // name), so each id is made relative to whichever form contains it.
+  const roots = [...new Set([realpathSync.native(root), path.resolve(root)])];
+  const relative = (id: string): string => {
+    const inside = roots.map((base) => path.relative(base, id)).find((file) => !file.startsWith('..'));
+    return (inside ?? path.relative(roots[0] ?? root, id)).replaceAll('\\', '/');
+  };
   return {
     name: 'inlined-modules',
     generateBundle(_options, bundle) {
@@ -21,7 +26,7 @@ export function inlinedModules(root: string): Rolldown.Plugin {
       // out of moduleIds, yet its code still ships. Listing a package that tree-shaking emptied costs nothing.
       const files = [...this.getModuleIds()]
         .filter((id) => !id.startsWith('\0'))
-        .map((id) => path.relative(realRoot, id).replaceAll('\\', '/'))
+        .map(relative)
         .filter((file) => NODE_MODULES.test(file));
       const source = `${JSON.stringify([...new Set(files)].sort(), null, 2)}\n`;
       const chunks = Object.values(bundle).filter((output) => output.type === 'chunk');
