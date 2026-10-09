@@ -40,7 +40,7 @@ flowchart LR
 | `benchmarks/`             | With-vs-without-kit harness (not published)                                                                   | _planned v0.2_   |
 | `examples/`               | Fixtures `ts-app`, `py-app`, `mixed` for tests and tapes; not linted, formatted, covered or published         | active           |
 | `scripts/`                | Repo checks (comments, brand, package), the license-file generator, shared helpers in `lib.mjs`               | active           |
-| `docs/`                   | This map, decisions/ADRs, roadmap, feature memories, research                                                 | active           |
+| `docs/`                   | This map, decisions/ADRs, roadmap, release runbook (`releasing.md`), feature memories, research               | active           |
 | `.claude/`                | This repo's own Claude Code setup (dogfooding)                                                                | active           |
 | `test/`                   | Vitest suites for hooks, scripts and lint rules, plus `helpers.ts`; `fixtures/` is kept out of `npm run lint` | active           |
 | `.github/`                | CI, release (tag-triggered staged publish), CodeQL and PR-title workflows; issue forms; Dependabot            | active           |
