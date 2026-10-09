@@ -9,6 +9,7 @@ const REDIRECTS = new Set('&>> &> <<< <<- << <> <& >> >| >& < >'.split(' '));
 const RESERVED_WORDS = new Set(
   '! { } if then elif else fi do done while until case esac for select function coproc'.split(' '),
 );
+const EMPTY_PARENS_END = /[ \t]*\)/y;
 const COMPOUND_ENDS = new Map(
   '{:} if:fi case:esac for:done select:done while:done until:done'.split(' ').map((pair) => pair.split(':')),
 );
@@ -83,9 +84,15 @@ class Parser extends WordReader {
       // The words before `)` in a case statement are patterns, not a command.
       seq.cmd = newCommand();
     } else {
+      if (operator === '(' && seq.cmd.argv.length === 1 && this.closesAt()) seq.cmd.definesFunction = true;
       this.finishCommand(seq);
       this.afterCommand(seq, operator, adjacentToWord);
     }
+  }
+
+  closesAt() {
+    EMPTY_PARENS_END.lastIndex = this.pos;
+    return EMPTY_PARENS_END.test(this.src);
   }
 
   afterCommand(seq, operator, adjacentToWord) {
@@ -117,10 +124,21 @@ class Parser extends WordReader {
     seq.cmd = newCommand();
     seq.skipName = false;
     if (cmd.argv.length === 0 && cmd.redirects.length === 0) return;
+    this.record(cmd, seq.pipe);
+  }
+
+  record(cmd, pipe) {
     const { frames, commands } = this.context;
-    cmd.pipes = [{ ...seq.pipe }, ...frames.map((frame) => frame.pipe)];
+    cmd.pipes = [{ ...pipe }, ...frames.map((frame) => frame.pipe)];
     commands.push(cmd);
     for (const frame of frames) frame.subs?.push(cmd);
+  }
+
+  // `function name` is not a command, but rules need to know the name runs the body that follows.
+  recordFunctionName(seq, name) {
+    const cmd = { ...newCommand(), argv: [name], braces: [[]], splits: [false], expands: [false] };
+    cmd.definesFunction = true;
+    this.record(cmd, seq.pipe);
   }
 
   redirect(seq, operator) {
@@ -172,6 +190,7 @@ class Parser extends WordReader {
     if (fdPrefix) return;
     if (seq.skipName) {
       seq.skipName = false;
+      this.recordFunctionName(seq, word.text);
     } else if (!word.quoted && seq.cmd.argv.length === 0 && RESERVED_WORDS.has(word.text)) {
       this.addReservedWord(seq, word.text);
     } else {
@@ -196,7 +215,8 @@ class Parser extends WordReader {
  * `braces` (indexes of unquoted brace syntax per word), `splits` (whether each word holds an unquoted expansion),
  * `expands` (whether each word holds any expansion or substitution, quoted or not), `redirects` (targets), `heredocs` (here-document and here-string bodies), `subs` (commands run by substitutions
  * in its words) and `pipes` (`{pipeline, stage}` for its own pipeline, then for each enclosing group or
- * substitution). Throws ShellSyntaxError.
+ * substitution). A function name (`f() …` or `function f …`) is a command with `definesFunction` set.
+ * Throws ShellSyntaxError.
  */
 export function tokenize(source) {
   const context = { commands: [], frames: [] };

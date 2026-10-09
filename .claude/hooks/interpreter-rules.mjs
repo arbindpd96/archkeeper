@@ -10,7 +10,15 @@ const UNCHECKED_CODE = ask(
 );
 
 const DOWNLOADERS = new Set(['curl', 'wget']);
-const isDownload = (command) => DOWNLOADERS.has(command.program);
+
+// A downloader can hide behind a variable (`"$D" url`) or a function defined in the same command.
+function possibleDownload(commands) {
+  const functions = new Set(
+    commands.filter((command) => command.definesFunction).map(({ program }) => program),
+  );
+  return ({ program, dynamicProgram, definesFunction }) =>
+    !definesFunction && (DOWNLOADERS.has(program) || dynamicProgram || functions.has(program));
+}
 
 function fedBy(commands, isSource) {
   const earliest = new Map();
@@ -20,26 +28,31 @@ function fedBy(commands, isSource) {
   return ({ pipes }) => pipes.some(({ pipeline, stage }) => (earliest.get(pipeline) ?? Infinity) < stage);
 }
 
-function verdictFor({ stdin, unknownScript, kinds }, fed) {
-  const runsInput = stdin || unknownScript || kinds.includes('unknown') || kinds.includes('runs');
-  if (fed && runsInput) return PIPE_TO_SHELL;
-  if (fed && kinds.includes('opaque')) return DOWNLOAD_INTO_CODE;
-  return kinds.includes('unknown') ? UNCHECKED_CODE : null;
+function downloadVerdict({ stdin, unknownScript, kinds }, { piped, captured }) {
+  const unknown = unknownScript || kinds.includes('unknown');
+  if (piped && (stdin || unknown || kinds.includes('runs'))) return PIPE_TO_SHELL;
+  if (captured && unknown) return PIPE_TO_SHELL;
+  return piped && kinds.includes('opaque') ? DOWNLOAD_INTO_CODE : null;
 }
 
+const verdictFor = (interpreter, source) =>
+  downloadVerdict(interpreter, source) ?? (interpreter.kinds.includes('unknown') ? UNCHECKED_CODE : null);
+
 /**
- * Judges what interpreters run. Code read from a download (through a pipe or a substitution) is denied when it
- * is the program itself, built from an expansion, or able to run its input; other inline code it feeds asks.
+ * Judges what interpreters run. Code from a download is denied when it is the program itself, built from an
+ * expansion (`c=$(curl …); sh -c "$c"`), or able to run its input; other inline code a download feeds asks.
  * Inline code built from an expansion asks even without a download.
  */
 export function interpreterVerdict(commands) {
-  const fed = fedBy(commands, isDownload);
+  const isDownload = possibleDownload(commands);
+  const piped = fedBy(commands, isDownload);
+  const captured = commands.some((command) => command.subs.some(isDownload));
   return strictest(
     commands.map((command) => {
       const interpreter = readInterpreter(command);
       if (interpreter === null) return null;
       if (command.subs.some(isDownload)) return PIPE_TO_SHELL;
-      return verdictFor(interpreter, fed(command));
+      return verdictFor(interpreter, { piped: piped(command), captured });
     }),
   );
 }

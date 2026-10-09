@@ -75,6 +75,7 @@ function normalize(raw, outer, charge) {
     splitProgram: splits[programIndex] ?? false,
     splitArgs: splits.slice(programIndex + 1).some(Boolean),
     expands: expands.slice(programIndex + 1),
+    definesFunction: raw.definesFunction === true,
     redirects: raw.redirects,
     heredocs: raw.heredocs,
     pipes: [...raw.pipes, ...outer.pipes],
