@@ -157,3 +157,14 @@ describe.skipIf(process.platform === 'win32')('render-tapes', () => {
     expect(result.stderr).toContain('there is no tape docs/media/tapes/missing.tape');
   });
 });
+
+describe('the VHS pin', () => {
+  it('is the same in render-tapes.mjs and the demo-gifs workflow, which pins the action by SHA', () => {
+    const script = readFileSync(path.join(REPO_ROOT, 'scripts/render-tapes.mjs'), 'utf8');
+    const workflow = readFileSync(path.join(REPO_ROOT, '.github/workflows/demo-gifs.yml'), 'utf8');
+    const pinned = /^const VHS_VERSION = '(\d+\.\d+\.\d+)';$/m.exec(script)?.[1];
+    expect(pinned).toBeDefined();
+    expect(workflow).toContain(`version: v${pinned ?? ''}\n`);
+    expect(workflow).toMatch(/uses: charmbracelet\/vhs-action@[\da-f]{40} # v/);
+  });
+});
