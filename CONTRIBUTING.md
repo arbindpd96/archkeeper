@@ -21,6 +21,8 @@ npm run check      # everything CI runs
 
 Commits are authored by people. Do not add AI co-author trailers or "generated with" lines. commitlint rejects them.
 
+The `Commit authors` CI job checks every commit in a PR. It fails on a bot author or co-author, an AI coding tool's address, or an AI attribution line. Human contributors keep their own authorship. Dependabot is the one bot exception: its dependency bumps keep `dependabot[bot]` authorship, but only on its own PRs, which merge by rebase once `CI passed` is green.
+
 ## What CI checks
 
 | Gate           | Command                      | What it enforces                                                                               |
@@ -37,6 +39,7 @@ Commits are authored by people. Do not add AI co-author trailers or "generated w
 | Install smoke  | CI only                      | The packed tarball installs under a path with a space and runs on ubuntu, macOS and Windows    |
 | Node.js gate   | CI only                      | The built bin rejects Node.js 18, 20, 22.17.0 and 23 and runs on 22.17.1                       |
 | Commits        | commitlint                   | Conventional Commits, no AI attribution trailers                                               |
+| Commit authors | CI only                      | No bot or AI-tool authors or co-authors (Dependabot only on its own PRs), no AI attribution    |
 | Changeset      | CI only                      | A PR that changes `src/` or `modules/` adds a changeset, or carries the `no-release` label     |
 | PR title       | action-semantic-pull-request | Conventional Commits title (it becomes the squash message)                                     |
 | Security       | CodeQL, dependency review    | Code scanning; no new dependency with a known vulnerability of moderate severity or higher     |
