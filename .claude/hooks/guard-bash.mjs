@@ -1,74 +1,53 @@
-import { readInput, respond } from './lib.mjs';
+const MAX_COMMAND_LENGTH = 8000;
+const AI_ATTRIBUTION =
+  /co-authored-by:[^\n]*(?:claude|noreply@anthropic\.com)|generated\s+(?:with|by)\s+\[?claude\s+code/i;
 
-const RULES = [
-  {
-    decision: 'deny',
-    pattern:
-      /\brm\s+(-[a-z]*r[a-z]*f[a-z]*|-[a-z]*f[a-z]*r[a-z]*|--recursive\s+--force|--force\s+--recursive)\s+(\/|~|\$HOME|\*|\.{1,2})(\s|\/?$)/i,
-    reason: 'Recursive force-delete of a root, home or whole-directory path is blocked.',
-  },
-  {
-    decision: 'deny',
-    pattern: /\bgit\s+push\b(?=.*\s(-f|--force)(\s|$))/,
-    reason: 'Plain force-push is blocked. Use --force-with-lease on a feature branch.',
-  },
-  {
-    decision: 'deny',
-    pattern: /\bgit\s+push\b(?=.*--force-with-lease)(?=.*\b(main|master)\b)/,
-    reason: 'Force-pushing main/master is blocked.',
-  },
-  {
-    decision: 'deny',
-    pattern: /\bgit\s+(commit|push)\b.*\s--no-verify\b/,
-    reason: '--no-verify skips the quality gates. Fix the failing check instead.',
-  },
-  {
-    decision: 'deny',
-    pattern: /co-authored-by:\s*claude|generated with \[?claude code/i,
-    reason: 'Commits and PRs are authored by the maintainer. Remove the Claude attribution line.',
-  },
-  {
-    decision: 'deny',
-    pattern: /\b(curl|wget)\b[^|]*\|\s*(sudo\s+)?(ba|z)?sh\b/,
-    reason: 'Piping a download into a shell is blocked. Download, review, then run.',
-  },
-  {
-    decision: 'deny',
-    pattern: /\bgh\s+(repo|release)\s+delete\b/,
-    reason: 'Deleting repositories or releases is blocked.',
-  },
-  {
-    decision: 'deny',
-    pattern: /\bchmod\s+(-R\s+)?777\b/,
-    reason: 'World-writable permissions are blocked.',
-  },
-  {
-    decision: 'ask',
-    pattern:
-      /\bgit\s+(reset\s+--hard|clean\s+-[a-z]*f[a-z]*|checkout\s+--\s+\.|restore\s+\.|branch\s+-D|stash\s+(drop|clear))\b/,
-    reason: 'This discards work irreversibly. Confirm with the user.',
-  },
-  {
-    decision: 'ask',
-    pattern: /\bnpm\s+(publish|unpublish|deprecate|dist-tag)\b/,
-    reason: 'Publishing to npm is outward-facing. Confirm with the user.',
-  },
-  {
-    decision: 'ask',
-    pattern: /(^|[;&|]\s*)sudo\s/,
-    reason: 'sudo needs explicit user approval.',
-  },
-];
+const TOO_LONG = {
+  decision: 'ask',
+  reason: 'This command is too long to inspect safely. Confirm with the user.',
+};
+const AI_AUTHORED = {
+  decision: 'deny',
+  reason: 'Commits and PRs are authored by the maintainer. Remove the Claude attribution line.',
+};
 
-const command = readInput().tool_input?.command ?? '';
-const match = RULES.find((rule) => rule.pattern.test(command));
+async function judge() {
+  const [{ readInput }, { judgeCommands }, { parseCommands }] = await Promise.all([
+    import('./lib.mjs'),
+    import('./bash-rules.mjs'),
+    import('./shell-commands.mjs'),
+  ]);
+  const command = readInput()?.tool_input?.command;
+  if (typeof command !== 'string') return null;
+  if (command.length > MAX_COMMAND_LENGTH) return TOO_LONG;
+  if (AI_ATTRIBUTION.test(command)) return AI_AUTHORED;
+  return judgeCommands(parseCommands(command));
+}
 
-if (match) {
-  respond({
-    hookSpecificOutput: {
-      hookEventName: 'PreToolUse',
-      permissionDecision: match.decision,
-      permissionDecisionReason: `claude-codekit guard: ${match.reason}`,
-    },
-  });
+async function judgeSafely() {
+  try {
+    return await judge();
+  } catch (error) {
+    // Fail closed: a guard that cannot load, crashes or cannot parse must not silently allow the command.
+    const detail =
+      error?.name === 'ShellSyntaxError' ? `it has ${error.message}` : 'the guard hit an internal error';
+    return {
+      decision: 'ask',
+      reason: `This command could not be inspected safely (${detail}). Confirm with the user.`,
+    };
+  }
+}
+
+const verdict = await judgeSafely();
+
+if (verdict) {
+  process.stdout.write(
+    JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: verdict.decision,
+        permissionDecisionReason: `archkeeper guard: ${verdict.reason}`,
+      },
+    }),
+  );
 }
