@@ -129,7 +129,12 @@ The command-line contract (#40):
   - In a json file, only the removed entries are re-added, through the same edits `update` makes.
 - `update` exits 2 when it wrote sidecars, and lists them with a hint.
 
-`uninstall` removes unmodified kit files, managed blocks, kit-owned JSON entries, the hook folder and `.archkeeper/`. It keeps and lists files the user modified (#41).
+`uninstall` (#41) removes only what is still exactly as the kit wrote it, and backs up everything it touches first:
+
+- It deletes unmodified kit files listed in the lock, unmodified managed blocks, unmodified kit-owned JSON entries, and sidecars that still match `pending`. A file the kit created that holds nothing else afterwards, such as a `settings.json` with only kit entries, goes too.
+- It keeps and lists everything else: files and blocks the user modified, diverged JSON entries, and any file the user added to a kit folder. `--force` also removes the modified kit files and blocks it listed, after confirmation, and still backs them up first.
+- It removes a kit folder, such as `BRAND.hookDir`, `BRAND.rulesDir`, a kit skill folder or `.archkeeper/base/`, only once that folder is empty.
+- It deletes `lock.json`, `config.json` (even when hand-edited, since the backup keeps it) and the rest of `.archkeeper/`, except `local/backup/` and the self-ignoring `local/.gitignore`. Its own backup therefore survives without showing in `git status`, and it prints the backup's path. Deleting what is left of `.archkeeper/` is the user's call.
 
 **v0.2 adds 3-way merges.** node-diff3 merges owned Markdown and managed blocks against the bases v0.1 already records. Conflicts are written diff3-style with the base inline (labels: yours / base / `archkeeper@<version>`), or as `.rej` files with `--conflict rej`. `.mjs` files keep sidecars, and JSON never gets markers. Because the base is inline, no skill needs to read `.archkeeper/base/`.
 
@@ -144,6 +149,7 @@ The command-line contract (#40):
 - The setup answers move from the lock (reference §7.2) to `config.json`, where users can read and edit them.
 - A file the user deleted stays deleted until they ask for it back.
 - A sidecar stays until the user deletes it, and deleting it is how they tell the kit they have seen that version.
+- After `uninstall`, an ignored `.archkeeper/local/backup/` stays behind until the user deletes it, so the uninstall itself can be undone.
 - The fast-check property "no user byte lost" (at least 1,000 runs) and the two-version e2e on the real tarball (#43) exercise this contract before 0.1.0 freezes it.
 - After 0.1.0, every schema change costs a migration.
 
