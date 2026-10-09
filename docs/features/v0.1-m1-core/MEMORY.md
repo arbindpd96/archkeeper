@@ -48,6 +48,8 @@ v0.1 milestone M1 (issues #18, #19, #20, #71): modules are validated data (manif
 - 2026-10-10 (review 3): templates never target `.env`, `.env.*` (except `.example`, `.sample`, `.template`), `.envrc`, `CLAUDE.local.md` or a name ending in the sidecar suffix; a declared blocks or json file must get content; JSON entries in the render tree keep their sorted owned `keys` for the lock. Why: a module mistake must not reach secrets or personal memory, a sidecar-named kit file would be misread, and M2 needs the keys for `ownedKeys`.
 - 2026-10-10 (review 3): ESLint `curly: multi-line` runs after eslint-config-prettier. Why: hand-bracing (7977805) missed five sites.
 
+- 2026-10-10 (final security pass): `importProblem` (`src/core/imports.ts`) refuses any `@` import of an outside path or of a private file (`.env*` other than templates, `.envrc`, `CLAUDE.local.md`, `.claude/settings.local.json`) in each whitespace-separated word, in template values, `toImport` and rendered markdown. MCP credential names split at camelCase, `Name: value` and Bearer/Basic values need `${NAME}`, a pair's value is checked as a pair, commands need `/` or `${CLAUDE_PROJECT_DIR:-.}/` paths with no backslash, inherited object names are not server names, and `${...}` scanning is linear. Settings and MCP files are reserved at any depth, along with `app.env`-style names and legacy sidecar suffixes. Why: the security review bypassed the round-3 checks with inline markdown before `@`, `@.env`, camelCase flags, nested settings files and unclosed `${`.
+
 ## Measured sizes (ADR-0017)
 
 | Item                            | Before M1 | After M1                | Budget |
@@ -97,6 +99,9 @@ Every module is `internal: true` until its milestone ships its README section an
 
 - [x] Review 3 fixes (8a3e2af–c2b0c79): MCP `${VAR:-default}` and credential-name bypasses, reserved `.env`/`CLAUDE.local.md`/sidecar targets, outside `@` imports and legacy markers in values, empty declared files, "is required" messages, owned JSON keys, `curly` lint, `configFile` rename, a sample per secret pattern, `toImport` scope note, mistakes log and map row. `npm run check` green before every commit.
 - Left as notes, not code: `holdsLiteralKey` refuses `sha256:` digests and `#<sha>` pins; exempt them when the launcher pinning check lands with the first stdio module.
+
+- [x] Final security pass (ea14002–97f9e3b): imports, nested settings, `.env` names, legacy sidecars, MCP credential names, header and Bearer args, pair-in-pair, backslash commands, inherited object names, linear `${...}` scan; tests in `test/kit-bypasses.test.ts`.
+- For M2: the block-marker parser must accept exactly the markers `checkValues` refuses (share one regex), or a value such as `archkeeper : end` could close a block early if the parser allows spaces.
 
 ## Next step
 
