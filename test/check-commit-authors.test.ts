@@ -77,6 +77,16 @@ describe('check-commit-authors', () => {
     expect(result.stderr).toContain('co-author Helper <noreply@anthropic.com> is an AI coding tool');
   });
 
+  it.each([
+    ['a unit separator', '\x1f'],
+    ['a record separator', '\x1e'],
+  ])('still reads a co-author after %s in the message', (_name, separator) => {
+    const message = `feat: x\n\nbody ${separator} more\n\nCo-authored-by: Helper <noreply@anthropic.com>`;
+    const result = checkAuthors([{ message, author: HUMAN }]);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('co-author Helper <noreply@anthropic.com> is an AI coding tool');
+  });
+
   it('fails a bot co-author', () => {
     const coAuthor = 'Co-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>';
     const result = checkAuthors([{ message: `feat: x\n\n${coAuthor}`, author: HUMAN }]);
