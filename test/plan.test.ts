@@ -146,6 +146,32 @@ describe('planInstall', () => {
     expect(plan.ops.find((op) => op.entry === HOOK_KEY)).toMatchObject({ kind: 'skip' });
   });
 
+  it('removes the registration it wrote once the user deletes the hook script', () => {
+    const first = planInstall(HOOK_TREE, snapshotOf(), undefined, CONTEXT);
+    const state = applied(snapshotOf(), first);
+    state.delete(SCRIPT);
+    const second = planInstall(HOOK_TREE, state, first.lock, CONTEXT);
+    expect(second.ops.find((op) => op.entry === HOOK_KEY)).toMatchObject({
+      kind: 'delete',
+      reason: 'its script is gone, so the kit removes the registration it wrote',
+    });
+    expect(second.writes.get(SETTINGS)).not.toContain(SCRIPT);
+    expect(second.lock.json.get(SETTINGS)?.has(HOOK_KEY)).toBe(false);
+    const third = planInstall(HOOK_TREE, applied(state, second), second.lock, CONTEXT);
+    expect(third.writes.size).toBe(0);
+    expect(third.ops.filter((op) => !['skip', 'respectRemoval'].includes(op.kind))).toEqual([]);
+  });
+
+  it('keeps a registration whose script the user changed, and reports why', () => {
+    const first = planInstall(HOOK_TREE, snapshotOf(), undefined, CONTEXT);
+    const state = applied(snapshotOf(), first).set(SCRIPT, { kind: 'file', content: USER_SCRIPT });
+    const second = planInstall(HOOK_TREE, state, first.lock, CONTEXT);
+    expect(second.writes.size).toBe(0);
+    expect(second.ops.find((op) => op.entry === HOOK_KEY)?.reason).toBe(
+      'its script is not the kit version, so the registration the kit wrote is left as it is',
+    );
+  });
+
   it('checks every path the lock names, since the lock is untrusted', () => {
     const lock: Lock = {
       ...emptyLock(TEST_KIT),

@@ -116,6 +116,17 @@ describe('user deletions', () => {
     expect(readFileSync(path.join(dir, 'AGENTS.md'), 'utf8')).toBe('# Only mine now\n');
     expect(install(dir, fixtureTree(), OPTIONS).applied.changed).toBe(false);
   });
+
+  it('take back the hook registrations of a script the user deleted', () => {
+    const dir = tempDir();
+    install(dir, fixtureTree(), OPTIONS);
+    const settings = path.join(dir, '.claude/settings.json');
+    expect(readFileSync(settings, 'utf8')).toContain('guard.mjs');
+    rmSync(path.join(dir, '.claude/hooks/acmekit/guard.mjs'));
+    install(dir, fixtureTree(), OPTIONS);
+    expect(readFileSync(settings, 'utf8')).not.toContain('guard.mjs');
+    expect(install(dir, fixtureTree(), OPTIONS).applied.changed).toBe(false);
+  });
 });
 
 describe('the state folder', () => {
