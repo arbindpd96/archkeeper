@@ -1,42 +1,95 @@
-# archkeeper
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/banner-dark.svg">
+    <img src="docs/media/banner-light.svg" alt="archkeeper" width="760">
+  </picture>
+</p>
 
-> Your AI coding agent never forgets your architecture, your decisions, or your design system.
+<p align="center">
+  <a href="https://www.npmjs.com/package/archkeeper"><img src="https://img.shields.io/npm/v/archkeeper?label=npm&color=cb3837" alt="npm version"></a>
+  <a href="https://github.com/arbindpd96/archkeeper/actions/workflows/ci.yml"><img src="https://github.com/arbindpd96/archkeeper/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2f80ed" alt="License: MIT"></a>
+  <a href="docs/adr/0011-single-package.md"><img src="https://img.shields.io/badge/runtime%20deps-0-2ea043" alt="Zero runtime dependencies"></a>
+  <a href="docs/adr/0011-single-package.md"><img src="https://img.shields.io/badge/node-22.17%2B%20%7C%2024.4%2B%20%7C%2026%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 22.17+, 24.4+ or 26+"></a>
+  <br>
+  <a href="docs/ROADMAP.md"><img src="https://img.shields.io/badge/status-pre--release-f59e0b" alt="Status: pre-release"></a>
+  <a href="docs/ROADMAP.md"><img src="https://img.shields.io/badge/roadmap-v0.0%20%E2%86%92%20v1.0-6f42c1" alt="Roadmap"></a>
+  <a href="#works-with"><img src="https://img.shields.io/badge/works%20with-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20Cursor%20%C2%B7%20Gemini%20%C2%B7%20Copilot-30363d" alt="Works with Claude Code, Codex, Cursor, Gemini CLI and Copilot"></a>
+  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-0f766e" alt="PRs welcome"></a>
+</p>
 
-[![CI](https://github.com/arbindpd96/archkeeper/actions/workflows/ci.yml/badge.svg)](https://github.com/arbindpd96/archkeeper/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+<h3 align="center">Your AI coding agent never forgets your architecture, your decisions, or your design system.</h3>
 
-**Status: pre-release.** Nothing is published to npm yet. Follow the [roadmap](docs/ROADMAP.md).
+Run `npx archkeeper init` in any repository and your agent stops rewriting code that already exists. archkeeper gives Claude Code a **living map of your codebase**, **memory that survives compaction**, and **standards it cannot skip**. The same rules reach Codex, Cursor, Gemini CLI and Copilot through `AGENTS.md`.
 
-One command gives your project a clean, enforced setup for [Claude Code](https://code.claude.com), plus `AGENTS.md` for Codex, Cursor, Gemini CLI and Copilot:
+- **Knows what already exists.** A living architecture map loads in every session, so the agent extends your code instead of writing a second copy of it.
+- **Remembers why.** Per-feature memory and decision records survive long sessions and `/compact`, and the agent will not quietly undo a decision you recorded.
+- **Enforced, not suggested.** Standards run as linters and hooks. Guard hooks stop destructive commands and leaked secrets before they run.
+- **Light and safe to update.** Zero runtime dependencies, `small` / `medium` / `full` presets, and updates that never overwrite your edits.
+
+> [!NOTE]
+> **archkeeper is pre-release and built in the open.** The npm name is reserved, and `npx archkeeper` prints a notice until **v0.1**, the first usable release. Follow the [roadmap](docs/ROADMAP.md) or watch the repository to know when it lands.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/media/hero-dark.svg">
+    <img src="docs/media/hero-light.svg" alt="What archkeeper sets up: a project map linking the architecture map, feature memory, decisions, standards, guard hooks and design tokens, all loaded into every agent session" width="100%">
+  </picture>
+</p>
+
+<p align="center"><i>What archkeeper sets up in your repository. Every part is a plain file you can read and edit, and every session starts with all of it loaded.</i></p>
+
+**Get started** (30 seconds, from v0.1):
 
 ```bash
-npx archkeeper init   # coming in v0.1
+npx archkeeper init     # detects your stack, asks a few questions, writes the setup
 ```
 
-## What it gives your agent
+Then, in Claude Code:
 
-|                           |                                                                                                           |
-| ------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Codebase awareness**    | A living architecture map (and an optional code graph), so the agent reuses code instead of rewriting it. |
-| **Decision memory**       | Per-feature memory files that survive long sessions and context compaction.                               |
-| **Clean code by default** | Big-tech coding standards enforced by linters and hooks, not just markdown.                               |
-| **Design-system sync**    | Tokens and design decisions from Figma (or Penpot or Storybook), kept current.                            |
-| **Safe by default**       | Guards against dangerous commands and leaked secrets. Updates never overwrite your edits.                 |
+```text
+/new-feature checkout-flow
+```
 
-Features are switchable modules with `small`, `medium` and `full` presets, so small projects stay light.
+That's it. You get:
 
-## Demos
+```text
+your-project/
+├── CLAUDE.md                  imports AGENTS.md, adds Claude-specific notes
+├── AGENTS.md                  one set of rules for every AI tool
+├── .claude/
+│   ├── settings.json          permissions and hook registration
+│   ├── hooks/                 guards, session memory, format-on-edit
+│   ├── rules/                 path-scoped standards for each language
+│   └── skills/                /new-feature  /handoff  /update-map  /why  /adr
+└── docs/
+    ├── architecture.md        the living map: what exists and where
+    ├── decisions.md, adr/     why things are the way they are
+    └── features/<name>/MEMORY.md   goal, decisions, done, next step
+```
 
-Each feature gets a short demo here when it ships.
+`update` merges new versions into these files and never overwrites your edits. `uninstall` removes everything it added.
 
-## Project docs
+## Works with
 
-- [Roadmap](docs/ROADMAP.md): the phased build plan
-- [Architecture](docs/architecture.md): how the code is laid out
-- [Decisions](docs/decisions.md): why things are the way they are
-- [Contributing](CONTRIBUTING.md): setup, standards and workflow
+**Claude Code** gets the full setup: hooks, skills, rules and memory. **Codex, Cursor, Gemini CLI and GitHub Copilot** read the same rules from `AGENTS.md`. archkeeper also composes with workflow tools such as [Superpowers](https://github.com/obra/superpowers) and [Spec Kit](https://github.com/github/spec-kit) instead of replacing them.
+
+## What's coming
+
+| Phase                       | You get                                                                                                       |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **v0.1** Foundation         | `init` for TS/JS and Python, guard hooks, feature memory, the architecture map, safe `update` and `uninstall` |
+| **v0.2** Trust and proof    | 3-way updates, a `doctor` health score, standards packs, a test guard, benchmarks                             |
+| **v0.3** Public launch      | The Claude Code plugin and marketplace, ready-made agents, design tokens                                      |
+| **v0.4** Design-system sync | Live Figma and Storybook sync, accessibility and dark-mode checks                                             |
+| **v0.5 – v1.0**             | Codebase intelligence, workflow skills, a local dashboard, more languages, team features                      |
+
+The full plan with milestones and exit criteria is in [docs/ROADMAP.md](docs/ROADMAP.md). Each feature gets a short demo GIF in this README when it ships.
+
+## Contributing
+
+Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md); the architecture map is in [docs/architecture.md](docs/architecture.md) and the decisions behind it are in [docs/decisions.md](docs/decisions.md). Please report security issues privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 
-[MIT](LICENSE). Independent community project; not affiliated with, endorsed by, or sponsored by Anthropic.
-Claude and Claude Code are trademarks of Anthropic, PBC.
+[MIT](LICENSE). Independent community project; not affiliated with, endorsed by, or sponsored by Anthropic. Claude and Claude Code are trademarks of Anthropic, PBC.
