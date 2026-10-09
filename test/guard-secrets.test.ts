@@ -1,4 +1,4 @@
-import { copyFileSync, symlinkSync } from 'node:fs';
+import { copyFileSync, mkdirSync, symlinkSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -236,5 +236,30 @@ describe('guard-secrets edit targets', () => {
     );
     const completes = { file_path, old_string: "' + suffix", new_string: `${'d'.repeat(36)}'` };
     expect(hookVerdict('guard-secrets.mjs', completes, env).reason).toContain('possible GitHub token');
+  });
+});
+
+describe('guard-secrets scan cost', () => {
+  const budgetMs = 3_000;
+
+  it('scans close to 1 MB of adversarial text well within the hook timeout', () => {
+    const lines = ['eyJ-', 'a-', 'a.', 'a://b:', 'eyJa.'].map((unit) => unit.repeat(150_000 / unit.length));
+    const started = performance.now();
+    expect(decision(write(lines.join('\n')))).toBe('allow');
+    expect(performance.now() - started).toBeLessThan(budgetMs);
+  });
+
+  it('asks about an edit that completes a token at the end of a long line, in time', () => {
+    const dir = tempDir();
+    mkdirSync(path.join(dir, 'src'));
+    writeFiles(dir, { 'src/a.ts': `const k = '${'a.'.repeat(150_000)}ghp_${'f'.repeat(35)}Z';\n` });
+    const toolInput = { file_path: path.join(dir, 'src', 'a.ts'), old_string: "Z'", new_string: "ff'" };
+    const started = performance.now();
+    expect(hookDecision('guard-secrets.mjs', toolInput, { CLAUDE_PROJECT_DIR: dir })).toBe('ask');
+    expect(performance.now() - started).toBeLessThan(budgetMs);
+  });
+
+  it('asks rather than scanning written text over 1 MB', () => {
+    expect(decision(write('x'.repeat(1_000_001)))).toBe('ask');
   });
 });
