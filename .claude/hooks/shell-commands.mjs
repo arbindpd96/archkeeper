@@ -1,21 +1,20 @@
 import { expandBraces } from './brace-expansion.mjs';
 import { unwrap } from './command-wrappers.mjs';
 import { readFindExpression } from './find-expression.mjs';
-import { isShell } from './interpreters.mjs';
+import { isShell, SHELL_VALUE_OPTIONS } from './shell-syntax.mjs';
 import { ShellSyntaxError, tokenize } from './shell-words.mjs';
 
 const MAX_SCRIPT_DEPTH = 8;
 const MAX_ARGV = 4096;
 const MAX_SCRIPT_TEXT = 64_000;
 const MAX_BRACE_WORK = 1_000_000;
-const SHELL_VALUE_OPTIONS = new Set(['-o', '+o', '-O', '+O', '--rcfile', '--init-file']);
 const TOP_LEVEL = { assignments: [], wrappers: [], pipes: [] };
 
 function shellOptionsEnd(args) {
   let index = 0;
   while (index < args.length && /^[-+]/.test(args[index])) {
     if (args[index] === '--' || args[index] === '-') return index + 1;
-    index += SHELL_VALUE_OPTIONS.has(args[index]) ? 2 : 1;
+    index += SHELL_VALUE_OPTIONS.includes(args[index]) ? 2 : 1;
   }
   return index;
 }

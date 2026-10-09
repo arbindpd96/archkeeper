@@ -1,9 +1,10 @@
 import { classifyCode, classifyModule } from './inline-code.mjs';
+import { SHELL_VALUE_OPTIONS, shellNames } from './shell-syntax.mjs';
 
-const SHELLS = new Set([
-  ...['sh', 'bash', 'zsh', 'dash', 'ksh', 'mksh', 'pdksh', 'oksh', 'ash', 'yash', 'posh', 'rbash'],
-  ...['fish', 'csh', 'tcsh'],
-]);
+const SHELL_SHORT_VALUES = SHELL_VALUE_OPTIONS.filter((option) => option.length === 2)
+  .map((option) => option[1])
+  .join('');
+const SHELL_LONG_VALUES = SHELL_VALUE_OPTIONS.filter((option) => option.startsWith('--'));
 
 /*
  * Option specs. Letters in `code`, `module`, `script` and `value` take a value (attached or the next word);
@@ -29,8 +30,15 @@ const define = (fields) => ({
 
 const SPECS = [
   [
-    new RegExp(`^(?:${[...SHELLS].join('|')})$`),
-    define({ language: 'shell', codeOperand: 'c', value: 'oO', stdin: 's', plusOptions: true }),
+    new RegExp(`^(?:${shellNames().join('|')})$`),
+    define({
+      language: 'shell',
+      codeOperand: 'c',
+      value: SHELL_SHORT_VALUES,
+      longValue: SHELL_LONG_VALUES,
+      stdin: 's',
+      plusOptions: true,
+    }),
   ],
   [
     /^python[\d.]*$/,
@@ -184,11 +192,6 @@ function summarize(found, spec, { expands, wrappers }) {
     scripts: literalScripts.map((script) => script.text),
     kinds,
   };
-}
-
-/** Tells whether a program is a shell that runs `-c` code, a script file or stdin. */
-export function isShell(program) {
-  return SHELLS.has(program);
 }
 
 /**

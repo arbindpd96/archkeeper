@@ -29,6 +29,9 @@ describe('guard-bash review cases', () => {
     [`${GET} | node /dev/./stdin`, 'deny'],
     [`${GET} | python3 "$D/0"`, 'deny'],
     [`${GET} | source /dev/stdin`, 'deny'],
+    [`${GET} | bash --rcfile ./rc`, 'deny'],
+    [`${GET} | bash --init-file ./rc`, 'deny'],
+    [`${GET} | bash -o pipefail ./install.sh`, 'allow'],
   ])('interpreter arguments in order: %s → %s', (command, expected) => {
     expect(judge(command)).toBe(expected);
   });
