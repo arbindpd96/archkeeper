@@ -119,7 +119,8 @@ Every bundle may import only `node:` built-ins (tsdown `deps.onlyImport`), so th
 - The `npm pack --dry-run` file list matches the committed `scripts/package-files.txt` (`npm run package -- --update` after an intended change).
 - `dependencies`, `optionalDependencies` and `peerDependencies` stay within the runtime-dependency budget (0), and there is no `preinstall`, `install` or `postinstall` script.
 - The tarball and each `dist/hooks/*.mjs` bundle stay within their size budgets.
-- The packed bin answers `--version` and `--help`.
+- The built bin answers `--version` with the package version, and `--help`.
+- `budgets.json` itself defines every budget as a non-negative number.
 
 CI also runs `npm publish --dry-run` and installs the packed tarball under a path with a space on ubuntu, macOS and Windows.
 

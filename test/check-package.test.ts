@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { runScript, tempDir, writeFiles, type RunResult } from './helpers.js';
@@ -75,8 +75,45 @@ describe('check-package', () => {
     const result = checkPackage(root);
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('+ dist/extra.mjs');
+    const snapshot = path.join(root, 'scripts/package-files.txt');
     expect(checkPackage(root, '--update').status).toBe(0);
-    expect(readFileSync(path.join(root, 'scripts/package-files.txt'), 'utf8')).toContain('dist/extra.mjs');
+    const updated = readFileSync(snapshot, 'utf8');
+    expect(updated).toBe('dist/cli.mjs\ndist/extra.mjs\npackage.json\n');
+    expect(checkPackage(root, '--update').status).toBe(0);
+    expect(readFileSync(snapshot, 'utf8')).toBe(updated);
+    expect(checkPackage(root).status).toBe(0);
+  });
+
+  it('fails when the tarball is over its budget', () => {
+    const budgets = JSON.stringify({ ...BUDGETS, tarball: { maxBytes: 10 } });
+    const result = checkPackage(fixture({}, { 'budgets.json': budgets }));
+    expect(result.status).toBe(1);
+    expect(result.stderr).toMatch(/tarball is \d+\.\d kB, over its budget/);
+  });
+
+  it('names every missing or invalid budget and cites ADR-0017', () => {
+    const budgets = JSON.stringify({ tarball: { maxBytes: -1 }, runtimeDependencies: { max: 'none' } });
+    const result = checkPackage(fixture({}, { 'budgets.json': budgets }));
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      'budgets.json needs a non-negative number for tarball.maxBytes, runtimeDependencies.max, hookBundle.maxBytes (ADR-0017)',
+    );
+  });
+
+  it('asks for a build when dist/ is missing', () => {
+    const root = fixture();
+    rmSync(path.join(root, 'dist'), { recursive: true });
+    const result = checkPackage(root);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('dist/ is missing. Run npm run build first.');
+  });
+
+  it('fails when the built bin prints a version other than package.json', () => {
+    const stale =
+      "#!/usr/bin/env node\nprocess.stdout.write(process.argv.includes('--version') ? '9.9.9\\n' : 'Usage:\\n');\n";
+    const result = checkPackage(fixture({}, { 'dist/cli.mjs': stale }));
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('bin --version printed "9.9.9", not 1.0.0');
   });
 
   it('fails when a hook bundle is over its budget', () => {
