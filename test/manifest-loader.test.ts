@@ -119,6 +119,12 @@ describe('loadModule cross-field rules', () => {
       'files[1].when.options.blockNoVerify',
       'compare it with a boolean',
     ],
+    [
+      'a when that compares a string-list option',
+      (m) => (entry(m, 'files', 1).when = { options: { optOut: 'x' } }),
+      'files[1].when.options.optOut',
+      'a when can compare only those',
+    ],
     ['an id that differs from its folder', (m) => (m.id = 'other'), 'id', 'set id to "rich"'],
   ])('rejects %s', (_name, change, location, fix) => {
     const error = loadRich(change);
