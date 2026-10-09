@@ -9,6 +9,7 @@ import {
   type PresetCatalog,
   presetCatalogSchema,
 } from './manifest-schema.js';
+import { compareText } from './text.js';
 
 /** Reads a kit file by its package-relative path with forward slashes; returns undefined when it does not exist. */
 export type ReadKitFile = (path: string) => string | undefined;
@@ -165,7 +166,7 @@ export function loadCatalog(moduleIds: readonly string[], read: ReadKitFile): Ca
   const presets = loadPresets(read);
   const chain = presets.presets.map((preset) => preset.name);
   const modules = new Map<string, KitModule>();
-  for (const id of [...moduleIds].sort()) {
+  for (const id of [...moduleIds].sort(compareText)) {
     const kit = loadModule(id, read);
     const broken = presetFinding(kit.manifest, chain);
     if (broken !== undefined) fail(kit.file, broken);
