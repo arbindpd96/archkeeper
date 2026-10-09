@@ -9,6 +9,7 @@ import { type KitModule, loadModule, type ReadKitFile } from '../src/core/loader
 import { render, type RenderContext, type RenderTree } from '../src/core/render.js';
 import { toImport } from '../src/core/template.js';
 import { git, REPO_ROOT } from './helpers.js';
+import { memoryReader, plainManifest } from './kit-fixtures.js';
 
 const FIXTURE = path.join(REPO_ROOT, 'test/fixtures/render');
 
@@ -39,6 +40,27 @@ const ACME: Brand = Object.freeze({
   disclaimer: 'Acme Kit is a test brand.',
   legacySlugs: Object.freeze([]),
 });
+
+/** A module whose one file renders only when its `extraRules` option, false by default, is true. */
+function optionalFile(): KitModule {
+  const manifest = plainManifest('extra', {
+    options: { extraRules: { type: 'boolean', default: false, description: 'Adds a rule file.' } },
+    files: [
+      {
+        from: 'extra.md',
+        to: 'docs/extra.md',
+        strategy: 'owned',
+        target: 'project',
+        when: { options: { extraRules: true } },
+      },
+    ],
+  });
+  const files = {
+    'modules/extra/module.json': JSON.stringify(manifest),
+    'modules/extra/files/extra.md': '# Extra\n',
+  };
+  return loadModule('extra', memoryReader(files));
+}
 
 /** The whole tree as text: one header per entry, then its content. */
 function treeText(tree: RenderTree): string {
@@ -137,6 +159,15 @@ describe('render', () => {
     const python = `${BRAND.rulesDir}/python.md`;
     expect(render(MODULES, CONTEXT).has(python)).toBe(true);
     expect(render(MODULES, { ...CONTEXT, stack: ['ts'] }).has(python)).toBe(false);
+  });
+
+  it('renders a file whose when option the context options set', () => {
+    const options = new Map([['extra', { extraRules: true }]]);
+    expect(render([optionalFile()], { stack: [], options }).has('docs/extra.md')).toBe(true);
+  });
+
+  it('skips that file under the option defaults when the context gives no options', () => {
+    expect(render([optionalFile()], { stack: [] }).has('docs/extra.md')).toBe(false);
   });
 
   it('keeps several modules blocks in one file, ordered by block id', () => {
