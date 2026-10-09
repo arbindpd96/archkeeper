@@ -157,7 +157,7 @@ These are part of the ADR-0017 contract:
 
 - Hooks need `node` on PATH, within the `engines.node` range (ADR-0011).
   - Without it, every hook fails without blocking, guards included; only the deny rules still apply.
-  - The README Requirements section states this, and `doctor` checks it.
+  - The README's Requirements section must state this (a v0.1 exit criterion, delivered in M9), and `doctor` checks it.
 - Kit hooks merge with user hooks by event and `args` path (ADR-0014). User hooks on the same events keep running, because hook arrays are additive (reference §1.8).
 - The guards cost an occasional extra prompt on commands they cannot read. False-positive suites and asking rather than denying keep that rare.
 - Claude cannot run any command that starts with `rm -rf`, because the native rule denies it before guard-bash judges it. The user runs it, and other spellings such as `rm -r dist` go to guard-bash. #31's rule that safe look-alikes pass applies to guard-bash alone. A user who wants Claude to run `rm -rf` deletes the rule, and `update` never adds it back (ADR-0014).

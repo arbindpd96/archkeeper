@@ -50,7 +50,7 @@ ADR-0002's status line now notes "Decision 2 partly superseded by ADR-0016".
 
 - v0.1 works fully without the plugin.
 - The plugin is a distribution channel for agents and opt-in skills, not a second implementation.
-- Users who install only the plugin get no hooks, rules or settings, so `init` is still needed. The README says so.
+- Users who install only the plugin get no hooks, rules or settings, so `init` is still needed. The README must say so when the plugin ships (v0.3).
 - Marketplace installs follow the repo's default branch rather than a pinned version, which is why `plugin/` changes only in release PRs.
 - Switching `--skills` changes how users invoke a skill (`/<skill>` or `/archkeeper:<skill>`).
 - The stop check runs project scripts, so it can only ever arrive through `init` in the full preset ([ADR-0015](0015-hook-runtime.md)), never silently through a plugin update.
