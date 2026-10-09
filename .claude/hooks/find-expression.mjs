@@ -29,15 +29,17 @@ function readTokens(args, start) {
       continue;
     }
     const exec = [];
+    const execStart = index + 1;
     for (index += 1; index < args.length && !endsExec(args[index], exec); index += 1) exec.push(args[index]);
-    tokens.push({ exec });
+    tokens.push({ exec, start: execStart });
   }
   return tokens;
 }
 
 /**
  * Splits `find` arguments into the starting `roots` and the expression `tokens`. Each `-exec`, `-execdir`, `-ok`
- * or `-okdir` segment becomes one `{ exec: argv }` token, so its words are never read as find primaries.
+ * or `-okdir` segment becomes one `{ exec: argv, start }` token (start is its index in args), so its words are
+ * never read as find primaries.
  */
 export function readFindExpression(args) {
   const { roots, start } = readRoots(args);

@@ -33,6 +33,7 @@ export class WordReader {
     this.src = source;
     this.pos = 0;
     this.context = context;
+    this.expansions = 0;
   }
 
   fail(problem) {
@@ -46,8 +47,10 @@ export class WordReader {
   }
 
   readWord(seq) {
-    const word = { text: '', quoted: false, braces: [], splits: false };
+    const word = { text: '', quoted: false, braces: [], splits: false, expands: false };
+    const before = this.expansions;
     while (!this.atWordEnd()) word.text += this.readWordPart(seq, word);
+    word.expands = this.expansions > before;
     return word;
   }
 
@@ -100,6 +103,7 @@ export class WordReader {
   readDollar(seq, word) {
     const next = this.src[this.pos + 1] ?? '';
     if (word && (next === "'" || next === '"')) return this.readDollarQuote(seq, word, next);
+    if (EXPANSION_START.test(next)) this.expansions += 1;
     if (word && EXPANSION_START.test(next)) this.markUnquotedExpansion(word);
     if (next === '(') return this.readSubstitution(seq);
     if (next === '{') return this.readBraced(seq, word);
@@ -124,6 +128,7 @@ export class WordReader {
 
   readSubstitution(seq) {
     const start = this.pos;
+    this.expansions += 1;
     this.pos += 2;
     this.nested(seq, seq.cmd.subs, () => this.parseSequence(')'));
     return this.src.slice(start, this.pos);
@@ -131,6 +136,7 @@ export class WordReader {
 
   readBackticks(seq, word) {
     const start = this.pos;
+    this.expansions += 1;
     if (word) word.splits = true;
     let body = '';
     this.pos += 1;

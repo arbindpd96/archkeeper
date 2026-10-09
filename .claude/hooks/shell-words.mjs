@@ -17,6 +17,7 @@ const newCommand = () => ({
   argv: [],
   braces: [],
   splits: [],
+  expands: [],
   redirects: [],
   heredocs: [],
   subs: [],
@@ -177,6 +178,7 @@ class Parser extends WordReader {
       seq.cmd.argv.push(word.text);
       seq.cmd.braces.push(word.braces);
       seq.cmd.splits.push(word.splits);
+      seq.cmd.expands.push(word.expands);
       this.lastWordEnd = this.pos;
     }
   }
@@ -192,7 +194,7 @@ class Parser extends WordReader {
 /**
  * Splits shell source into simple commands. Each has `argv` (quotes removed, substitutions kept as source text),
  * `braces` (indexes of unquoted brace syntax per word), `splits` (whether each word holds an unquoted expansion),
- * `redirects` (targets), `heredocs` (here-document and here-string bodies), `subs` (commands run by substitutions
+ * `expands` (whether each word holds any expansion or substitution, quoted or not), `redirects` (targets), `heredocs` (here-document and here-string bodies), `subs` (commands run by substitutions
  * in its words) and `pipes` (`{pipeline, stage}` for its own pipeline, then for each enclosing group or
  * substitution). Throws ShellSyntaxError.
  */
