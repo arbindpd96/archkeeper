@@ -160,6 +160,7 @@ Every event sends these common fields: `session_id`, `prompt_id`, `transcript_pa
 - **Parallel execution.** Hooks that match the same event run in parallel. If several PreToolUse hooks return `updatedInput`, the last one to finish wins, which is non-deterministic [src](https://code.claude.com/docs/en/hooks-guide).
 - **Isolation.** Hooks cannot run slash commands or tool calls. They communicate only through stdout, stderr and exit codes [src](https://code.claude.com/docs/en/hooks-guide).
 - **Hooks run before permission checks.** Hooks fire before any permission-mode check, even in `bypassPermissions` [src](https://code.claude.com/docs/en/permissions).
+- **Hooks never bypass deny or ask rules.** Claude Code evaluates deny and ask rules whatever a PreToolUse hook returns: a matching deny rule blocks the call, and a matching ask rule still prompts, even after the hook returned `"allow"` [src](https://code.claude.com/docs/en/permissions).
 - **Snapshot at startup.** Settings are read at session startup. `/hooks` shows the configuration, but changes need a restart [src](https://code.claude.com/docs/en/auto-mode-config).
 - **Retries.** A blocked PreToolUse call blocks only that one call; Claude may retry it a different way [src](https://code.claude.com/docs/en/hooks).
 - **Stop loop protection.** After 8 consecutive Stop-hook blocks with no tool call in between, Claude Code lets Claude stop anyway. Raise the cap with `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`. Hooks must check `stop_hook_active` [src](https://code.claude.com/docs/en/hooks-guide).
