@@ -154,7 +154,7 @@ function requireModule(context: Context, kit: KitModule, index: number): string 
 }
 
 function addRequirements(context: Context): void {
-  const queue = [...context.origins.keys()].sort();
+  const queue = [...context.origins.keys()].sort(compareText);
   for (let next = queue.shift(); next !== undefined; next = queue.shift()) {
     const kit = context.catalog.modules.get(next);
     for (let index = 0; kit !== undefined && index < kit.manifest.requires.length; index += 1) {
@@ -166,7 +166,7 @@ function addRequirements(context: Context): void {
 
 function unmatched({ request, catalog, origins }: Context): Map<string, string> {
   const dropped = new Map<string, string>();
-  for (const id of [...origins.keys()].sort()) {
+  for (const id of [...origins.keys()].sort(compareText)) {
     const manifest = catalog.modules.get(id)?.manifest;
     if (manifest === undefined) continue;
     const options = request.options?.get(id) ?? optionDefaults(manifest);
@@ -183,7 +183,9 @@ function dropUnmatched(context: Context): Map<string, string> {
     context.catalog.modules.get(id)?.manifest.requires ?? [];
   for (let changed = true; changed;) {
     changed = false;
-    for (const id of [...context.origins.keys()].sort().filter((candidate) => !dropped.has(candidate))) {
+    for (const id of [...context.origins.keys()]
+      .sort(compareText)
+      .filter((candidate) => !dropped.has(candidate))) {
       const missing = requires(id).find((required) => dropped.has(required));
       if (missing === undefined) continue;
       dropped.set(id, `requires ${missing}, which was left out`);
@@ -275,7 +277,7 @@ export function resolveModules(request: ResolveRequest, catalog: Catalog, brand:
   const kept = new Map(
     [...context.origins.keys()]
       .filter((id) => !dropped.has(id))
-      .sort()
+      .sort(compareText)
       .flatMap((id) => {
         const kit = catalog.modules.get(id);
         return kit === undefined ? [] : [[id, kit] as const];
