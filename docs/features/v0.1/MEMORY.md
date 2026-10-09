@@ -21,6 +21,7 @@ This repo itself runs on that setup (dogfooding).
 - 2026-10-09: guard-bash denies when a literal curl or wget (any case) reaches code through a pipe, a captured `$(curl …)` or a file the same command downloaded, and asks when the producer is a program named by a variable or a function (#65). Why: a literal download is `curl | sh` in another form, but a variable or function may be anything, so the user decides.
 - 2026-10-09: Inline code fed by a download asks unless it is an allowlisted read-and-print idiom; code that can run its input is denied (#65). Why: the code is visible, but what it does with the download is not.
 - 2026-10-09: `find . -name '*' -delete` and `find ~ -exec rm -rf {} +` stay denied, though the #65 review expected ask. Why: each deletes as much as a bare `find <root> -delete`.
+- 2026-10-09: A script named by a variable (`bash "$f"`, `python3 "$SCRIPT"`) is allowed when no download is in the command; inline code from a variable (`python3 -c "$c"`) asks (#65). Why: a variable script is a file like any named script, which the guard already lets run, while variable code is as open as `eval`. With a download in the command, both are denied.
 
 ## Done
 
@@ -32,12 +33,12 @@ This repo itself runs on that setup (dogfooding).
 - [x] Research reference committed (docs/research/claude-code-reference.md)
 - [x] Renamed to archkeeper (ADR-0010, PR #2)
 - [x] ROADMAP.md with phases; GitHub milestones (v0.0–v1.0) and issues #3–#65, including owner-action issues
-- [ ] Guard hardening from the focused review (#65)
-- [ ] v0.0 Runway: #3 ADR-0011 single package, #4 restructure to `src/`, #5 brand constants, #6 tsdown bundle, #7 budgets
+- [x] Guard hardening from the focused review (#65, PR #70): interpreter option specs, find filter order, piped scripts, downloaded files
+- [x] v0.0 Runway R1: #3 ADR-0011 single package, #4 restructure to `src/`, #5 brand constants, #6 tsdown bundle, #7 budgets (PR #69, see `docs/features/runway-r1/`)
 
 ## Next step
 
-Enable the `main` ruleset, then fix #65 (guard hardening) in its own PR. Then start v0.0 R1 with `/new-feature runway-r1`: issue #3 (ADR-0011) and #4 (restructure to `src/core`, `src/cli`, `src/hooks`).
+Merge PR #70 (#65) once CI passes. Then start v0.0 R2 with `/new-feature runway-r2`: example fixtures, the demo-gifs workflow, ADR-0013 and the staged-release workflow (#11). The `main` ruleset is still to enable.
 
 ## Gotchas / don't try again
 
