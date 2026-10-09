@@ -3,7 +3,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { main, readPackageInfo, type CliOutput } from '../src/cli/main.js';
-import { MIN_NODE_VERSION, nodeVersionProblem } from '../src/cli/node-version.js';
+import { nodeVersionProblem, SUPPORTED_NODE_RANGE } from '../src/cli/node-version.js';
 import { BRAND } from '../src/core/brand.js';
 import { REPO_ROOT, tempDir, writeFiles } from './helpers.js';
 
@@ -22,20 +22,29 @@ function run(args: string[]): { code: number; stdout: string; stderr: string } {
 }
 
 describe('nodeVersionProblem', () => {
-  it('matches the published engines.node floor', () => {
-    expect(manifest.engines.node).toBe(`>=${MIN_NODE_VERSION}`);
+  it('enforces exactly the published engines.node range', () => {
+    expect(manifest.engines.node).toBe(SUPPORTED_NODE_RANGE);
   });
 
-  it.each(['22.11.0', '22.11.9', 'v22.11.0', '20.19.5', '18.20.8'])(
+  it('uses only the comparator forms the gate understands', () => {
+    for (const comparator of SUPPORTED_NODE_RANGE.split('||')) {
+      expect(comparator.trim()).toMatch(/^(?:\^\d+\.\d+\.\d+|>=\d+(?:\.\d+){0,2})$/);
+    }
+  });
+
+  it.each(['18.20.8', '20.19.5', '22.12.0', 'v22.13.1', '22.17.0', '23.11.0', '24.4.0', '25.2.1'])(
     'asks Node.js %s to upgrade',
     (version) => {
-      expect(nodeVersionProblem(version)).toContain(`needs Node.js ${MIN_NODE_VERSION} or newer`);
+      expect(nodeVersionProblem(version)).toContain(`needs Node.js ${SUPPORTED_NODE_RANGE}`);
     },
   );
 
-  it.each(['22.12.0', '22.22.2', '23.0.0', '24.15.0', '26.5.1'])('accepts Node.js %s', (version) => {
-    expect(nodeVersionProblem(version)).toBeUndefined();
-  });
+  it.each(['22.17.1', '22.22.2', 'v24.4.1', '24.15.0', '26.0.0', '26.5.1', '27.1.0'])(
+    'accepts Node.js %s',
+    (version) => {
+      expect(nodeVersionProblem(version)).toBeUndefined();
+    },
+  );
 });
 
 describe('main', () => {
@@ -109,16 +118,16 @@ describe('bin', () => {
     process.exitCode = undefined;
   });
 
-  it('prints an upgrade message and exits 1 on Node.js 22.11 without loading the program', async () => {
-    stubNodeVersion('22.11.0');
+  it('prints an upgrade message and exits 1 on Node.js 22.17.0 without loading the program', async () => {
+    stubNodeVersion('22.17.0');
     const { loaded, stderr } = await startBin();
-    expect(stderr).toContain(`needs Node.js ${MIN_NODE_VERSION} or newer, but this is Node.js 22.11.0`);
+    expect(stderr).toContain(`needs Node.js ${SUPPORTED_NODE_RANGE}, but this is Node.js 22.17.0`);
     expect(stderr).toContain('exit 1');
     expect(loaded()).toBe(false);
   });
 
-  it('loads and runs the program on Node.js 22.12', async () => {
-    stubNodeVersion('22.12.0');
+  it('loads and runs the program on Node.js 22.17.1', async () => {
+    stubNodeVersion('22.17.1');
     const { loaded, stderr } = await startBin();
     expect(stderr).toBe('');
     expect(loaded()).toBe(true);

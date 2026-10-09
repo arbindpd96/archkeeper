@@ -55,8 +55,8 @@ Add a row whenever something is created. Keep one line per item.
 | Path                      | Purpose                                                                                                 | Key exports                                           |
 | ------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
 | `src/core/brand.ts`       | The only place the product slug is written; every name, path and marker derives from it                 | `BRAND`, `Brand`                                      |
-| `src/cli/bin.ts`          | Bundle entry (`dist/cli.mjs`): rejects Node.js below 22.12 before it imports the program                | none (entry)                                          |
-| `src/cli/node-version.ts` | The published Node.js floor and the upgrade message                                                     | `MIN_NODE_VERSION`, `nodeVersionProblem`              |
+| `src/cli/bin.ts`          | Bundle entry (`dist/cli.mjs`): rejects unsupported Node.js before it imports the program                | none (entry)                                          |
+| `src/cli/node-version.ts` | The supported Node.js range (equal to `engines.node`) and the upgrade message                           | `SUPPORTED_NODE_RANGE`, `nodeVersionProblem`          |
 | `src/cli/main.ts`         | Argument parsing with `node:util` `parseArgs`: `--version` and `--help` until commander arrives in v0.1 | `main`, `readPackageInfo`, `CliOutput`, `PackageInfo` |
 
 ### Modules

@@ -52,7 +52,10 @@ Publish one npm package with zero runtime dependencies.
 
 **Node floors.**
 
-- The published `engines.node` is `>=22.12.0`, the commander 15 floor.
+- The published `engines.node` is `^22.17.1 || ^24.4.1 || >=26`: even-numbered (LTS) lines only, above the commander 15 floor (22.12).
+  - Security: 22.17.1 and 24.4.1 are the first releases that fix the Windows `node:path` traversal CVEs, CVE-2025-23084 (fixed in 22.13.1) and CVE-2025-27210 (fixed in 22.17.1 and 24.4.1). The CLI resolves paths inside users' projects, so it refuses to run on the vulnerable releases.
+  - The odd lines 23 and 25 are short-lived and unsupported.
+  - The bin enforces the same range before it loads the program (`src/cli/node-version.ts`); a test keeps it equal to `engines.node`.
 - The contributor floor (`^22.22.2 || ^24.15.0 || >=26`, the dev toolchain's own minimums) moves to `devEngines` and `.nvmrc`.
 
 **Revisit** when a second published artifact is needed.
