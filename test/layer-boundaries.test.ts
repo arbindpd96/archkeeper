@@ -8,6 +8,7 @@ const BOUNDARY_RULES = new Set([
   'no-restricted-imports',
   'no-restricted-properties',
   'no-restricted-globals',
+  'no-restricted-syntax',
 ]);
 
 // The fixtures mirror src/ under their own root and sit outside tsconfig, so type-aware rules are off.
@@ -31,7 +32,13 @@ describe('layer boundaries (ADR-0011)', () => {
     ['src/core/imports-commander.ts', 'no-restricted-imports'],
     ['src/core/imports-clack.ts', 'no-restricted-imports'],
     ['src/core/calls-process-exit.ts', 'no-restricted-properties'],
+    ['src/core/imports-exit-from-node-process.ts', 'no-restricted-imports'],
+    ['src/core/imports-exit-from-process.ts', 'no-restricted-imports'],
+    ['src/core/global-this-process-exit.ts', 'no-restricted-syntax'],
     ['src/core/uses-console.ts', 'no-restricted-globals'],
+    ['src/core/imports-node-console.ts', 'no-restricted-imports'],
+    ['src/core/imports-console.ts', 'no-restricted-imports'],
+    ['src/core/global-this-console.ts', 'no-restricted-properties'],
     ['src/hooks/imports-core.ts', 'no-restricted-imports'],
     ['src/hooks/runtime/imports-package.ts', 'no-restricted-imports'],
   ])('%s breaks %s', async (file, ruleId) => {

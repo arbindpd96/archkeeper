@@ -62,7 +62,9 @@ const layerBoundaries = [
         {
           paths: [
             { name: 'node:process', importNames: ['exit'], message: CORE_IS_PURE },
+            { name: 'process', importNames: ['exit'], message: CORE_IS_PURE },
             { name: 'node:console', message: CORE_IS_PURE },
+            { name: 'console', message: CORE_IS_PURE },
           ],
           patterns: [
             { group: ['**/cli', '**/cli/**'], message: CORE_IS_PURE },
@@ -70,7 +72,18 @@ const layerBoundaries = [
           ],
         },
       ],
-      'no-restricted-properties': ['error', { object: 'process', property: 'exit', message: CORE_IS_PURE }],
+      'no-restricted-properties': [
+        'error',
+        { object: 'process', property: 'exit', message: CORE_IS_PURE },
+        { object: 'globalThis', property: 'console', message: CORE_IS_PURE },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "MemberExpression[property.name='exit'][object.property.name='process']",
+          message: CORE_IS_PURE,
+        },
+      ],
       'no-restricted-globals': ['error', { name: 'console', message: CORE_IS_PURE }],
     },
   },
