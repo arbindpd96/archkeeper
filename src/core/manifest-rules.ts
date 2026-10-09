@@ -92,6 +92,35 @@ const reservedTargets: Rule = ({ files }) => {
   return undefined;
 };
 
+// An MCP tool rule names one tool, such as mcp__docs__search; any other bare tool name allows every use.
+const ONE_MCP_TOOL = /^mcp__[A-Za-z0-9-]+(?:_[A-Za-z0-9-]+)*__[A-Za-z0-9_-]+$/;
+const MATCHES_ALL = /^[\s*/.:~]*$/;
+const SECRET_PATH =
+  /\.env|secret|credential|\.pem\b|\.key\b|id_rsa|id_ed25519|\.ssh\b|\.aws\b|\.npmrc|\.netrc/i;
+
+function broadAllowProblem(rule: string): string | undefined {
+  const open = rule.indexOf('(');
+  if (open === -1) return ONE_MCP_TOOL.test(rule) ? undefined : `allows every use of ${rule}`;
+  const specifier = rule.slice(open + 1, -1);
+  if (MATCHES_ALL.test(specifier)) return `allows every use of ${rule.slice(0, open)}`;
+  if (SECRET_PATH.test(specifier)) return 'allows a path that can hold secrets, such as .env or a key file';
+  return undefined;
+}
+
+const narrowAllows: Rule = ({ permissions }) => {
+  for (const [index, rule] of (permissions.allow ?? []).entries()) {
+    const problem = broadAllowProblem(rule);
+    if (problem === undefined) continue;
+    return finding(
+      ['permissions', 'allow', index],
+      problem,
+      'allow one command or path, such as Bash(npm test) or Edit(src/**/*.ts): a module never widens access ' +
+        'across the project or to secrets',
+    );
+  }
+  return undefined;
+};
+
 function declares(manifest: ModuleManifest, strategy: 'blocks' | 'json', to: string): boolean {
   return manifest.files.some((entry) => entry.strategy === strategy && entry.to === to);
 }
@@ -193,6 +222,7 @@ const whenOptions: Rule = (manifest) => {
 const RULES: readonly Rule[] = [
   demoOrInternal,
   reservedTargets,
+  narrowAllows,
   uniqueLists,
   noSelfReference,
   pluginTargets,
