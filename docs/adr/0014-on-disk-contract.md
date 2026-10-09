@@ -58,7 +58,7 @@ Everything the kit keeps lives in `.archkeeper/` (`BRAND.stateDir`):
 - `pending` is the hash of kit content waiting in a sidecar. Its blob is kept like a base.
 - `ownedKeys` maps each JSON entry the kit owns to the hash of the entry as the kit wrote it, so an entry the user changed is recognised. Hook entries are keyed by event and `args` path, so one script registered on two events has two keys. Permission rules are keyed by list and exact string, so the same string in `allow` and `deny` has two keys. MCP servers are keyed by name.
 - `removed[]` entries name a path, plus a block id or an owned key for a block or a JSON entry.
-- The zod schema in `src/core`, exported to `schema/lock.schema.json`, is the exact definition.
+- The zod schema in `src/core`, exported to `schema/lock.schema.json`, is the exact definition. Every hash in the lock must match `^[0-9a-f]{64}$`, so no lock value can name a path.
 
 **Base blobs.** `.archkeeper/base/<sha256>` holds the last kit-written content of each owned file and block.
 
@@ -66,6 +66,7 @@ Everything the kit keeps lives in `.archkeeper/` (`BRAND.stateDir`):
 - A blob is written only when absent, and removed when no lock entry references it.
 - A managed `.gitattributes` block marks `.archkeeper/base/**` as `binary linguist-generated`.
 - A blob is valid when its decompressed sha256 matches its name. Either side of a git conflict on a blob is therefore correct, and `doctor` checks integrity.
+- Blobs are committed, so they are untrusted input. A blob is decompressed with zlib's `maxOutputLength` set to 1 MiB, far above any kit file, so a crafted gzip bomb fails the integrity check instead of exhausting memory.
 
 **`local/`** holds the active-feature pointer (`local/active-feature`), the pre-compact snapshot (`local/snapshots/latest.json`), caches, hook state ([ADR-0015](0015-hook-runtime.md)) and per-run backups.
 
@@ -100,6 +101,9 @@ Every generated file declares one strategy in its module manifest (#18):
   - resolves (via realpath) through a symlink outside the project root
   - lies inside `.git/`, compared case-insensitively and including the 8.3 short name, so `.GIT/` and `GIT~1/` are refused too
   - uses a Windows reserved name with or without an extension (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`, so `nul.txt` and `con.md` too), or a name ending in a dot or space
+- **The lock is untrusted.** It is committed, and lockfile changes are often approved unread, so a crafted lock must not turn `update` or `uninstall` into a way to delete files or widen access:
+  - The kit deletes, replaces or migrates only paths that the current kit's manifests could own, including files they list as retired from an earlier version and their `legacySlugs` equivalents. It removes or changes only JSON keys a manifest could have written. Other lock entries are reported and ignored.
+  - `update` and `uninstall` always list every deny or ask rule they remove or narrow and every allow rule they add. They never change permissions silently.
 - **Symlinks are left alone.** A write target that is itself a symlink, even one inside the project such as `CLAUDE.md -> AGENTS.md`, is never written through or replaced. It is left alone and reported, and the kit's content goes to a sidecar.
 - **Transactional.**
   - Every touched path is backed up first. The backup manifest records whether each path was a file, a symlink (with its target) or absent.
