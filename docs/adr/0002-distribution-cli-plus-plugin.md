@@ -1,6 +1,6 @@
 # ADR-0002: Ship as an npx CLI **and** a Claude Code plugin from one source of truth
 
-- Status: accepted (DECIDED in handoff §4)
+- Status: accepted (DECIDED in handoff §4); Decision 2 partly superseded by [ADR-0016](0016-delivery-split.md)
 - Date: 2026-10-08
 - Deciders: owner
 
