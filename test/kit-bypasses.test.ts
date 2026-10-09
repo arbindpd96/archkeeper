@@ -133,6 +133,19 @@ describe('@ imports the kit never writes', () => {
     '@config/.env.local',
     '`x`@CLAUDE.local.md',
     '@.claude/settings.local.json',
+    '[@.env](x)',
+    'npm test @.env#x',
+    '@.env/',
+    '@./.env/.',
+    '*@.env*',
+    '<b>@.env</b>',
+    '`x`@.env`y`',
+    '@.env<!-- -->',
+    '@.env\\ ',
+    '@deploy/app.env#',
+    '@.envrc/',
+    '@.claude//settings.local.json',
+    '<!---->@.<!---->env',
   ])('finds an import of a private file in %j', (text) => {
     expect(importProblem(text)).toContain('secrets or personal file');
   });
@@ -143,13 +156,21 @@ describe('@ imports the kit never writes', () => {
     'mail me@example.com',
     '@Design\\ Docs/api.md',
     '@.env.example',
+    '@docs/environment.md',
   ])('allows %j', (text) => {
     expect(importProblem(text)).toBeUndefined();
   });
 
-  it.each(['.env', 'docs/.env.local', 'Design Docs/.env'])('toImport refuses the private file %j', (path) => {
-    expect(() => toImport(path)).toThrow(RenderError);
+  it('finds an outside import that an HTML comment splits', () => {
+    expect(importProblem('<!---->@.<!---->./.ssh/id_rsa')).toContain('outside the project');
   });
+
+  it.each(['.env', 'docs/.env.local', 'Design Docs/.env', '.env#x'])(
+    'toImport refuses the private file %j',
+    (path) => {
+      expect(() => toImport(path)).toThrow(RenderError);
+    },
+  );
 
   it('refuses an import that two values form only side by side', () => {
     const notes: KitModule = loadModule(
