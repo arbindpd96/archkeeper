@@ -9,6 +9,7 @@ import {
   refusing,
   relativePath,
   STACKS,
+  targetPath,
 } from './schema-parts.js';
 
 /** Hook events a module may register (ADR-0015). PreToolUse and PostToolUse are the tool events. */
@@ -55,21 +56,21 @@ const noFrom = z.optional(z.never({ error: NO_FROM }));
 const file = z.discriminatedUnion('strategy', [
   z.strictObject({
     from: relativePath,
-    to: relativePath,
+    to: targetPath,
     strategy: z.literal('owned'),
     target: z.enum(['project', 'plugin']),
     when: whenField,
   }),
   z.strictObject({
     from: relativePath,
-    to: relativePath,
+    to: targetPath,
     strategy: z.literal('create-only'),
     target: projectTarget,
     when: whenField,
   }),
   z.strictObject({
     from: noFrom,
-    to: relativePath,
+    to: targetPath,
     strategy: z.literal('blocks'),
     target: projectTarget,
     when: whenField,

@@ -3,7 +3,7 @@ import { RenderError } from './errors.js';
 import { type KitModule, templatePath } from './loader.js';
 import { GITIGNORE_FILE, ignoreLineProblem, MCP_FILE, type ModuleManifest } from './manifest-schema.js';
 import { optionDefaults, type ResolvedOptions } from './options.js';
-import { relativePathProblem } from './paths.js';
+import { relativePathProblem, targetPathProblem } from './paths.js';
 import { hookScriptPath, type JsonPart, mcpPart, settingsPart, toJson } from './render-json.js';
 import { collectEntries, type Draft, type RenderTree } from './render-tree.js';
 import type { Stack } from './schema-parts.js';
@@ -48,7 +48,7 @@ function source(kit: KitModule, path: string): string {
 function renderedPath(job: ModuleRender, file: ManifestFile, index: number): string {
   const location = `files[${String(index)}].to`;
   const path = renderTemplate(file.to, job.scope, `${job.kit.file} ${location}`);
-  const problem = relativePathProblem(path);
+  const problem = targetPathProblem(path);
   if (problem !== undefined) {
     throw new RenderError({
       file: job.kit.file,

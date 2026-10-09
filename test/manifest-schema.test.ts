@@ -95,6 +95,24 @@ describe('module manifest schema', () => {
       'forward slashes',
     ],
     [
+      'a target name with a long s, which macOS reads as settings.json',
+      (m) => (file(m, 1).to = '.claude/\u017Fettings.json'),
+      'files[1].to',
+      'ASCII letters, digits',
+    ],
+    [
+      'a target folder name that ends in a dot',
+      (m) => (file(m, 1).to = '.git./hooks/pre-commit'),
+      'files[1].to',
+      'no name that ends in a dot or a space',
+    ],
+    [
+      'a target name that ends in a space',
+      (m) => (file(m, 1).to = 'docs/notes.md '),
+      'files[1].to',
+      'no name that ends in a dot or a space',
+    ],
+    [
       'a template path with ..',
       (m) => (file(m, 1).from = '../base/files/x.md'),
       'files[1].from',

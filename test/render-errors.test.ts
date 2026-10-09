@@ -108,11 +108,6 @@ describe('render refuses two modules writing one thing', () => {
   it.each<[string, () => KitModule[], string]>([
     ['in case', () => [owned('a', 'docs/Notes.md'), owned('b', 'docs/notes.md')], 'docs/Notes.md from a'],
     [
-      'in Unicode normalisation',
-      () => [owned('a', 'docs/caf\u00e9.md'), owned('b', 'docs/cafe\u0301.md')],
-      'from a name one file',
-    ],
-    [
       'for blocks with their own ids',
       () => [block('a', 'one'), blockIn('b', 'agents.md')],
       'AGENTS.md from a',
@@ -154,6 +149,12 @@ describe('render refuses reserved targets', () => {
     const error = renderError([owned('a', '{{ brand.stateDir }}/notes.md')]);
     expect(error.location).toBe('files[0].to');
     expect(error.message).toContain(`renders to "${BRAND.stateDir}/notes.md", which is inside`);
+  });
+
+  it('refuses a target that a template value renders to a name with other characters', () => {
+    const values = { local: { name: '\u017Fettings' } };
+    const run = (): unknown => render([owned('a', '.claude/{{local.name}}.json')], { stack: [], values });
+    expect(run).toThrow('renders to ".claude/\u017Fettings.json", which has a character other than ASCII');
   });
 
   it('refuses a target that a brand with other folders would put in its hook folder', () => {
