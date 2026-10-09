@@ -21,8 +21,7 @@ const readability = {
 };
 
 const commentPolicy = {
-  'no-inline-comments': 'error',
-  'line-comment-position': ['error', { position: 'above' }],
+  'no-inline-comments': ['error', { ignorePattern: 'codekit:' }],
   'jsdoc/require-jsdoc': [
     'error',
     {
@@ -34,6 +33,7 @@ const commentPolicy = {
         FunctionExpression: true,
       },
       contexts: ['TSInterfaceDeclaration', 'TSTypeAliasDeclaration', 'TSEnumDeclaration'],
+      enableFixer: false,
     },
   ],
   'jsdoc/require-param': 'off',
@@ -44,7 +44,6 @@ const commentPolicy = {
   'jsdoc/no-blank-blocks': 'error',
   'jsdoc/no-blank-block-descriptions': 'error',
   '@eslint-community/eslint-comments/require-description': 'error',
-  '@eslint-community/eslint-comments/no-unused-disable': 'error',
 };
 
 export default defineConfig(
