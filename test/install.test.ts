@@ -161,6 +161,8 @@ describe('the state folder', () => {
         expect(statSync(path.join(run, name)).mode & 0o777, name).toBe(0o600);
       }
       expect(statSync(run).mode & 0o777).toBe(0o700);
+      expect(statSync(path.join(dir, STATE, 'local')).mode & 0o777).toBe(0o700);
+      expect(statSync(path.join(dir, STATE)).mode & 0o077).not.toBe(0);
     }
   });
 
