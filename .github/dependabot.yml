@@ -7,6 +7,13 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: 'chore(deps)'
+    ignore:
+      # typescript-eslint supports TypeScript < 6.1 only (ADR-0009).
+      - dependency-name: typescript
+        versions: ['>=6.1.0']
+      # Types track the oldest supported Node (22), so newer APIs fail to type-check.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
     groups:
       dev-dependencies:
         dependency-type: development
