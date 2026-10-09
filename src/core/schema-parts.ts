@@ -26,13 +26,27 @@ export const oneLine = z
   .string()
   .check(z.regex(/^\S[^\r\n]*$/, { error: 'write one line that does not start with a space' }));
 
+/** Why a value is refused, and the fix. */
+export interface Refusal {
+  readonly problem: string;
+  readonly hint: string;
+}
+
+/** A check that refuses a string with the problem and fix `refuse` returns; the message never shows the string. */
+export function refusing(refuse: (value: string) => Refusal | undefined): z.core.$ZodCheck<string> {
+  return z.superRefine((value: string, context) => {
+    const refusal = refuse(value);
+    if (refusal === undefined) return;
+    const { problem, hint } = refusal;
+    context.addIssue({ code: 'custom', input: value, message: hint, params: { problem } });
+  });
+}
+
 /** A relative path with forward slashes that stays inside its root (see `relativePathProblem`). */
 export const relativePath = z.string().check(
-  z.superRefine((value, context) => {
+  refusing((value) => {
     const problem = relativePathProblem(value);
-    if (problem !== undefined) {
-      context.addIssue({ code: 'custom', input: value, message: RELATIVE_PATH_HINT, params: { problem } });
-    }
+    return problem === undefined ? undefined : { problem, hint: RELATIVE_PATH_HINT };
   }),
 );
 

@@ -611,7 +611,7 @@
               },
               "url": {
                 "type": "string",
-                "pattern": "^https?:\\/\\/[^\\s/@]+(?:\\/\\S*)?$"
+                "pattern": "^https?:\\/\\/[^\\s/?#@]+(?:\\/[^\\s?#]*)?(?:\\?[^\\s=&#]+=\\$\\{[A-Za-z_][A-Za-z0-9_]*\\}(?:&[^\\s=&#]+=\\$\\{[A-Za-z_][A-Za-z0-9_]*\\})*)?$"
               },
               "headers": {
                 "type": "object",
@@ -625,7 +625,7 @@
               },
               "headersHelper": {
                 "type": "string",
-                "minLength": 1
+                "pattern": "^\\$\\{CLAUDE_PROJECT_DIR:-\\.\\}(?:\\/(?!\\.\\.?(?:\\/|$))[\\w.][\\w.-]*)+$"
               }
             },
             "required": [
