@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
-import { ManifestError } from '../src/core/errors.js';
-import { loadModule } from '../src/core/loader.js';
+import { ManifestError, RenderError } from '../src/core/errors.js';
+import { importProblem } from '../src/core/imports.js';
+import { type KitModule, loadModule } from '../src/core/loader.js';
 import { render } from '../src/core/render.js';
+import { toImport } from '../src/core/template.js';
 import {
   entry,
   type ManifestData,
@@ -60,6 +62,58 @@ describe('template targets that Claude Code reads from a subfolder or as secrets
     );
     expect(() => render([module], { stack: [] }, { ...BRAND, legacySlugs: ['oldkit'] })).toThrow(
       'taken for one',
+    );
+  });
+});
+
+describe('@ imports the kit never writes', () => {
+  it.each([
+    '`a`@~/.ssh/id_rsa',
+    '*a*@/etc/passwd',
+    '_a_@C:/x.md',
+    '[a](b)@../../x.md',
+    'see@docs/../../x.md',
+  ])('finds an import of an outside file in %j', (text) => {
+    expect(importProblem(text)).toContain('outside the project');
+  });
+
+  it.each([
+    'jest @.env',
+    '@./.env',
+    '@config/.env.local',
+    '`x`@CLAUDE.local.md',
+    '@.claude/settings.local.json',
+  ])('finds an import of a private file in %j', (text) => {
+    expect(importProblem(text)).toContain('secrets or personal file');
+  });
+
+  it.each([
+    '@AGENTS.md',
+    'npm i @scope/pkg',
+    'mail me@example.com',
+    '@Design\\ Docs/api.md',
+    '@.env.example',
+  ])('allows %j', (text) => {
+    expect(importProblem(text)).toBeUndefined();
+  });
+
+  it.each(['.env', 'docs/.env.local', 'Design Docs/.env'])('toImport refuses the private file %j', (path) => {
+    expect(() => toImport(path)).toThrow(RenderError);
+  });
+
+  it('refuses an import that two values form only side by side', () => {
+    const notes: KitModule = loadModule(
+      'm',
+      memoryReader({
+        'modules/m/module.json': JSON.stringify(
+          plainManifest('m', { files: [{ from: 'a.md', to: 'a.md', strategy: 'owned', target: 'project' }] }),
+        ),
+        'modules/m/files/a.md': 'Run {{cmd.a}}{{cmd.b}}\n',
+      }),
+    );
+    const values = { cmd: { a: 'npm test @', b: '~/.ssh/id_rsa' } };
+    expect(() => render([notes], { stack: [], values })).toThrow(
+      'a.md: would get an @ import of a file outside',
     );
   });
 });

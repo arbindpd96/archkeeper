@@ -1,5 +1,6 @@
 import type { Brand } from './brand.js';
 import { RenderError } from './errors.js';
+import { importProblem } from './imports.js';
 import { hasControlCharacter, relativePathProblem } from './paths.js';
 
 /** The values a template can read, nested in plain objects: `{{brand.hookDir}}` reads `scope.brand.hookDir`. */
@@ -29,21 +30,19 @@ export interface UnsafeValue {
   readonly problem: string;
 }
 
-// An @ word that starts at the home folder, the root, a drive or a .. segment imports a file outside the project.
-const OUTSIDE_IMPORT = /(?:^|\s)@(?:[~/\\]|[A-Za-z]:|(?:\S*[/\\])?\.\.(?:[/\\]|\s|$))/;
-
 function valueProblem(value: string, markers: readonly string[]): string | undefined {
   if (hasControlCharacter(value)) return 'holds a control character, such as a newline';
-  if (OUTSIDE_IMPORT.test(value)) return 'holds an @ import of a file outside the project';
+  const imported = importProblem(value);
+  if (imported !== undefined) return imported;
   const marker = markers.find((candidate) => value.toLowerCase().includes(candidate.toLowerCase()));
   return marker === undefined ? undefined : `holds ${marker}, which marks a managed block`;
 }
 
 /**
- * Finds the first string in `scope` that holds a control character, an `@` import of a file outside the
- * project, or one of `markers`. Values carry project data, such as detected commands, into templates as is:
- * Claude Code reads an `@path` anywhere on a line of CLAUDE.md as an import, and a marker could end a managed
- * block early. Imports of project files, such as `toImport('AGENTS.md')`, stay allowed.
+ * Finds the first string in `scope` that holds a control character, an `@` import that `importProblem` refuses,
+ * or one of `markers`. Values carry project data, such as detected commands, into templates as is: an `@path`
+ * in CLAUDE.md is an import, and a marker could end a managed block early. Imports of ordinary project files,
+ * such as `toImport('AGENTS.md')`, stay allowed.
  */
 export function unsafeValue(scope: TemplateScope, markers: readonly string[]): UnsafeValue | undefined {
   for (const [key, value] of Object.entries(scope)) {
@@ -116,8 +115,10 @@ export function renderTemplate(template: string, scope: TemplateScope, file: str
  * only in a file at the project root, such as `CLAUDE.md`; a nested file needs a path relative to itself.
  */
 export function toImport(path: string): string {
+  const privateFile =
+    importProblem(`@${path.replaceAll(' ', '\\ ')}`) === undefined ? undefined : 'names a private file';
   const problem =
-    relativePathProblem(path) ?? (path.startsWith('~') ? 'starts with ~, the home folder' : undefined);
+    relativePathProblem(path) ?? (path.startsWith('~') ? 'starts with ~, the home folder' : privateFile);
   if (problem !== undefined) {
     throw new RenderError({
       file: JSON.stringify(path),

@@ -7,6 +7,7 @@ import { relativePathProblem, targetPathProblem } from './paths.js';
 import { hookScriptPath, type JsonPart, mcpPart, settingsPart, toJson } from './render-json.js';
 import { collectEntries, type Draft, type RenderTree } from './render-tree.js';
 import type { Stack } from './schema-parts.js';
+import { importProblem } from './imports.js';
 import { findSecret } from './secrets.js';
 import { reservedTarget } from './targets.js';
 import { brandScope, renderTemplate, type TemplateScope, unsafeValue } from './template.js';
@@ -180,6 +181,23 @@ function refuseSecrets(tree: RenderTree): void {
   }
 }
 
+// Two values side by side, such as `x @` and `~/.ssh/id_rsa`, can form an import no single value holds.
+function refuseImports(tree: RenderTree): void {
+  for (const [path, entries] of tree) {
+    if (!path.toLowerCase().endsWith('.md')) continue;
+    for (const { content, module } of entries) {
+      const problem = importProblem(content);
+      if (problem === undefined) continue;
+      throw new RenderError({
+        file: path,
+        location: '',
+        problem: `${problem.replace(/^holds/, 'would get')} from ${module}`,
+        hint: 'import only ordinary project files, such as AGENTS.md: Claude Code loads @ imports into every session',
+      });
+    }
+  }
+}
+
 function checkValues(values: TemplateScope | undefined, brand: Brand): void {
   const prefixes = [brand.markerPrefix, ...brand.legacySlugs];
   const markers = prefixes.flatMap((prefix) => [`${prefix}:begin`, `${prefix}:end`]);
@@ -189,7 +207,7 @@ function checkValues(values: TemplateScope | undefined, brand: Brand): void {
     file: 'template values',
     location: unsafe.name,
     problem: unsafe.problem,
-    hint: 'pass one line of text with no block marker and no @ import outside the project: a value fills its template as is',
+    hint: 'pass one line of text with no block marker and no @ import of an outside or private file: a value fills its template as is',
   });
 }
 
@@ -209,5 +227,6 @@ export function render(
   const drafts = modules.flatMap((kit) => moduleDrafts({ kit, context, scope, brand }));
   const tree = collectEntries(drafts);
   refuseSecrets(tree);
+  refuseImports(tree);
   return tree;
 }
