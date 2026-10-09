@@ -213,6 +213,13 @@ describe('module manifest schema', () => {
       'camelCase',
     ],
     ['a gitignore comment line', (m) => (m.gitignore = ['# local files']), 'gitignore[0]', 'not a comment'],
+    ['a gitignore negation', (m) => (m.gitignore = ['!.env']), 'gitignore[0]', 'a ! negation'],
+    [
+      'a gitignore line with a tab',
+      (m) => (m.gitignore = ['local\tfiles/']),
+      'gitignore[0]',
+      'one ignore pattern',
+    ],
     ['an empty when stack list', (m) => (m.when = { stack: [] }), 'when.stack', 'list at least 1 entry'],
     ['a when stack that is not supported', (m) => (m.when = { stack: ['go'] }), 'when.stack[0]', '"python"'],
     [

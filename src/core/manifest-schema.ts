@@ -1,4 +1,5 @@
 import * as z from 'zod/mini';
+import { hasControlCharacter } from './paths.js';
 import {
   described,
   kebabId,
@@ -21,6 +22,15 @@ export const SETTINGS_FILE = '.claude/settings.json';
 export const MCP_FILE = '.mcp.json';
 /** The ignore file that `gitignore` lines go to, in a block named after the module. */
 export const GITIGNORE_FILE = '.gitignore';
+
+const GITIGNORE_START = /^[^\s#!]/;
+const GITIGNORE_HINT = 'write one ignore pattern, not a comment, a blank line or a ! negation';
+
+/** Says why `line` is not one ignore pattern, or returns undefined; a `!` negation would un-ignore a file. */
+export function ignoreLineProblem(line: string): string | undefined {
+  if (hasControlCharacter(line)) return 'contains a control character, such as a newline';
+  return GITIGNORE_START.test(line) ? undefined : 'is blank, a comment or a ! negation';
+}
 
 const when = z.strictObject({
   stack: z.optional(z.array(z.enum(STACKS)).check(z.minLength(1))),
@@ -183,11 +193,13 @@ export const moduleManifestSchema = z
     hooks: listOf(hook, 'Hooks registered in exec form in .claude/settings.json (ADR-0015).'),
     permissions: described(z._default(permissions, {}), 'Permission rules added to .claude/settings.json.'),
     gitignore: listOf(
-      z
-        .string()
-        .check(
-          z.regex(/^[^\s#][^\r\n]*$/, { error: 'write one ignore pattern, not a comment or blank line' }),
-        ),
+      z.string().check(
+        z.regex(GITIGNORE_START, { error: GITIGNORE_HINT }),
+        refusing((line) => {
+          const problem = ignoreLineProblem(line);
+          return problem === undefined ? undefined : { problem, hint: GITIGNORE_HINT };
+        }),
+      ),
       'Lines for a .gitignore block named after the module.',
     ),
     options: described(
