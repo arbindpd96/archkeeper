@@ -49,8 +49,10 @@ function rmRule({ args, wrappers, splitArgs }) {
   const targets = [...options.operands, ...options.afterDashes];
   // An unquoted expansion such as `rm $FLAGS /` may supply -r at run time, so a dangerous target is enough.
   if ((recursive || splitArgs) && targets.some(isDangerousPath)) return DANGEROUS_DELETE;
-  const unseen = targets.some(isUncheckedPath) || wrappers.includes('xargs') || wrappers.includes('find');
-  return recursive && unseen ? UNSEEN_DELETE : null;
+  // find -exec and xargs supply the targets at run time, so even a plain `rm` there deletes unseen paths.
+  const runner = wrappers.includes('xargs') || wrappers.includes('find');
+  const unseen = runner || targets.some(isUncheckedPath);
+  return (recursive || splitArgs || runner) && unseen ? UNSEEN_DELETE : null;
 }
 
 function findRoots(args) {
