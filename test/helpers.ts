@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { onTestFinished } from 'vitest';
@@ -105,4 +105,42 @@ export function writeFiles(dir: string, files: Record<string, string>): void {
     mkdirSync(path.dirname(absolute), { recursive: true });
     writeFileSync(absolute, content);
   }
+}
+
+/** A fixture project copied out of `examples/`, with the environment to run tools in it. */
+export interface FixtureCopy {
+  dir: string;
+  /** `process.env` with HOME and the global git config moved into the temp dir. */
+  env: NodeJS.ProcessEnv;
+}
+
+const FIXTURE_GIT_CONFIG = [
+  '[user]',
+  '\tname = test',
+  '\temail = test@example.com',
+  '[init]',
+  '\tdefaultBranch = main',
+  '[commit]',
+  '\tgpgsign = false',
+  '',
+].join('\n');
+
+/** Copies `examples/<name>` under a path with a space and non-ASCII characters, isolated from the real HOME. */
+export function fixtureCopy(name: string): FixtureCopy {
+  const source = path.join(REPO_ROOT, 'examples', name);
+  if (!existsSync(source)) throw new Error(`No fixture examples/${name}; see the examples/ folder.`);
+  const root = tempDir();
+  const dir = path.join(root, 'my project é', name);
+  const home = path.join(root, 'home');
+  cpSync(source, dir, { recursive: true });
+  writeFiles(home, { '.gitconfig': FIXTURE_GIT_CONFIG });
+  const env = {
+    ...process.env,
+    HOME: home,
+    USERPROFILE: home,
+    XDG_CONFIG_HOME: path.join(home, '.config'),
+    GIT_CONFIG_GLOBAL: path.join(home, '.gitconfig'),
+    GIT_CONFIG_NOSYSTEM: '1',
+  };
+  return { dir, env };
 }
