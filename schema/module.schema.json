@@ -396,13 +396,45 @@
                 "type": "string",
                 "enum": [
                   "SessionStart",
-                  "PreCompact",
-                  "Stop"
+                  "PreCompact"
                 ]
               },
               "matcher": {
                 "type": "string",
                 "minLength": 1
+              },
+              "script": {
+                "type": "string",
+                "pattern": "^dist\\/hooks\\/[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.mjs$"
+              },
+              "timeout": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 600
+              },
+              "once": {
+                "not": {}
+              },
+              "if": {
+                "not": {}
+              }
+            },
+            "required": [
+              "event",
+              "script",
+              "timeout"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "event": {
+                "type": "string",
+                "const": "Stop"
+              },
+              "matcher": {
+                "not": {}
               },
               "script": {
                 "type": "string",

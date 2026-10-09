@@ -55,6 +55,12 @@ describe('module manifest schema', () => {
       'never runs on a non-tool event',
     ],
     [
+      'a matcher on a Stop hook',
+      (m) => (m.hooks = [{ event: 'Stop', matcher: 'x', script: 'dist/hooks/guard-bash.mjs', timeout: 60 }]),
+      'hooks[0].matcher',
+      'Stop has none',
+    ],
+    [
       'a shell-form hook command',
       (m) => (hook(m, 0).command = 'node x.mjs'),
       'hooks[0].command',

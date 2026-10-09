@@ -13,7 +13,7 @@ import {
 /** Hook events a module may register (ADR-0015). PreToolUse and PostToolUse are the tool events. */
 export const HOOK_EVENTS = ['SessionStart', 'PreToolUse', 'PostToolUse', 'PreCompact', 'Stop'] as const;
 const TOOL_EVENTS = ['PreToolUse', 'PostToolUse'] as const;
-const OTHER_EVENTS = ['SessionStart', 'PreCompact', 'Stop'] as const;
+const MATCHED_EVENTS = ['SessionStart', 'PreCompact'] as const;
 
 /** The co-owned files the kit builds from manifest data rather than from a template (ADR-0014). */
 export const SETTINGS_FILE = '.claude/settings.json';
@@ -92,12 +92,15 @@ const hookFields = {
     z.never({ error: 'remove once: settings files ignore it; only skill frontmatter honours it' }),
   ),
 };
+const noIf = z.optional(z.never({ error: 'remove if: a hook with if never runs on a non-tool event' }));
 const hook = z.discriminatedUnion('event', [
   z.strictObject({ event: z.enum(TOOL_EVENTS), ...hookFields, if: z.optional(rule) }),
+  z.strictObject({ event: z.enum(MATCHED_EVENTS), ...hookFields, if: noIf }),
   z.strictObject({
-    event: z.enum(OTHER_EVENTS),
+    event: z.literal('Stop'),
     ...hookFields,
-    if: z.optional(z.never({ error: 'remove if: a hook with if never runs on a non-tool event' })),
+    matcher: z.optional(z.never({ error: 'remove matcher: Stop has none, so Claude Code ignores it' })),
+    if: noIf,
   }),
 ]);
 
