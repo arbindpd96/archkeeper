@@ -41,7 +41,9 @@ ADR-0007's reachability check is delivered by `doctor --online`. It first ships 
 - It reports each configured server as reachable, needing auth, or unreachable, with a one-line fix.
 - http servers get an MCP initialize request with a 5 s timeout.
 - stdio servers are checked by resolving their command, without starting them.
-- It contacts only servers whose `.mcp.json` entries the kit owns ([ADR-0014](0014-on-disk-contract.md)). Any other server is listed, and contacted only after the user confirms its host, so a cloned repo's `.mcp.json` cannot make `doctor` send a request to a host the user never chose.
+- It contacts a server without asking only when the kit owns its `.mcp.json` entry and the entry's URL has the origin (scheme, host and port) that the running kit's manifest renders for that server.
+  - Ownership alone never decides. It is read from the committed lock, which is untrusted ([ADR-0014](0014-on-disk-contract.md)), so a cloned repo could point a kit-named server such as `figma` at its own host and record a matching hash.
+  - Every other server is listed, and contacted only after the user confirms its host. A cloned repo's `.mcp.json` or lock therefore cannot make `doctor` send a request to a host the user never chose.
 - It follows no redirect to another host.
 - Secrets are never sent or printed. Requests carry no credentials, so a server that needs them reports "needs auth", and output shows each URL without its userinfo or query string.
 
