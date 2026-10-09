@@ -244,6 +244,27 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: npx commitlint --verbose --from "$BASE_SHA" --to "$HEAD_SHA"
 
+  commit-authors:
+    name: Commit authors
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      # The script is dependency-free, so this job installs nothing.
+      - name: No bot authors (Dependabot only on its own PRs) and no AI attribution
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: node scripts/check-commit-authors.mjs "$BASE_SHA" "$HEAD_SHA"
+
   changeset:
     name: Changeset
     if: github.event_name == 'pull_request'
@@ -302,6 +323,7 @@ jobs:
       - release-dry-run
       - install-smoke
       - commits
+      - commit-authors
       - changeset
       - dependency-review
     runs-on: ubuntu-latest
