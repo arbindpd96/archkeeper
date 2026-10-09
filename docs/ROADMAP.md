@@ -119,8 +119,8 @@ More ADRs will be written when their phase starts:
 
 **R3: ADRs accepted, roadmap published.** The architecture is decided, and the plan is public.
 
-- [ ] docs(adr): ADR-0012 brand constants
-- [ ] docs(adr): ADR-0014, 0015, 0016 and 0018 for the on-disk contract, hooks, delivery split and no telemetry
+- [x] docs(adr): ADR-0012 brand constants
+- [x] docs(adr): ADR-0014, 0015, 0016 and 0018 for the on-disk contract, hooks, delivery split and no telemetry
 - [x] docs(readme): launch-ready README skeleton with disclaimer and pre-release banner (done in #2)
 - [x] docs: publish ROADMAP.md, GitHub milestones and v0.1 issues (this PR)
 
