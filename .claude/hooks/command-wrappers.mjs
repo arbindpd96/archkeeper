@@ -189,8 +189,9 @@ function readRunner(argv, index, spec, found) {
 
 /**
  * Strips `VAR=value` prefixes and runners such as sudo, env and xargs. Returns the `program` that runs (or the
- * `script` a runner evaluates), its `args`, its index in argv, the `assignments` and `wrappers` seen, and the
- * `xargsReplace` string that xargs substitutes its input for (null when it appends the input instead).
+ * `script` a runner evaluates), its `args`, the argv indexes of the program word and the first arg, the
+ * `assignments` and `wrappers` seen, and the `xargsReplace` string that xargs substitutes its input for
+ * (null when it appends the input instead).
  */
 export function unwrap(argv) {
   const found = { assignments: [], wrappers: [], script: null, xargsReplace: null };
@@ -199,15 +200,16 @@ export function unwrap(argv) {
   let stdinProgram = null;
   while (spec) {
     const optionsEnd = readRunner(argv, index, spec, found);
-    if (found.script !== null) return { ...found, programIndex: argv.length, program: '', args: [] };
+    if (found.script !== null) {
+      return { ...found, programIndex: argv.length, argsIndex: argv.length, program: '', args: [] };
+    }
     index = takeAssignments(argv, optionsEnd + (spec.operands ?? 0), found.assignments);
     stdinProgram = spec.stdinProgram ?? null;
     spec = runnerAt(argv, index);
   }
-  // `uv run -` runs a Python script read from stdin, so it is judged as `python -`.
-  if (stdinProgram && argv[index] === '-') {
-    return { ...found, programIndex: index - 1, program: stdinProgram, args: argv.slice(index) };
-  }
-  const program = commandName(argv[index] ?? '');
-  return { ...found, programIndex: index, program, args: argv.slice(index + 1) };
+  // `uv run -` runs a Python script read from stdin, so it is judged as `python -` with `-` as the first arg.
+  const impliedProgram = stdinProgram !== null && argv[index] === '-';
+  const program = impliedProgram ? stdinProgram : commandName(argv[index] ?? '');
+  const argsIndex = impliedProgram ? index : index + 1;
+  return { ...found, programIndex: index, argsIndex, program, args: argv.slice(argsIndex) };
 }
