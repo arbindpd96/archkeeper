@@ -44,15 +44,18 @@ Everything the kit keeps lives in `.archkeeper/` (`BRAND.stateDir`):
 { lockfileVersion: 1,
   kit:     { name, version },
   modules: [ids in install order],
-  files:   { <path>: { module, strategy, hash, base } },
-  blocks:  { <path>: { <blockId>: <base> } },
+  files:   { <path>: { module, strategy, base, pending? } },
+  blocks:  { <path>: { <blockId>: { base, pending? } } },
   json:    { <path>: <ownedKeys> },
   removed: [kit files and blocks the user deleted] }
 ```
 
 - Paths are project-relative with forward slashes.
 - Hashes are sha256 of LF-normalised content, so an autocrlf checkout is not mistaken for an edit.
-- `hash` is the file as the kit last left it. `base` names the blob of the kit content an owned file was last written from, and each `blocks` entry names the blob of that block's kit content.
+- `base` is the hash of the content the kit last wrote to that file or block. It never holds user content: it is the yardstick for every user change (see [Updates](#updates)).
+  - For owned files and blocks it also names the blob that holds that content. A create-only file keeps no blob, because nothing is ever merged into it.
+  - It is `null` where the kit has never written, such as a different user file found at an owned path on first contact.
+- `pending` is the hash of kit content waiting in a sidecar. Its blob is kept like a base.
 - `ownedKeys` maps each JSON entry the kit owns to the hash of the entry as the kit wrote it, so an entry the user changed is recognised. Entries are keyed by hook `args` path, by exact permission string, and by MCP server name.
 - The zod schema in `src/core`, exported to `schema/lock.schema.json`, is the exact definition.
 
@@ -84,8 +87,8 @@ Every generated file declares one strategy in its module manifest (#18):
 
 ### Writing
 
-- **Planned purely.** Core turns the rendered tree, a snapshot of the project and the lock into ordered operations, each with a reason: `create`, `insertBlock`, `replaceBlock`, `mergeJson`, `sidecar`, `adopt`, `skip`, `delete` and `respectRemoval` (#21). Planning against the state the previous apply left behind yields zero operations.
-- **First contact loses nothing.** An existing file identical to the kit output (after LF normalisation) is adopted. A different existing file at an owned path is never overwritten: it is left alone and reported, and the kit's version goes to a sidecar.
+- **Planned purely.** Core turns the rendered tree, a snapshot of the project and the lock into ordered operations, each with a reason: `create`, `insertBlock`, `replaceBlock`, `mergeJson`, `sidecar`, `adopt`, `skip`, `delete` and `respectRemoval` (#21). Planning against the state the previous apply left behind yields no operation but `skip`, so a second run writes nothing.
+- **First contact loses nothing.** An existing file identical to the kit output (after LF normalisation) is adopted. A different existing file at an owned path is never overwritten: it is left alone with `base: null` and reported, and the kit's version goes to a sidecar.
 - **User deletions are respected.** A kit file or block the user deleted is recorded in `removed[]` and never recreated.
 - **Path-checked.** Every write and delete target is refused when it is absolute or contains `..`, resolves (via realpath) through a symlink outside the project root, lies inside `.git/`, or uses a Windows reserved name (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`) or a name ending in a dot or space. Deletes never follow symlinks (#23).
 - **Transactional.** Every touched file is backed up first. Each write goes to a temp sibling and is renamed into place, retrying with backoff on Windows `EPERM` and `EBUSY`. Any failure restores every file byte-identical. The lock is written last, so an interrupted run leaves the previous lock and the next run plans again.
@@ -93,14 +96,22 @@ Every generated file declares one strategy in its module manifest (#18):
 
 ### Updates
 
-**v0.1 never overwrites a user edit.** `update` re-renders from `config.json` with the running kit and compares each file, block and JSON entry on disk with the lock:
+**v0.1 never overwrites a user edit.** `update` re-renders from `config.json` with the running kit and compares each file, block and JSON entry on disk with its `base` in the lock:
 
-| Strategy      | Unchanged since the kit wrote it          | Changed by the user                                                             |
-| ------------- | ----------------------------------------- | ------------------------------------------------------------------------------- |
-| `owned`       | Replaced with the new version             | Kept; the new version goes to a whole-file sidecar                              |
-| `blocks`      | The block is replaced                     | The file is kept; the sidecar holds the whole file with only that block updated |
-| `json`        | Kit entries are added, changed or removed | The diverged entry is kept and reported                                         |
-| `create-only` | Never replaced                            | Never replaced                                                                  |
+| Strategy      | Unchanged since the kit wrote it          | Changed by the user                                                                        |
+| ------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `owned`       | Replaced with the new version             | Kept; the new version goes to a whole-file sidecar                                         |
+| `blocks`      | The block is replaced in place            | The block is kept; one sidecar per file holds the whole file with every such block updated |
+| `json`        | Kit entries are added, changed or removed | The diverged entry is kept and reported                                                    |
+| `create-only` | Never replaced                            | Never replaced                                                                             |
+
+What counts as a change:
+
+- **Always against `base`.** "Unchanged" and "unmodified" mean that the content on disk still hashes to `base`, the content the kit last wrote. User content never becomes a base, so a file or block with `base: null` is never unchanged: `update` never replaces it and `uninstall` never deletes it.
+- **Nothing new, nothing written.** When the new kit content equals `base`, a user-modified file, block or entry is skipped, with no sidecar. That is why a second run writes nothing.
+- **Adoption.** When the content on disk already equals the new kit content, `base` moves to it, and only the lock is written.
+- **Sidecars keep the base.** Writing a sidecar leaves `base` at the last kit-written content and records the sidecar's content as `pending`. A sidecar that already holds the new kit content is left alone. An unedited sidecar is rewritten when the kit content changes again, and one the user edited is never overwritten; it is reported instead.
+- **Resolving a sidecar.** The user takes what they want from the sidecar into the file, or copies it over the file, and deletes the sidecar. The next run finds `pending` with no sidecar on disk and moves `base` to `pending`. That kit version then counts as seen: it is never offered again, and the v0.2 merge starts from it. Kit changes the user never saw stay out of the base, so a merge can still bring them in.
 
 The command-line contract (#40):
 
@@ -124,6 +135,7 @@ The command-line contract (#40):
 - Base and backup copies cannot be loaded as instructions or matched by Grep.
 - The setup answers move from the lock (reference §7.2) to `config.json`, where users can read and edit them.
 - A file the user deleted stays deleted until they ask for it back.
+- A sidecar stays until the user deletes it, and deleting it is how they tell the kit they have seen that version.
 - The fast-check property "no user byte lost" (at least 1,000 runs) and the two-version e2e on the real tarball (#43) exercise this contract before 0.1.0 freezes it.
 - After 0.1.0, every schema change costs a migration.
 
