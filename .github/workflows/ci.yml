@@ -154,6 +154,40 @@ jobs:
         # An explicit tag keeps the dry run independent of what is on npm (the name holds a 0.0.1 placeholder).
         run: npm publish --dry-run --ignore-scripts --tag ci-dry-run
 
+  release-dry-run:
+    name: Release dry run
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          check-latest: true
+          cache: npm
+      - run: npm ci --ignore-scripts
+      # The same steps as release.yml, without a token: the tag, CHANGELOG and private guards are
+      # reported rather than enforced, and npm stage publish runs with --dry-run.
+      - name: Release guards (dry run)
+        id: guards
+        run: node scripts/check-release.mjs --dry-run
+      - name: Strip dev-only lifecycle scripts, as a release does
+        run: npm pkg delete scripts.prepare
+      - run: npm run build
+      - name: Package checks on the stripped manifest
+        run: npm run package -- --release
+      - name: Stage publish dry run
+        env:
+          PRERELEASE: ${{ steps.guards.outputs.prerelease }}
+          DIST_TAG: ${{ steps.guards.outputs.dist-tag }}
+        run: |
+          tag_args=()
+          if [ "$PRERELEASE" = true ]; then tag_args=(--tag next); fi
+          npm stage publish --dry-run --access public --ignore-scripts --json "${tag_args[@]}" > "$RUNNER_TEMP/stage.json"
+          node scripts/stage-summary.mjs "$RUNNER_TEMP/stage.json" --dist-tag "$DIST_TAG" --dry-run
+
   install-smoke:
     name: Install smoke (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -263,6 +297,7 @@ jobs:
       - reproducible-build
       - node-gate
       - package
+      - release-dry-run
       - install-smoke
       - commits
       - changeset
