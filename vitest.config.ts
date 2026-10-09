@@ -6,7 +6,7 @@ export default defineConfig({
     environment: 'node',
     coverage: {
       provider: 'v8',
-      include: ['packages/*/src/**', 'scripts/**', '.claude/hooks/**'],
+      include: ['src/**', 'packages/*/src/**'],
       reporter: ['text', 'lcov'],
     },
   },
