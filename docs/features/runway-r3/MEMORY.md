@@ -29,6 +29,7 @@ v0.0 Runway milestone R3 (issues #14, #15): ADR-0012, 0014, 0015, 0016 and 0018 
 - 2026-10-09: The stop check is off until the user confirms it, even in the full preset, and `checks.stop` stays the runner argv #38 specifies rather than only an npm script name, as the review suggested. Why: #38 also covers Python projects; the value never reaches a shell and is committed project content, like the tests it runs.
 - 2026-10-09: The CI check that keeps `plugin/` and `.claude-plugin/` to release PRs, and their CODEOWNERS entries, land in v0.3 M1. Why: neither path exists yet, and no marketplace exists without them.
 - 2026-10-09: `doctor --online` contacts only kit-owned MCP servers unless the user confirms a host, follows no cross-host redirect, and redacts userinfo and query strings (ADR-0018). Why: a cloned repo's `.mcp.json` must not choose where `doctor` sends requests.
+- 2026-10-09: guard-secrets judges an Edit or MultiEdit by replaying it on the file and asks about every new line that holds a likely secret, marked or not, and when it cannot read the file or find an `old_string` (45f7268). It reads the file through one `O_NOFOLLOW | O_NONBLOCK` descriptor, only for a regular file of at most 1 MB, and for a Write only when a written line carries the pragma (f3569b2). Why: the second review showed an edit to the token alone on a marked line passing, and a FIFO at the target hanging the hook past its timeout, which fails open.
 
 ## Done
 
