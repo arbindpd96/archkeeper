@@ -88,6 +88,8 @@ const DESCRIBERS: Describers = {
     hint: `use ${oneOf(issue.values)}`,
   }),
   invalid_union: invalidUnion,
+  // A value that fails a pattern can be a pasted secret, such as a token in an env value, so it is not shown.
+  invalid_format: () => ({ problem: 'does not have the required form', hint: 'see the schema' }),
   invalid_key: (issue) => ({
     problem: 'is not a valid key',
     hint: issue.issues[0]?.message ?? 'see the schema',
