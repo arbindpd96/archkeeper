@@ -43,6 +43,11 @@ v0.1 milestone M1 (issues #18, #19, #20, #71): modules are validated data (manif
 - 2026-10-10: The frontmatter allowlist stays for M3. Why: it constrains the contents of rendered skill and agent files (ADR-0015's static test over every preset and stack), not the manifest.
 - 2026-10-10: No new ADR. Why: every choice above refines ADR-0011, 0014, 0015 or 0016 without changing them; `docs/decisions.md` lists the larger ones.
 
+- 2026-10-10 (review 3): an MCP command, arg or URL may hold only plain `${NAME}` references, plus `${CLAUDE_PROJECT_DIR:-.}` as the one default; credential names are matched word by word in flags and `NAME=value` args (so `--apikey` and `API_KEY=` count, `--author` does not); a stdio command with a `/` is absolute or starts at the project; `__proto__`, `constructor` and `prototype` are not server names. Why: Claude Code uses a `${VAR:-default}` default when the variable is unset, so a key or `./` path there shipped as a literal. Open gap: a relative arg without `./`, such as `tools/server.py`, cannot be told from a plain word; the first stdio module must use `${CLAUDE_PROJECT_DIR:-.}` and the review checks it.
+- 2026-10-10 (review 3): template values may not hold an `@` import of a file outside the project (home, root, drive or `..`); imports of project files, such as `toImport()` output, stay allowed. Values are checked for block markers under every legacy slug too. Why: Claude Code reads `@path` mid-line, so a detected command could pull `~/.ssh/id_rsa` into context.
+- 2026-10-10 (review 3): templates never target `.env`, `.env.*` (except `.example`, `.sample`, `.template`), `.envrc`, `CLAUDE.local.md` or a name ending in the sidecar suffix; a declared blocks or json file must get content; JSON entries in the render tree keep their sorted owned `keys` for the lock. Why: a module mistake must not reach secrets or personal memory, a sidecar-named kit file would be misread, and M2 needs the keys for `ownedKeys`.
+- 2026-10-10 (review 3): ESLint `curly: multi-line` runs after eslint-config-prettier. Why: hand-bracing (7977805) missed five sites.
+
 ## Measured sizes (ADR-0017)
 
 | Item                            | Before M1 | After M1                | Budget |
@@ -90,9 +95,12 @@ Every module is `internal: true` until its milestone ships its README section an
 
 - [x] Second review answered: target names a file system folds into another file, and names ending in a dot or space (997de13); no module allow rules (763fa21); one option lookup (5100924); a render test for `when.options` (8bf4038); spaced brand variables in targets (fa22b7d); the `when` hint for string-list options (0e6308a); the hook script pattern from `KEBAB_ID` (f75ae84); secret patterns kept equal to the guard-secrets hook (db295e2); unknown `conflicts` ids (effa345); repeated entries in every unique list (8f150ab); template values with a newline or a marker (938d156); MCP schema in its own module (2b2a4c5); https and header names (db39420); literal keys in MCP URLs and arguments (0d9c913); `${CLAUDE_PROJECT_DIR:-.}` for stdio paths (04f9d95). Owner sign-off on #20 and the Windows CI run stay open (see Next step); the declined finding is under Gotchas.
 
+- [x] Review 3 fixes (8a3e2af–c2b0c79): MCP `${VAR:-default}` and credential-name bypasses, reserved `.env`/`CLAUDE.local.md`/sidecar targets, outside `@` imports and legacy markers in values, empty declared files, "is required" messages, owned JSON keys, `curly` lint, `configFile` rename, a sample per secret pattern, `toImport` scope note, mistakes log and map row. `npm run check` green before every commit.
+- Left as notes, not code: `holdsLiteralKey` refuses `sha256:` digests and `#<sha>` pins; exempt them when the launcher pinning check lands with the first stdio module.
+
 ## Next step
 
-Open the M1 PR (closes #18, #19, #20, #71). In the PR body, say that #18's "every CLI command in the command registry declares a demo or is internal" moves to #26 (`TODO(#26)` in `scripts/check-demos.mjs`; #26's acceptance criteria cover it). Before the PR closes #20: get the owner's confirmation of the render tree's list of entries per path and amend #20's text or comment on it, and confirm that the Windows leg of CI runs the render snapshot green. Then start M2 with `/new-feature v0.1-m2-...` (#21–#24); note the purity lint decision above for #24.
+Open the M1 PR (closes #18, #19, #20, #71). #18's command-registry demo rule moves to #26 and #20's render shape is a list of entries per path; both issues carry a comment saying so. Confirm the Windows leg of CI runs the render snapshot green before merging. Then start M2 with `/new-feature v0.1-m2-...` (#21–#24); note the purity lint decision above for #24.
 
 ## Gotchas / don't try again
 
