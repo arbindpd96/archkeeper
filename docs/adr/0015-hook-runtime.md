@@ -86,8 +86,10 @@ Both guards fail closed because the backstop behind them is thin: deny rules are
 - **guard-bash decides on parsed commands, never on regexes over raw text.** It tokenizes quotes, escapes, here-documents, substitutions and brace expansion within a work budget, unwraps wrappers such as `sudo`, `env`, `xargs` and `bash -c`, and judges each simple command. When a case is ambiguous it asks rather than denies.
   - It asks before any command that names a `.env`, `.env.*` or `.envrc` file at any depth, such as `cat sub/.env.local` or `source .env`, except templates such as `.env.example`. The `Read` deny rules below cover only the Read tool, so this is the only check on shell access to those files.
 - **guard-secrets** scans every string a write would put into a file, denies likely secrets with a reason that names the rule and the file but never the value, and asks before editing `.env`, `.env.*` or `.envrc`, except templates such as `.env.example`.
-  - An `archkeeper:allow-secret` pragma exempts a line only when that exact line is already in the file on disk, read without following symlinks.
-  - A write that adds a pragma line matching a secret rule asks instead, so an agent cannot approve its own secret. The user confirms each new fixture once, and later edits that keep the line pass. This repo's guard-secrets already works this way.
+  - An `archkeeper:allow-secret` pragma exempts a line only when that exact line is already in the file on disk. The guard reads the file through one descriptor opened with `O_NOFOLLOW` and `O_NONBLOCK`, after an `lstat` check for platforms that lack those flags, and only when it is a regular project file of at most 1 MB.
+  - A write that adds a pragma line matching a secret rule asks instead, so an agent cannot approve its own secret. The user confirms each new fixture once, and later edits that keep the line pass.
+  - An Edit or MultiEdit is judged by the lines it leaves in the file, not by its `new_string` alone, because an edit to part of a line, such as only the token on a marked line, never shows that line. The guard replays each `old_string` → `new_string` (honouring `replace_all`) on the file and asks about every new line that holds a likely secret. It also asks when it cannot read the file or find an `old_string` in it.
+  - This repo's guard-secrets already works this way.
   - The pragma is also accepted under every `BRAND.legacySlugs` prefix (ADR-0012).
 - **Repo-specific policies** such as `blockAiAttribution` and `blockNoVerify` are module options, off by default.
 
