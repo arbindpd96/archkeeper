@@ -117,6 +117,26 @@ The AGENTS.md block and the README must say all three.
 
 Generated settings always carry the SchemaStore `$schema` (set only when absent). They never contain `once`, `if` on a non-tool event, `permissions.defaultMode`, `autoMode`, a model id or `enabledMcpServers` (reference §1.2, §1.9, §11, §12). A static test checks every preset × stack output.
 
+### Generated skill and agent frontmatter
+
+Frontmatter can widen access without touching `settings.json` (reference §3.1, §3.2):
+
+- `hooks` registers hooks for the rest of the session.
+- A skill's `allowed-tools` lets Claude use those tools without a prompt.
+- An agent's `permissionMode` can be `acceptEdits`, `auto`, `dontAsk` or `bypassPermissions`.
+- `mcpServers` adds MCP servers.
+- A skill's `` !`cmd` `` runs a command at load time, without a prompt, whenever the permission rules or the skill's own `allowed-tools` allow it.
+
+So every skill and agent the kit generates, for the project or for the plugin ([ADR-0016](0016-delivery-split.md)), follows an allowlist:
+
+- no `hooks` and no `mcpServers`
+- `permissionMode` only as `default` or `plan`
+- a skill's `allowed-tools` holds no unscoped `Bash`, only `Bash(<command>)` entries
+- an agent's `tools` is always explicit (reference §11); it may list `Bash`, because that list only makes a tool available, and every call still goes through the permission rules and guard-bash
+- no `` !`cmd` `` in a skill body; the skill tells Claude which command to run, so the guards judge it
+
+The preset × stack static test checks the frontmatter of every generated skill and agent, and the same test runs on the built `plugin/`.
+
 ### Stop hooks
 
 - Stop hooks return at once when `stop_hook_active` is set.
