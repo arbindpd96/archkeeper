@@ -65,15 +65,15 @@ function expandArgv({ argv, braces, splits, expands }, charge) {
 
 function normalize(raw, outer, charge) {
   const { argv, splits, expands } = expandArgv(raw, charge);
-  const { programIndex, ...command } = unwrap(argv);
+  const { programIndex, argsIndex, ...command } = unwrap(argv);
   return {
     ...command,
     assignments: [...outer.assignments, ...command.assignments],
     wrappers: [...outer.wrappers, ...command.wrappers],
     dynamicProgram: hasExpansion(argv[programIndex] ?? ''),
     splitProgram: splits[programIndex] ?? false,
-    splitArgs: splits.slice(programIndex + 1).some(Boolean),
-    expands: expands.slice(programIndex + 1),
+    splitArgs: splits.slice(argsIndex).some(Boolean),
+    expands: expands.slice(argsIndex),
     definesFunction: raw.definesFunction === true,
     redirects: raw.redirects,
     heredocs: raw.heredocs,
