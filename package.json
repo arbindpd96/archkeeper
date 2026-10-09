@@ -37,6 +37,7 @@
     "comments": "node scripts/check-comments.mjs",
     "brand": "node scripts/check-brand.mjs",
     "demos": "node scripts/check-demos.mjs",
+    "gifs:pull": "node scripts/pull-gifs.mjs",
     "build": "tsdown && node scripts/third-party-licenses.mjs",
     "package": "node scripts/check-package.mjs",
     "test": "vitest run",
