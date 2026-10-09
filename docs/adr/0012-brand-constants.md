@@ -13,6 +13,7 @@ ADR-0010 renamed the project to `archkeeper` and asked for the name to be a sing
 - the state directory `.archkeeper/`, which holds the config, the lock and the base blobs (ADR-0014)
 - the hook folder `.claude/hooks/archkeeper/`, whose script paths are registered in users' `settings.json` ([ADR-0015](0015-hook-runtime.md))
 - the rules folder `.claude/rules/archkeeper/` and the sidecar suffix `.archkeeper-new`
+- the `archkeeper:allow-secret` pragma, which users put on fixture lines in their own files (ADR-0015)
 - the plugin and marketplace names, which users enable as `archkeeper@archkeeper` ([ADR-0016](0016-delivery-split.md))
 
 Markers, the state dir and the hook paths therefore become permanent in users' repos at the first publish: every later `update` must still recognise them. The plugin and marketplace names must also pass Claude Code's validator, which rejects `claude-` prefixes and other reserved names (reference §4.1, §10).
@@ -55,7 +56,15 @@ The disclaimer is ADR-0010's wording, and the README carries the same text in it
 2. Update `package.json` `name` and `bin`; `check-brand` fails until they match.
 3. Regenerate snapshots and tape renders, and write a new ADR.
 
-Marker parsing accepts every `legacySlugs` prefix (#22). `update` rewrites legacy markers and moves the legacy state and hook folders to the current names (#40), which is tested with a fake legacy slug. Because `check-brand` also searches for legacy slugs, the old name cannot creep back into code.
+Every slug-derived string in users' repos is either migrated by `update` or still accepted (#22, #40), and each case is tested with a fake legacy slug:
+
+- **Markers.** Parsing accepts every `legacySlugs` prefix, and `update` rewrites legacy markers to the current prefix.
+- **Folders.** The state, hook and rules folders move to their current names, and `update` rewrites the hook paths registered in `settings.json` to match.
+- **Sidecars.** A sidecar with a legacy suffix counts as the pending sidecar it is; `update` renames it when it is unedited and reports it otherwise.
+- **Plugin settings.** Where the team step wrote `enabledPlugins` and `extraKnownMarketplaces`, those kit-owned entries are rewritten to the current names.
+- **Pragma.** The `allow-secret` pragma sits on users' own lines, which the kit never edits, so guard-secrets keeps accepting it under every legacy slug.
+
+Because `check-brand` also searches for legacy slugs, the old name cannot creep back into code.
 
 ## Consequences
 
