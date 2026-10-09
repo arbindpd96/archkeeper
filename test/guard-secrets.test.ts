@@ -1,0 +1,54 @@
+import { describe, expect, it } from 'vitest';
+import { runScript } from './helpers.js';
+
+function decision(toolInput: unknown): string {
+  const { stdout } = runScript('.claude/hooks/guard-secrets.mjs', { payload: { tool_input: toolInput } });
+  if (!stdout) return 'allow';
+  const output = JSON.parse(stdout) as { hookSpecificOutput?: { permissionDecision?: string } };
+  return output.hookSpecificOutput?.permissionDecision ?? 'allow';
+}
+
+const write = (content: string) => ({ file_path: 'src/config.ts', content });
+
+describe('guard-secrets patterns', () => {
+  it.each([
+    ['AWS temporary key', `ASIA${'Q'.repeat(16)}`],
+    ['AWS secret line', `aws_secret_access_key = ${'a'.repeat(40)}`],
+    ['GitHub token followed by an underscore', `ghp_${'a'.repeat(36)}_x`],
+    ['Slack app token', `xapp-1-${'A'.repeat(20)}`],
+    [
+      'Slack webhook',
+      `https://hooks.slack.com/services/${'T'.repeat(9)}/${'B'.repeat(11)}/${'x'.repeat(24)}`,
+    ],
+    ['Stripe webhook secret', `whsec_${'a'.repeat(32)}`],
+    ['PGP private key block', ['-----BEGIN PGP PRIVATE', 'KEY BLOCK-----'].join(' ')],
+    ['JWT', `eyJ${'a'.repeat(20)}.eyJ${'b'.repeat(20)}.${'c'.repeat(20)}`],
+    ['credentialed database URL', 'postgres://admin:s3cr3tValue@db.internal:5432/app'],
+    ['npmrc auth token', `//registry.npmjs.org/:_authToken=${'n'.repeat(36)}`],
+  ])('denies a %s', (_name, secret) => {
+    expect(decision(write(`const value = '${secret}';`))).toBe('deny');
+  });
+
+  it.each([
+    ['env-var reference in a URL', 'https://user:${TOKEN}@github.com/o/r.git'],
+    ['placeholder password', 'postgres://user:password@localhost/db'],
+    ['npmrc token from env', '//registry.npmjs.org/:_authToken=${NPM_TOKEN}'],
+  ])('allows a %s', (_name, text) => {
+    expect(decision(write(text))).toBe('allow');
+  });
+});
+
+describe('guard-secrets env files and robustness', () => {
+  it.each(['/p/.ENV', '/p/.envrc', '/p/packages/api/.env.production'])('asks before editing %s', (file) => {
+    expect(decision({ file_path: file, content: 'A=1' })).toBe('ask');
+  });
+
+  it('allows editing .env.example in any case', () => {
+    expect(decision({ file_path: '/p/.ENV.EXAMPLE', content: 'A=' })).toBe('allow');
+  });
+
+  it('does not crash on malformed multi-edit payloads', () => {
+    expect(decision({ file_path: 'a.ts', edits: [null, { new_string: 'ok' }] })).toBe('allow');
+    expect(decision({ file_path: 'a.ts', edits: 'not-an-array' })).toBe('allow');
+  });
+});

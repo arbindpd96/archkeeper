@@ -4,23 +4,36 @@ import { readInput, respond } from './lib.mjs';
 const ALLOW_PRAGMA = 'codekit:allow-secret';
 
 const SECRET_PATTERNS = [
-  { name: 'AWS access key', pattern: /\bAKIA[0-9A-Z]{16}\b/ },
-  { name: 'GitHub token', pattern: /\b(gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{60,})\b/ },
+  { name: 'AWS access key', pattern: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/ },
+  { name: 'AWS secret key', pattern: /aws_secret_access_key\s*[=:]\s*['"]?[A-Za-z0-9/+=]{40}/i },
+  { name: 'GitHub token', pattern: /\b(gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{60,})/ },
   { name: 'Anthropic API key', pattern: /\bsk-ant-[A-Za-z0-9_-]{20,}/ },
   { name: 'OpenAI API key', pattern: /\bsk-(proj-)?[A-Za-z0-9_-]{32,}/ },
-  { name: 'Slack token', pattern: /\bxox[abprs]-[A-Za-z0-9-]{10,}/ },
-  { name: 'Stripe live key', pattern: /\b[sr]k_live_[0-9a-zA-Z]{24,}/ },
-  { name: 'Google API key', pattern: /\bAIza[0-9A-Za-z_-]{35}\b/ },
-  { name: 'npm token', pattern: /\bnpm_[A-Za-z0-9]{36}\b/ },
-  { name: 'private key', pattern: /-----BEGIN ([A-Z]+ )?PRIVATE KEY-----/ },
+  { name: 'Slack token', pattern: /\b(xox[abprs]-[A-Za-z0-9-]{10,}|xapp-\d-[A-Za-z0-9-]{10,})/ },
+  { name: 'Slack webhook', pattern: /https:\/\/hooks\.slack\.com\/services\/[A-Za-z0-9/]{20,}/ },
+  { name: 'Stripe secret', pattern: /\b([sr]k_live_[0-9a-zA-Z]{24,}|whsec_[A-Za-z0-9]{24,})/ },
+  { name: 'Google API key', pattern: /\bAIza[0-9A-Za-z_-]{35}/ },
+  { name: 'npm token', pattern: /\bnpm_[A-Za-z0-9]{36}|_authToken\s*=\s*[^\s$]{8,}/ },
+  { name: 'private key', pattern: /-----BEGIN ([A-Z]+ )*PRIVATE KEY( BLOCK)?-----/ },
+  { name: 'JWT', pattern: /\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/ },
+  {
+    name: 'credentialed URL',
+    pattern: /\b[a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:(?![$<{]|(password|pass|secret|changeme)@)[^\s@/]{3,}@/i,
+  },
 ];
 
-const ENV_FILE = /^\.env(\..+)?$/;
+const ENV_FILE = /^\.env(rc|\..+)?$/i;
+const ENV_TEMPLATE = /^\.env\.example$/i;
 
 /** Collects every string the tool call would write into the file. */
 function writtenText(toolInput) {
-  const edits = toolInput.edits ?? [];
-  return [toolInput.content, toolInput.new_string, toolInput.new_source, ...edits.map((e) => e.new_string)]
+  const edits = Array.isArray(toolInput.edits) ? toolInput.edits : [];
+  return [
+    toolInput.content,
+    toolInput.new_string,
+    toolInput.new_source,
+    ...edits.map((edit) => edit?.new_string),
+  ]
     .filter((value) => typeof value === 'string')
     .join('\n');
 }
@@ -36,19 +49,27 @@ function decide(permissionDecision, reason) {
   };
 }
 
-const toolInput = readInput().tool_input ?? {};
-const fileName = path.basename(toolInput.file_path ?? toolInput.notebook_path ?? '');
-
-if (ENV_FILE.test(fileName) && fileName !== '.env.example') {
-  respond(decide('ask', `${fileName} holds secrets. Confirm with the user before editing it.`));
-} else {
+/** Returns the permission response for a write, or null when the write is safe. */
+function evaluate(toolInput) {
+  const target = toolInput.file_path ?? toolInput.notebook_path;
+  const fileName = typeof target === 'string' ? path.basename(target) : '';
+  if (ENV_FILE.test(fileName) && !ENV_TEMPLATE.test(fileName)) {
+    return decide('ask', `${fileName} holds secrets. Confirm with the user before editing it.`);
+  }
   const leaks = writtenText(toolInput)
     .split('\n')
     .filter((line) => !line.includes(ALLOW_PRAGMA))
     .flatMap((line) => SECRET_PATTERNS.filter(({ pattern }) => pattern.test(line)).map(({ name }) => name));
+  if (leaks.length === 0) return null;
+  return decide(
+    'deny',
+    `possible ${[...new Set(leaks)].join(', ')} in written content. Use an env var instead.`,
+  );
+}
 
-  if (leaks.length > 0) {
-    const kinds = [...new Set(leaks)].join(', ');
-    respond(decide('deny', `possible ${kinds} in written content. Use an env var instead.`));
-  }
+try {
+  const response = evaluate(readInput().tool_input ?? {});
+  if (response) respond(response);
+} catch {
+  respond(decide('ask', 'could not inspect this write. Confirm with the user.'));
 }
