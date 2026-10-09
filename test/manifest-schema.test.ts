@@ -146,6 +146,27 @@ describe('module manifest schema', () => {
       'options.blockNoVerify.type',
       '"string-list"',
     ],
+    [
+      'an option name that is not camelCase',
+      (m) => (m.options = { 'Block-It': {} }),
+      'options.Block-It',
+      'camelCase',
+    ],
+    ['a gitignore comment line', (m) => (m.gitignore = ['# local files']), 'gitignore[0]', 'not a comment'],
+    ['an empty when stack list', (m) => (m.when = { stack: [] }), 'when.stack', 'list at least 1 entry'],
+    ['a when stack that is not supported', (m) => (m.when = { stack: ['go'] }), 'when.stack[0]', '"python"'],
+    [
+      'an MCP server name with a dot',
+      (m) => (server(m, 0).name = 'docs.site'),
+      'mcpServers[0].name',
+      'letters',
+    ],
+    [
+      'a demo tape that is not an id',
+      (m) => (m.demo = { tape: 'Init Tape', section: 'S' }),
+      'demo.tape',
+      'kebab-case',
+    ],
   ])('rejects %s', (_name, change, location, fix) => {
     const error = load(change);
     expect(error.file).toBe('modules/rich/module.json');

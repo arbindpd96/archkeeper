@@ -55,8 +55,10 @@ function invalidUnion(issue: Extract<Issue, { code: 'invalid_union' }>): Describ
 function sizeIssue(issue: Extract<Issue, { code: 'too_small' | 'too_big' }>): Described {
   const limit = issue.code === 'too_small' ? issue.minimum : issue.maximum;
   const bound = issue.code === 'too_small' ? 'at least' : 'at most';
-  if (issue.origin === 'array')
-    return { problem: `needs ${bound} ${String(limit)} entries`, hint: 'see the schema' };
+  if (issue.origin === 'array') {
+    const entries = `${String(limit)} ${limit === 1 ? 'entry' : 'entries'}`;
+    return { problem: `needs ${bound} ${entries}`, hint: `list ${bound} ${entries}` };
+  }
   if (issue.origin === 'string' && limit === 1) return { problem: 'must not be empty', hint: 'fill it in' };
   return { problem: `must be ${bound} ${String(limit)}`, hint: `use a value ${bound} ${String(limit)}` };
 }
@@ -74,24 +76,29 @@ function customIssue(issue: Extract<Issue, { code: 'custom' }>): Described {
   return { problem: problem ?? `${show(issue.input)} is not valid`, hint: 'see the schema' };
 }
 
+type Describers = { readonly [Code in Issue['code']]?: (issue: Extract<Issue, { code: Code }>) => Described };
+
+const DESCRIBERS: Describers = {
+  unrecognized_keys: unknownKey,
+  invalid_type: invalidType,
+  invalid_value: (issue) => ({
+    problem: `${show(issue.input)} is not allowed`,
+    hint: `use ${oneOf(issue.values)}`,
+  }),
+  invalid_union: invalidUnion,
+  invalid_key: (issue) => ({
+    problem: 'is not a valid key',
+    hint: issue.issues[0]?.message ?? 'see the schema',
+  }),
+  too_small: sizeIssue,
+  too_big: sizeIssue,
+  custom: customIssue,
+};
+
 function describe(issue: Issue): Described {
-  switch (issue.code) {
-    case 'unrecognized_keys':
-      return unknownKey(issue);
-    case 'invalid_type':
-      return invalidType(issue);
-    case 'invalid_value':
-      return { problem: `${show(issue.input)} is not allowed`, hint: `use ${oneOf(issue.values)}` };
-    case 'invalid_union':
-      return invalidUnion(issue);
-    case 'too_small':
-    case 'too_big':
-      return sizeIssue(issue);
-    case 'custom':
-      return customIssue(issue);
-    default:
-      return { problem: `${show(issue.input)} is not valid`, hint: 'see the schema' };
-  }
+  // TypeScript cannot pair a code with its own describer through the lookup, so the entry is widened.
+  const describer = DESCRIBERS[issue.code] as ((issue: Issue) => Described) | undefined;
+  return describer?.(issue) ?? { problem: `${show(issue.input)} is not valid`, hint: 'see the schema' };
 }
 
 /** The data when `value` matches `schema`, or the finding for zod's first issue. */

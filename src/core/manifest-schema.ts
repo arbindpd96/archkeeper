@@ -148,7 +148,11 @@ export const moduleManifestSchema = z
     hooks: listOf(hook, 'Hooks registered in exec form in .claude/settings.json (ADR-0015).'),
     permissions: described(z._default(permissions, {}), 'Permission rules added to .claude/settings.json.'),
     gitignore: listOf(
-      z.string().check(z.regex(/^[^\s#][^\r\n]*$/)),
+      z
+        .string()
+        .check(
+          z.regex(/^[^\s#][^\r\n]*$/, { error: 'write one ignore pattern, not a comment or blank line' }),
+        ),
       'Lines for a .gitignore block named after the module.',
     ),
     options: described(
