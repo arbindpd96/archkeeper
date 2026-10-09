@@ -26,7 +26,7 @@ Commits are authored by people. Do not add AI co-author trailers or "generated w
 | Gate           | Command                      | What it enforces                                                                           |
 | -------------- | ---------------------------- | ------------------------------------------------------------------------------------------ |
 | Formatting     | `npm run format:check`       | Prettier, 110 columns, single quotes                                                       |
-| Lint           | `npm run lint`               | typescript-eslint strict, readability limits, JSDoc                                        |
+| Lint           | `npm run lint`               | typescript-eslint strict, readability limits, JSDoc, layer boundaries (ADR-0011)           |
 | Types          | `npm run typecheck`          | TypeScript strict, `noUncheckedIndexedAccess`                                              |
 | Comment policy | `npm run comments`           | See [Comments](#comments)                                                                  |
 | Tests          | `npm test`                   | Vitest: Linux on Node 22/24/26, macOS + Windows on 24                                      |

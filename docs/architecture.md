@@ -1,14 +1,14 @@
 # Architecture map
 
 > The living map of archkeeper. Read it before creating anything new; update it (or run `/update-map`) after adding a
-> package, module, pack or shared util. Status: **tooling and dogfood setup only; product code starts in v0.0 Runway** (see `docs/ROADMAP.md`). The layout below is the agreed target (handoff §8, ADR-0002/0003).
+> source layer, module, pack or shared util. Status: **single-package layout in place (ADR-0011); product code starts in v0.0 Runway** (see `docs/ROADMAP.md`). Rows marked _planned_ are the agreed target (handoff §8, ADR-0002/0003/0011).
 
 ## Overview
 
 ```mermaid
 flowchart LR
-  user([Developer]) -->|npx archkeeper init| cli[packages/cli]
-  cli --> core[packages/core]
+  user([Developer]) -->|npx archkeeper init| cli[src/cli]
+  cli --> core[src/core]
   core -->|loads manifests| modules[modules/*]
   modules --> packs[packs/languages · packs/frameworks]
   core -->|merge-safe writes + lockfile| project[(User project:<br/>CLAUDE.md · AGENTS.md · .claude/ · docs/)]
@@ -18,35 +18,41 @@ flowchart LR
 ```
 
 - **One source of truth.** Modules hold templates, hooks, skills and agents. The CLI scaffolds the project-owned parts. The build emits the plugin-owned parts into `plugin/`.
+- **One package, zero runtime dependencies** (ADR-0011). Every library is a devDependency that tsdown inlines. The published `files` are `dist`, `modules`, `packs` and `schema`.
 - **Core is pure.** It does module resolution, rendering, merge planning and the lockfile. The CLI owns prompts, output and exit codes.
+- **Layers are lint-enforced** (ESLint `no-restricted-*` rules in `eslint.config.mjs`; each is proven by a fixture in `test/fixtures/layers/`):
+  - `src/core` never imports `src/cli`, commander or @clack/prompts, and never uses `process.exit` or `console`.
+  - `src/hooks` imports only `node:` built-ins and `src/hooks/runtime`.
+  - `src/hooks/runtime` imports no npm package.
 
 ## Repository layout
 
-| Path                      | Purpose                                                                                | Status           |
-| ------------------------- | -------------------------------------------------------------------------------------- | ---------------- |
-| `packages/cli/`           | npx entry: `init`, `update`, `doctor`, `uninstall`                                     | _planned v0.1_   |
-| `packages/core/`          | Module loader, manifest schema, stack detection, renderer, merge-safe writer, lockfile | _planned v0.1_   |
-| `packages/dashboard/`     | Local web dashboard                                                                    | _planned v0.4_   |
-| `modules/<name>/`         | One switchable feature: `manifest`, `templates/`, `hooks/`, `skills/`, `agents/`       | _planned v0.1_   |
-| `packs/languages/<lang>/` | Language rules, linter configs, detection (TS/JS, Python first)                        | _planned v0.1–2_ |
-| `packs/frameworks/<fw>/`  | Framework rules and detection                                                          | _planned v0.2+_  |
-| `plugin/`                 | Generated Claude Code plugin (`.claude-plugin/plugin.json`, skills, agents, hooks)     | _planned v0.1_   |
-| `benchmarks/`             | With-vs-without-kit harness                                                            | _planned v0.2_   |
-| `examples/`               | Fixture projects for tests and demo GIFs                                               | _planned v0.1_   |
-| `scripts/`                | Repo tooling (comment-policy check; release helpers later)                             | active           |
-| `docs/`                   | This map, decisions/ADRs, roadmap, feature memories, research                          | active           |
-| `.claude/`                | This repo's own Claude Code setup (dogfooding)                                         | active           |
-| `test/`                   | Vitest suites for hooks and scripts, plus `helpers.ts`                                 | active           |
-| `.github/`                | CI, CodeQL, PR-title workflows; issue forms; Dependabot                                | active           |
-| `.husky/`                 | Git hooks: lint-staged on commit, commitlint on message                                | active           |
+| Path                      | Purpose                                                                                                       | Status           |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `src/cli/`                | npx entry: `init`, `update`, `doctor`, `uninstall`; prompts, output, exit codes                               | _planned v0.1_   |
+| `src/core/`               | Module loader, manifest schema, stack detection, renderer, merge planner, lockfile                            | _planned v0.1_   |
+| `src/hooks/`              | Hook sources (one self-contained bundle each) and the shared hook runtime in `src/hooks/runtime/`             | _planned v0.1_   |
+| `modules/<id>/`           | One switchable feature: `module.json` and `files/`                                                            | _planned v0.1_   |
+| `packs/languages/<lang>/` | Language rules, linter configs, detection (TS/JS, Python first)                                               | _planned v0.1–2_ |
+| `packs/frameworks/<fw>/`  | Framework rules and detection                                                                                 | _planned v0.2+_  |
+| `schema/`                 | Generated JSON Schemas for manifests, config and the lockfile                                                 | _planned v0.1_   |
+| `plugin/`                 | Generated Claude Code plugin, kept in the repo for the marketplace; never published to npm (ADR-0016)         | _planned v0.3_   |
+| `benchmarks/`             | With-vs-without-kit harness (not published)                                                                   | _planned v0.2_   |
+| `examples/`               | Fixture projects for tests and demo GIFs (not published)                                                      | _planned v0.0_   |
+| `scripts/`                | Repo tooling (comment-policy check; release helpers later)                                                    | active           |
+| `docs/`                   | This map, decisions/ADRs, roadmap, feature memories, research                                                 | active           |
+| `.claude/`                | This repo's own Claude Code setup (dogfooding)                                                                | active           |
+| `test/`                   | Vitest suites for hooks, scripts and lint rules, plus `helpers.ts`; `fixtures/` is kept out of `npm run lint` | active           |
+| `.github/`                | CI, CodeQL, PR-title workflows; issue forms; Dependabot                                                       | active           |
+| `.husky/`                 | Git hooks: lint-staged on commit, commitlint on message                                                       | active           |
 
 ## Index
 
 Add a row whenever something is created. Keep one line per item.
 
-### Packages
+### Source layers
 
-| Package    | Purpose | Key exports |
+| Path       | Purpose | Key exports |
 | ---------- | ------- | ----------- |
 | _none yet_ |         |             |
 
