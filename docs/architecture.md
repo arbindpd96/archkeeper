@@ -93,6 +93,7 @@ Add a row whenever something is created. Keep one line per item.
 | `scripts/check-changeset.mjs`                                                                               | Changeset gate: a PR that changes `src/` or `modules/` adds a `.changeset/*.md`, unless labelled `no-release`              |
 | `scripts/check-release.mjs`                                                                                 | Release guards: npm ≥ 11.15, tag = `v<version>`, CHANGELOG section, not private; step outputs and notes; `--dry-run`       |
 | `scripts/stage-summary.mjs`                                                                                 | Reads `npm stage publish --json` and prints the exact `npm stage approve <id>` command to the job summary                  |
+| `scripts/check-demos.mjs`                                                                                   | Demo GIF caps: each GIF has a tape, ≤ 2 MB, ≤ 20 s (30 s for a `# hero` tape), timed from its frame delays                 |
 | `test/helpers.ts`                                                                                           | `runScript`, hook verdict helpers, `tempDir`, `tempRepo`, `git`, `commitFiles`, `writeFiles`, `fixtureCopy` (own HOME)     |
 
 ## This repo's Claude Code setup
