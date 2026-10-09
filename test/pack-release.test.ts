@@ -23,7 +23,7 @@ function release(edits: Record<string, string>): RunResult & { outputs: string; 
   const result = runScript('scripts/pack-release.mjs', {
     args: [destination],
     cwd: repo,
-    env: { GITHUB_OUTPUT: outputFile },
+    env: { GITHUB_OUTPUT: outputFile, npm_config_cache: tempDir(), npm_config_update_notifier: 'false' },
   });
   return { ...result, outputs: readFileSync(outputFile, 'utf8'), destination };
 }
