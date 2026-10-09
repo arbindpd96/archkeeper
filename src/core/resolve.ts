@@ -36,7 +36,7 @@ type Origin = { readonly label: string } | { readonly requiredBy: string };
 interface Context {
   readonly request: ResolveRequest;
   readonly catalog: Catalog;
-  readonly config: string;
+  readonly configFile: string;
   readonly origins: Map<string, Origin>;
   /** Requirements that `modules.remove` drops; an error only if the module that needs one is kept. */
   readonly removedRequirements: Failure[];
@@ -70,12 +70,12 @@ function knownIds(catalog: Catalog): string {
   return [...catalog.modules.keys()].join(', ');
 }
 
-function findPreset({ request, catalog, config }: Context): Preset {
+function findPreset({ request, catalog, configFile }: Context): Preset {
   const preset = catalog.presets.find((candidate) => candidate.name === request.preset);
   if (preset !== undefined) return preset;
   const names = catalog.presets.map((candidate) => candidate.name).join(', ');
   return fail({
-    file: config,
+    file: configFile,
     location: 'preset',
     chain: [],
     problem: `${JSON.stringify(request.preset)} is not a preset`,
@@ -83,7 +83,7 @@ function findPreset({ request, catalog, config }: Context): Preset {
   });
 }
 
-function checkRequestedIds({ request, catalog, config }: Context): void {
+function checkRequestedIds({ request, catalog, configFile }: Context): void {
   for (const [list, ids] of [
     ['add', request.add ?? []],
     ['remove', request.remove ?? []],
@@ -92,7 +92,7 @@ function checkRequestedIds({ request, catalog, config }: Context): void {
     if (index === -1) continue;
     const problem = `${JSON.stringify(ids[index] ?? '')} is not a module`;
     fail({
-      file: config,
+      file: configFile,
       location: `modules.${list}[${String(index)}]`,
       chain: [],
       problem,
@@ -103,7 +103,7 @@ function checkRequestedIds({ request, catalog, config }: Context): void {
   if (both === -1) return;
   const problem = `${JSON.stringify(request.remove?.[both] ?? '')} is also in modules.add`;
   fail({
-    file: config,
+    file: configFile,
     location: `modules.remove[${String(both)}]`,
     chain: [],
     problem,
@@ -124,7 +124,7 @@ function seed(context: Context, preset: Preset): void {
 }
 
 function requireModule(context: Context, kit: KitModule, index: number): string | undefined {
-  const { catalog, config, origins, request } = context;
+  const { catalog, configFile, origins, request } = context;
   const id = kit.manifest.requires[index] ?? '';
   const chain = [...chainOf(kit.manifest.id, origins), id];
   if (!catalog.modules.has(id)) {
@@ -140,7 +140,7 @@ function requireModule(context: Context, kit: KitModule, index: number): string 
   const removed = (request.remove ?? []).indexOf(id);
   if (removed !== -1) {
     context.removedRequirements.push({
-      file: config,
+      file: configFile,
       location: `modules.remove[${String(removed)}]`,
       chain,
       problem: `removes "${id}", which is required`,
@@ -232,10 +232,10 @@ function leaveOutFix({ origins, request }: Context, id: string): string {
 function conflictHint(context: Context, id: string, other: string): string {
   const root = chainOf(id, context.origins)[1];
   if (root !== undefined && root === chainOf(other, context.origins)[1]) {
-    return `${leaveOutFix(context, root)} in ${context.config}: it needs both ${id} and ${other}`;
+    return `${leaveOutFix(context, root)} in ${context.configFile}: it needs both ${id} and ${other}`;
   }
   const [first, second] = [leaveOutFix(context, id), leaveOutFix(context, other)];
-  return `leave one of them out: ${first}, or ${second}, in ${context.config}`;
+  return `leave one of them out: ${first}, or ${second}, in ${context.configFile}`;
 }
 
 function checkConflicts(context: Context, kept: ReadonlyMap<string, KitModule>): void {
@@ -265,7 +265,7 @@ export function resolveModules(request: ResolveRequest, catalog: Catalog, brand:
   const context: Context = {
     request,
     catalog,
-    config: configPath(brand),
+    configFile: configPath(brand),
     origins: new Map(),
     removedRequirements: [],
   };
