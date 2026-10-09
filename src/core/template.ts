@@ -29,16 +29,21 @@ export interface UnsafeValue {
   readonly problem: string;
 }
 
+// An @ word that starts at the home folder, the root, a drive or a .. segment imports a file outside the project.
+const OUTSIDE_IMPORT = /(?:^|\s)@(?:[~/\\]|[A-Za-z]:|(?:\S*[/\\])?\.\.(?:[/\\]|\s|$))/;
+
 function valueProblem(value: string, markers: readonly string[]): string | undefined {
   if (hasControlCharacter(value)) return 'holds a control character, such as a newline';
+  if (OUTSIDE_IMPORT.test(value)) return 'holds an @ import of a file outside the project';
   const marker = markers.find((candidate) => value.toLowerCase().includes(candidate.toLowerCase()));
   return marker === undefined ? undefined : `holds ${marker}, which marks a managed block`;
 }
 
 /**
- * Finds the first string in `scope` that holds a control character or one of `markers`. Values carry project
- * data, such as detected commands, into templates as is: a newline could start an `@` import line in CLAUDE.md
- * and a marker could end a managed block early.
+ * Finds the first string in `scope` that holds a control character, an `@` import of a file outside the
+ * project, or one of `markers`. Values carry project data, such as detected commands, into templates as is:
+ * Claude Code reads an `@path` anywhere on a line of CLAUDE.md as an import, and a marker could end a managed
+ * block early. Imports of project files, such as `toImport('AGENTS.md')`, stay allowed.
  */
 export function unsafeValue(scope: TemplateScope, markers: readonly string[]): UnsafeValue | undefined {
   for (const [key, value] of Object.entries(scope)) {

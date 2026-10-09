@@ -181,14 +181,15 @@ function refuseSecrets(tree: RenderTree): void {
 }
 
 function checkValues(values: TemplateScope | undefined, brand: Brand): void {
-  const markers = [`${brand.markerPrefix}:begin`, `${brand.markerPrefix}:end`];
+  const prefixes = [brand.markerPrefix, ...brand.legacySlugs];
+  const markers = prefixes.flatMap((prefix) => [`${prefix}:begin`, `${prefix}:end`]);
   const unsafe = values === undefined ? undefined : unsafeValue(values, markers);
   if (unsafe === undefined) return;
   throw new RenderError({
     file: 'template values',
     location: unsafe.name,
     problem: unsafe.problem,
-    hint: 'pass one line of text with no block marker: a value fills its template as is',
+    hint: 'pass one line of text with no block marker and no @ import outside the project: a value fills its template as is',
   });
 }
 
