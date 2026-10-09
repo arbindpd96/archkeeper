@@ -119,6 +119,8 @@ describe('loadModule cross-field rules', () => {
       'blocks[0].id',
       'another id',
     ],
+    ['a declared .mcp.json with no servers', (m) => (m.mcpServers = []), 'files[5]', 'remove the entry'],
+    ['a declared blocks file with no blocks', (m) => (m.blocks = []), 'files[2]', 'remove the entry'],
     [
       'a when option the module does not declare',
       (m) => (entry(m, 'files', 1).when = { options: { nope: true } }),
