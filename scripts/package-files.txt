@@ -3,3 +3,4 @@ README.md
 dist/THIRD_PARTY_LICENSES.md
 dist/cli.mjs
 package.json
+schema/module.schema.json

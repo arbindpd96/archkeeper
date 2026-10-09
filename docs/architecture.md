@@ -35,7 +35,7 @@ flowchart LR
 | `modules/<id>/`           | One switchable feature: `module.json` and `files/`                                                            | _planned v0.1_   |
 | `packs/languages/<lang>/` | Language rules, linter configs, detection (TS/JS, Python first)                                               | _planned v0.1–2_ |
 | `packs/frameworks/<fw>/`  | Framework rules and detection                                                                                 | _planned v0.2+_  |
-| `schema/`                 | Generated JSON Schemas for manifests, config and the lockfile                                                 | _planned v0.1_   |
+| `schema/`                 | JSON Schemas generated from the zod schemas in `src/core` (`npm run schema`); published for `$schema` URLs    | active           |
 | `plugin/`                 | Generated Claude Code plugin, kept in the repo for the marketplace; never published to npm (ADR-0016)         | _planned v0.3_   |
 | `benchmarks/`             | With-vs-without-kit harness (not published)                                                                   | _planned v0.2_   |
 | `examples/`               | Fixtures `ts-app`, `py-app`, `mixed` for tests and tapes; not linted, formatted, covered or published         | active           |
@@ -98,6 +98,7 @@ Add a row whenever something is created. Keep one line per item.
 | `scripts/third-party-licenses.mjs`                                                                          | Writes `dist/THIRD_PARTY_LICENSES.md` from the `<bundle>.inlined.json` lists the build writes from its module graph        |
 | `scripts/check-package.mjs`                                                                                 | Package gates: publint, pack-list snapshot, runtime dependencies, install scripts, size budgets, bin smoke                 |
 | `scripts/check-brand.mjs`                                                                                   | Brand check: no slug literal outside `src/core/brand.ts` and the allowlist; `package.json` `name` and `bin` match `BRAND`  |
+| `scripts/build-schemas.mjs`                                                                                 | Writes `schema/*.json` with `z.toJSONSchema()` from the zod schemas in `src/core`; `--check` fails when one is stale       |
 | `scripts/check-changeset.mjs`                                                                               | Changeset gate: a PR that changes `src/`, `modules/`, `packs/` or `schema/` adds a changeset, unless labelled `no-release` |
 | `scripts/check-commit-authors.mjs`                                                                          | Commit-author gate: no bot or AI-tool author or co-author (Dependabot only on its own PRs), no `AI_ATTRIBUTION` line       |
 | `scripts/check-release.mjs`                                                                                 | Release guards: npm ≥ 11.15, tag = `v<version>`, CHANGELOG section, not private, not below npm `latest`; `--dry-run`       |

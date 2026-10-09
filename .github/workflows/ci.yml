@@ -39,6 +39,8 @@ jobs:
         run: npm run comments
       - name: Brand (slug only in src/core/brand.ts)
         run: npm run brand
+      - name: Schemas (schema/*.json match the zod schemas in src/core)
+        run: npm run schema:check
       - name: Demo GIFs (2 MB, 20 s or 30 s for the hero, each from a tape)
         run: npm run demos
       - name: Tests

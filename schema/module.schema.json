@@ -1,0 +1,686 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "schemaVersion": {
+      "type": "number",
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$",
+      "description": "The module folder name."
+    },
+    "description": {
+      "type": "string",
+      "pattern": "^\\S[^\\r\\n]*$",
+      "description": "One line that says what the module adds."
+    },
+    "requires": {
+      "default": [],
+      "description": "Modules this one needs; resolution adds them.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+      }
+    },
+    "conflicts": {
+      "default": [],
+      "description": "Modules that cannot be enabled together with this one.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+      }
+    },
+    "presets": {
+      "default": [],
+      "description": "Presets that include this module; each preset contains the one before it.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+      }
+    },
+    "when": {
+      "description": "Render only when the project stack is one of `stack` and every listed option of this module has its value.",
+      "type": "object",
+      "properties": {
+        "stack": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "ts",
+              "python"
+            ]
+          }
+        },
+        "options": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z][A-Za-z0-9]*(?:\\.[a-z][A-Za-z0-9]*)*$"
+          },
+          "additionalProperties": {
+            "type": [
+              "boolean",
+              "string"
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "files": {
+      "default": [],
+      "description": "Every file the module writes, with its ownership strategy and target (ADR-0014, ADR-0016).",
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              },
+              "strategy": {
+                "type": "string",
+                "const": "owned"
+              },
+              "target": {
+                "type": "string",
+                "enum": [
+                  "project",
+                  "plugin"
+                ]
+              },
+              "when": {
+                "description": "Render only when the project stack is one of `stack` and every listed option of this module has its value.",
+                "type": "object",
+                "properties": {
+                  "stack": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "ts",
+                        "python"
+                      ]
+                    }
+                  },
+                  "options": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^[a-z][A-Za-z0-9]*(?:\\.[a-z][A-Za-z0-9]*)*$"
+                    },
+                    "additionalProperties": {
+                      "type": [
+                        "boolean",
+                        "string"
+                      ]
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "from",
+              "to",
+              "strategy",
+              "target"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string"
+              },
+              "to": {
+                "type": "string"
+              },
+              "strategy": {
+                "type": "string",
+                "const": "create-only"
+              },
+              "target": {
+                "type": "string",
+                "const": "project"
+              },
+              "when": {
+                "description": "Render only when the project stack is one of `stack` and every listed option of this module has its value.",
+                "type": "object",
+                "properties": {
+                  "stack": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "ts",
+                        "python"
+                      ]
+                    }
+                  },
+                  "options": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^[a-z][A-Za-z0-9]*(?:\\.[a-z][A-Za-z0-9]*)*$"
+                    },
+                    "additionalProperties": {
+                      "type": [
+                        "boolean",
+                        "string"
+                      ]
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "from",
+              "to",
+              "strategy",
+              "target"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "from": {
+                "not": {}
+              },
+              "to": {
+                "type": "string"
+              },
+              "strategy": {
+                "type": "string",
+                "const": "blocks"
+              },
+              "target": {
+                "type": "string",
+                "const": "project"
+              },
+              "when": {
+                "description": "Render only when the project stack is one of `stack` and every listed option of this module has its value.",
+                "type": "object",
+                "properties": {
+                  "stack": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "ts",
+                        "python"
+                      ]
+                    }
+                  },
+                  "options": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^[a-z][A-Za-z0-9]*(?:\\.[a-z][A-Za-z0-9]*)*$"
+                    },
+                    "additionalProperties": {
+                      "type": [
+                        "boolean",
+                        "string"
+                      ]
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "to",
+              "strategy",
+              "target"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "from": {
+                "not": {}
+              },
+              "to": {
+                "type": "string",
+                "enum": [
+                  ".claude/settings.json",
+                  ".mcp.json"
+                ]
+              },
+              "strategy": {
+                "type": "string",
+                "const": "json"
+              },
+              "target": {
+                "type": "string",
+                "const": "project"
+              },
+              "when": {
+                "description": "Render only when the project stack is one of `stack` and every listed option of this module has its value.",
+                "type": "object",
+                "properties": {
+                  "stack": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "ts",
+                        "python"
+                      ]
+                    }
+                  },
+                  "options": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string",
+                      "pattern": "^[a-z][A-Za-z0-9]*(?:\\.[a-z][A-Za-z0-9]*)*$"
+                    },
+                    "additionalProperties": {
+                      "type": [
+                        "boolean",
+                        "string"
+                      ]
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "to",
+              "strategy",
+              "target"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "blocks": {
+      "default": [],
+      "description": "Managed blocks rendered from templates into files declared with the blocks strategy.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+          },
+          "template": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "file",
+          "id",
+          "template"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "hooks": {
+      "default": [],
+      "description": "Hooks registered in exec form in .claude/settings.json (ADR-0015).",
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "event": {
+                "type": "string",
+                "enum": [
+                  "PreToolUse",
+                  "PostToolUse"
+                ]
+              },
+              "matcher": {
+                "type": "string",
+                "minLength": 1
+              },
+              "script": {
+                "type": "string",
+                "pattern": "^dist\\/hooks\\/[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.mjs$"
+              },
+              "timeout": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 600
+              },
+              "once": {
+                "not": {}
+              },
+              "if": {
+                "type": "string",
+                "pattern": "^[A-Za-z][\\w-]*(?:\\(.+\\))?$"
+              }
+            },
+            "required": [
+              "event",
+              "script",
+              "timeout"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "event": {
+                "type": "string",
+                "enum": [
+                  "SessionStart",
+                  "PreCompact",
+                  "Stop"
+                ]
+              },
+              "matcher": {
+                "type": "string",
+                "minLength": 1
+              },
+              "script": {
+                "type": "string",
+                "pattern": "^dist\\/hooks\\/[a-z][a-z0-9]*(?:-[a-z0-9]+)*\\.mjs$"
+              },
+              "timeout": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 600
+              },
+              "once": {
+                "not": {}
+              },
+              "if": {
+                "not": {}
+              }
+            },
+            "required": [
+              "event",
+              "script",
+              "timeout"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "permissions": {
+      "default": {},
+      "description": "Permission rules added to .claude/settings.json.",
+      "type": "object",
+      "properties": {
+        "allow": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z][\\w-]*(?:\\(.+\\))?$"
+          }
+        },
+        "ask": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z][\\w-]*(?:\\(.+\\))?$"
+          }
+        },
+        "deny": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z][\\w-]*(?:\\(.+\\))?$"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "gitignore": {
+      "default": [],
+      "description": "Lines for a .gitignore block named after the module.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[^\\s#][^\\r\\n]*$"
+      }
+    },
+    "options": {
+      "default": {},
+      "description": "Options users set in the project config, with typed defaults.",
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][A-Za-z0-9]*(?:\\.[a-z][A-Za-z0-9]*)*$"
+      },
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "boolean"
+              },
+              "default": {
+                "type": "boolean"
+              },
+              "description": {
+                "type": "string",
+                "pattern": "^\\S[^\\r\\n]*$"
+              }
+            },
+            "required": [
+              "type",
+              "default",
+              "description"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "string"
+              },
+              "default": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string",
+                "pattern": "^\\S[^\\r\\n]*$"
+              }
+            },
+            "required": [
+              "type",
+              "default",
+              "description"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "string-list"
+              },
+              "default": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "description": {
+                "type": "string",
+                "pattern": "^\\S[^\\r\\n]*$"
+              }
+            },
+            "required": [
+              "type",
+              "default",
+              "description"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "mcpServers": {
+      "default": [],
+      "description": "MCP servers written to .mcp.json; configure-only and secret-free (ADR-0007).",
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]+$"
+              },
+              "type": {
+                "type": "string",
+                "const": "stdio"
+              },
+              "command": {
+                "type": "string",
+                "minLength": 1
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "env": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string",
+                  "pattern": "^\\$\\{[A-Za-z_][A-Za-z0-9_]*\\}$"
+                }
+              }
+            },
+            "required": [
+              "name",
+              "type",
+              "command"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]+$"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "http",
+                  "sse"
+                ]
+              },
+              "url": {
+                "type": "string",
+                "pattern": "^https?:\\/\\/[^\\s/@]+(?:\\/\\S*)?$"
+              },
+              "headers": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string",
+                  "pattern": "^\\$\\{[A-Za-z_][A-Za-z0-9_]*\\}$"
+                }
+              },
+              "headersHelper": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "name",
+              "type",
+              "url"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "demo": {
+      "description": "A user-facing module: docs/media/tapes/<tape>.tape renders docs/media/<tape>.gif for the README section.",
+      "type": "object",
+      "properties": {
+        "tape": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+        },
+        "section": {
+          "type": "string",
+          "pattern": "^\\S[^\\r\\n]*$"
+        }
+      },
+      "required": [
+        "tape",
+        "section"
+      ],
+      "additionalProperties": false
+    },
+    "internal": {
+      "description": "A module with no user-facing feature of its own, so no demo.",
+      "type": "boolean",
+      "const": true
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "id",
+    "description"
+  ],
+  "additionalProperties": false,
+  "title": "Module manifest",
+  "description": "One switchable module as data (ADR-0003, ADR-0014). Declare exactly one of demo or internal.",
+  "oneOf": [
+    {
+      "required": [
+        "demo"
+      ]
+    },
+    {
+      "required": [
+        "internal"
+      ]
+    }
+  ]
+}
