@@ -65,6 +65,18 @@ describe('main', () => {
     expect(result.code).toBe(1);
     expect(result.stderr).toContain(`Run ${BRAND.binName} --help for usage.`);
   });
+
+  it('reports an unreadable package.json as a damaged install instead of a stack trace', () => {
+    let stderr = '';
+    const output: CliOutput = { stdout: () => undefined, stderr: (text) => (stderr += text) };
+    const unreadable = (): never => {
+      throw new Error('No package.json found above /x/dist/cli.mjs.');
+    };
+    expect(main(['--version'], output, unreadable)).toBe(1);
+    expect(stderr).toBe(
+      `No package.json found above /x/dist/cli.mjs.\nThe ${BRAND.displayName} install looks damaged. Reinstall it and try again.\n`,
+    );
+  });
 });
 
 describe('readPackageInfo', () => {
