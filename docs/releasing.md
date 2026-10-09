@@ -8,10 +8,12 @@ The maintainer's runbook for [ADR-0013](adr/0013-release-process.md). CI never c
 2. **Version.** On a branch from an up-to-date `main`:
 
    ```sh
-   GITHUB_TOKEN="$(gh auth token)" npm run version-packages
+   read -rs GITHUB_TOKEN && export GITHUB_TOKEN    # paste the read-only token; it stays out of history
+   npm run version-packages
+   unset GITHUB_TOKEN
    ```
 
-   This applies the changesets to `package.json`, `package-lock.json` and `CHANGELOG.md`; the GitHub changelog needs the token to look up PRs and authors. Review `CHANGELOG.md`, commit `chore(release): vX.Y.Z`, and merge the PR like any other.
+   This applies the changesets to `package.json`, `package-lock.json` and `CHANGELOG.md`. The GitHub changelog looks up each changeset's PR and author, so it needs a token: use a fine-grained personal access token with read-only access to public repositories and no other permission, not your full `gh auth token`. Review `CHANGELOG.md`, commit `chore(release): vX.Y.Z`, and merge the PR like any other.
 
 3. **Tag and push.** On `main` at the release commit:
 
@@ -23,8 +25,10 @@ The maintainer's runbook for [ADR-0013](adr/0013-release-process.md). CI never c
 4. **Approve.** The `Release` workflow's build job holds no secret. It checks npm 11.15+, the tag against `package.json`, the `CHANGELOG.md` section, `private`, that the version is not below npm's `latest`, and that the tagged commit is on `main`. It removes the dev-only `prepare` script, runs every check, and packs the tarball. The stage job, in the `npm-stage` environment, installs nothing: it stages that tarball with an explicit dist-tag (`next` for prereleases, `latest` otherwise), and its job summary prints the tarball's shasum and the exact commands. Before you approve, check that `npm stage view <id>` shows that shasum and that `npm stage list archkeeper` shows no other pending stage:
 
    ```sh
+   npm login                 # only for the approval
    npm stage view <id>       # the shasum must match the job summary
    npm stage approve <id>    # asks for your 2FA code
+   npm logout
    ```
 
    Run it in a normal terminal. Inside Claude Code, a `!` command has no TTY to prompt on, so pass `--otp=<code>` (docs/mistakes.md).
@@ -37,7 +41,7 @@ The maintainer's runbook for [ADR-0013](adr/0013-release-process.md). CI never c
 
 ```sh
 npx changeset pre enter rc
-GITHUB_TOKEN="$(gh auth token)" npm run version-packages    # for example 0.1.0-rc.0
+npm run version-packages    # with the read-only GITHUB_TOKEN exported as above; for example 0.1.0-rc.0
 ```
 
 Commit `.changeset/pre.json` with the release commit, then tag `v0.1.0-rc.0`; it is staged under the `next` dist-tag. Each further changeset and `version-packages` run produces the next `rc.N`. Before the final release, run `npx changeset pre exit`, then `version-packages` again for `0.1.0`.
@@ -48,8 +52,8 @@ The name is reserved by a notice-only `0.0.1` placeholder on `latest`, so the fi
 
 The first release is published from your laptop, then tagged:
 
-1. Run `npm login` with 2FA enabled on the account. Merge the release commit, which removes `"private": true`.
-2. From a clean checkout of that commit, run the same guards and checks as the workflow, then stage the packed tarball:
+1. Enable 2FA on the npm account. Merge the release commit, which removes `"private": true`.
+2. From a clean checkout of that commit, run the same guards and checks as the workflow while logged out of npm, so no dev dependency runs beside your npm session. Log in only to stage and approve the packed tarball, then log out:
 
    ```sh
    npm ci --ignore-scripts
@@ -57,8 +61,11 @@ The first release is published from your laptop, then tagged:
    npm pkg delete scripts.prepare
    npm run check && npm run package -- --release
    packed="$(mktemp -d)" && node scripts/pack-release.mjs "$packed"
-   npm stage publish "$packed/archkeeper-0.1.0-rc.0.tgz" --access public --tag next --ignore-scripts
+   npm login
+   npm stage publish "$packed/archkeeper-0.1.0-rc.0.tgz" --registry https://registry.npmjs.org/ \
+     --access public --tag next --ignore-scripts
    npm stage approve <id>
+   npm logout
    git checkout -- package.json
    ```
 
