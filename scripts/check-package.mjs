@@ -10,6 +10,11 @@ const SNAPSHOT = 'scripts/package-files.txt';
 const RUNTIME_FIELDS = ['dependencies', 'optionalDependencies', 'peerDependencies'];
 const INSTALL_SCRIPTS = ['preinstall', 'install', 'postinstall'];
 const HOOK_BUNDLE = /^dist\/hooks\/[^/]+\.mjs$/;
+const BUDGET_KEYS = [
+  ['tarball', 'maxBytes'],
+  ['runtimeDependencies', 'max'],
+  ['hookBundle', 'maxBytes'],
+];
 
 const readJson = (file) => JSON.parse(readFileSync(file, 'utf8'));
 const kB = (bytes) => `${(bytes / 1000).toFixed(1)} kB`;
@@ -40,9 +45,28 @@ function npm(args, cwd) {
   }
 }
 
+/** Reads budgets.json, exiting unless every expected budget is a non-negative finite number. */
+function readBudgets(root) {
+  const file = path.join(root, 'budgets.json');
+  let budgets;
+  try {
+    budgets = readJson(file);
+  } catch (error) {
+    return exitWith(`check-package: cannot read ${file}: ${error.message}. Restore it (ADR-0017).`, 1);
+  }
+  const invalid = BUDGET_KEYS.filter(([group, limit]) => {
+    const value = budgets?.[group]?.[limit];
+    return typeof value !== 'number' || !Number.isFinite(value) || value < 0;
+  });
+  if (invalid.length > 0) {
+    const keys = invalid.map((keyPath) => keyPath.join('.')).join(', ');
+    exitWith(`check-package: budgets.json needs a non-negative number for ${keys} (ADR-0017).`, 1);
+  }
+  return budgets;
+}
+
 /** Fails on runtime dependencies beyond the budget and on scripts that run when users install. */
-function manifestProblems(manifest, budgets) {
-  const runtime = RUNTIME_FIELDS.flatMap((field) => Object.keys(manifest[field] ?? {}));
+function manifestProblems(manifest, runtime, budgets) {
   const scripts = INSTALL_SCRIPTS.filter((name) => manifest.scripts?.[name] !== undefined);
   const problems = [];
   if (runtime.length > budgets.runtimeDependencies.max) {
@@ -74,13 +98,12 @@ function snapshotProblems(root, files, update) {
 }
 
 /** Measures the tarball and the bundles against the budgets, returning summary rows and problems. */
-function measure(pack, manifest, budgets) {
-  const runtime = RUNTIME_FIELDS.flatMap((field) => Object.keys(manifest[field] ?? {})).length;
+function measure(pack, runtime, budgets) {
   const rows = [
     ['Tarball', kB(pack.size), kB(budgets.tarball.maxBytes)],
     ['Unpacked', kB(pack.unpackedSize), ''],
     ['Files', String(pack.entryCount), ''],
-    ['Runtime dependencies', String(runtime), String(budgets.runtimeDependencies.max)],
+    ['Runtime dependencies', String(runtime.length), String(budgets.runtimeDependencies.max)],
   ];
   const problems = [];
   if (pack.size > budgets.tarball.maxBytes) problems.push(`tarball is ${kB(pack.size)}, over its budget`);
@@ -94,7 +117,7 @@ function measure(pack, manifest, budgets) {
   return { rows, problems };
 }
 
-/** Runs the packed bin with --version and --help, the way a user would after installing. */
+/** Runs the built bin with --version and --help, the way a user would after installing. */
 function binProblems(root, manifest) {
   const bin = path.join(root, Object.values(manifest.bin ?? {})[0] ?? '');
   try {
@@ -131,16 +154,18 @@ function report(rows) {
 const args = process.argv.slice(2);
 const root = path.resolve(args.find((arg) => !arg.startsWith('--')) ?? '.');
 const manifest = readJson(path.join(root, 'package.json'));
-const budgets = readJson(path.join(root, 'budgets.json'));
-if (!existsSync(path.join(root, 'dist')))
+const budgets = readBudgets(root);
+if (!existsSync(path.join(root, 'dist'))) {
   exitWith('check-package: dist/ is missing. Run npm run build first.', 1);
+}
 
+const runtime = RUNTIME_FIELDS.flatMap((field) => Object.keys(manifest[field] ?? {}));
 const [pack] = JSON.parse(npm(['pack', '--dry-run', '--json', '--ignore-scripts'], root));
 const files = pack.files.map((entry) => entry.path).sort();
-const { rows, problems: budgetProblems } = measure(pack, manifest, budgets);
+const { rows, problems: budgetProblems } = measure(pack, runtime, budgets);
 report(rows);
 const problems = [
-  ...manifestProblems(manifest, budgets),
+  ...manifestProblems(manifest, runtime, budgets),
   ...snapshotProblems(root, files, args.includes('--update')),
   ...budgetProblems,
   ...binProblems(root, manifest),
