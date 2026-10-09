@@ -121,7 +121,7 @@ Generated settings always carry the SchemaStore `$schema` (set only when absent)
 
 Frontmatter can widen access without touching `settings.json` (reference §3.1, §3.2):
 
-- `hooks` registers hooks for the rest of the session.
+- `hooks` registers hooks outside `settings.json`; a skill's stay registered for the rest of the session.
 - A skill's `allowed-tools` lets Claude use those tools without a prompt.
 - An agent's `permissionMode` can be `acceptEdits`, `auto`, `dontAsk` or `bypassPermissions`.
 - `mcpServers` adds MCP servers.
