@@ -46,6 +46,14 @@ describe('MCP stdio values that hide a credential', () => {
     ['a pair inside a flag value', ['--env=API_KEY=hunter2'], 'args[0]'],
     ['an Authorization header argument', ['--header', 'Authorization: Bearer hunter2'], 'args[1]'],
     ['a Bearer value after any flag', ['--x', 'Bearer hunter2'], 'args[1]'],
+    ['a header with a space before its colon', ['-H', 'Authorization : Bearer hunter2'], 'args[1]'],
+    ['a cookie header', ['-H', 'Cookie: session=hunter2'], 'args[1]'],
+    ['a key in a URL query argument', ['https://mcp.example.com/sse?api_key=hunter2'], 'args[0]'],
+    ['a token in a --url= query', ['--url=https://mcp.example.com/sse?token=hunter2'], 'args[0]'],
+    ['a key in a JSON argument', ['{"apiKey": "hunter2"}'], 'args[0]'],
+    ['a plural secrets flag', ['--secrets', 'hunter2'], 'args[1]'],
+    ['a numbered key flag', ['--key2', 'hunter2'], 'args[1]'],
+    ['a pw flag', ['--pw', 'hunter2'], 'args[1]'],
   ])('refuses %s', (_name, args, location) => {
     expect(refusal((m) => (stdio(m).args = args)).location).toBe(`mcpServers[1].${location}`);
   });
@@ -72,10 +80,16 @@ describe('MCP stdio values that hide a credential', () => {
         'Acme',
         '--header',
         'Authorization: Bearer ${API_TOKEN}',
-        'https://x.example',
+        'https://x.example/sse?team=acme&token=${TOKEN}',
       ];
     });
     expect(loaded.manifest.mcpServers).toHaveLength(2);
+  });
+
+  it('checks a header-shaped argument padded with spaces in linear time', () => {
+    const started = performance.now();
+    loadRich((m) => (stdio(m).args = [`a:${' '.repeat(100_000)}x\n`]));
+    expect(performance.now() - started).toBeLessThan(1_000);
   });
 
   it('checks a value with thousands of unclosed ${ in linear time', () => {

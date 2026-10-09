@@ -97,7 +97,7 @@ const headersHelper = z
   );
 
 const CREDENTIAL_WORD =
-  /^(?:[a-z0-9]*(?:key|token|secret)|pass(?:word|wd|phrase)?|pwd|auth(?:orization)?|cred(?:ential)?s?|bearer|pat)$/i;
+  /^(?:[a-z0-9]*(?:key|token|secret)s?\d*|pass(?:word|wd|phrase)?|pwd|pw|auth(?:orization)?|cred(?:ential)?s?|bearer|pat|cookie)$/i;
 // A name is a credential when one of its -, _, . or camelCase words is, so --clientSecret is and --author is not.
 const namesCredential = (name: string): boolean =>
   name
@@ -129,11 +129,36 @@ function stdioValueRefusal(value: string, name: string | undefined): Refusal | u
   if (SCHEME_VALUE.test(value) && !isReference(value)) {
     return { problem: 'holds a literal Bearer or Basic credential', hint: ARG_KEY_HINT };
   }
+  const embedded = embeddedCredential(value);
+  if (embedded !== undefined) return { problem: `gives ${embedded} a literal value`, hint: ARG_KEY_HINT };
   return holdsLiteralKey(value) ? { problem: LITERAL_KEY, hint: ARG_KEY_HINT } : undefined;
 }
 
-const PAIR = /^(--?[\w-]+|[A-Za-z_]\w*)=(.*)$/;
-const HEADER = /^([A-Za-z][\w-]*):\s*(.*)$/;
+// The s flag lets .* take a newline, so a failed $ never makes these backtrack over the value.
+// A URL query in an argument, such as ?api_key=..., or a JSON argument, such as {"apiKey": "..."}.
+function queryCredential(value: string): string | undefined {
+  const query = value.slice(value.indexOf('?') + 1).split('#')[0] ?? '';
+  for (const part of query.split('&')) {
+    const [name = '', literal = ''] = part.split('=');
+    if (namesCredential(name) && !isReference(literal)) return name;
+  }
+  return undefined;
+}
+
+function jsonCredential(value: string): string | undefined {
+  for (const [, name = '', literal = ''] of value.matchAll(/"([^"\\]{1,100})"\s*:\s*"([^"\\]*)"/g)) {
+    if (namesCredential(name) && !isReference(literal)) return name;
+  }
+  return undefined;
+}
+
+function embeddedCredential(value: string): string | undefined {
+  if (value.includes('?')) return queryCredential(value);
+  return value.trimStart().startsWith('{') ? jsonCredential(value) : undefined;
+}
+
+const PAIR = /^(--?[\w-]+|[A-Za-z_]\w*)=(.*)$/s;
+const HEADER = /^([A-Za-z][\w-]*)\s*:(.*)$/s;
 
 // The value of a pair can be a pair itself, as in --env=API_KEY=value.
 function pairRefusal(name: string, value: string): Refusal | undefined {
@@ -147,7 +172,9 @@ function pairRefusal(name: string, value: string): Refusal | undefined {
 // An argument is a --flag=value, NAME=value or Name: value pair, or a value for the flag before it.
 function argRefusal(arg: string, previous: string | undefined): Refusal | undefined {
   const pair = PAIR.exec(arg) ?? HEADER.exec(arg);
-  return pair === null ? stdioValueRefusal(arg, previous) : pairRefusal(pair[1] ?? '', pair[2] ?? '');
+  return pair === null
+    ? stdioValueRefusal(arg, previous)
+    : pairRefusal(pair[1] ?? '', (pair[2] ?? '').trim());
 }
 
 // A command with a slash is a path: absolute, or under the project (reference §5.1). A backslash would let
