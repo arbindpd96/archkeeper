@@ -52,6 +52,12 @@ describe('check-package', () => {
     expect(readFileSync(summary, 'utf8')).toContain('### Package size');
   });
 
+  it('still finds npm, beside Node.js or on PATH, when npm did not launch it', () => {
+    const result = runScript('scripts/check-package.mjs', { args: [fixture()], env: { npm_execpath: '' } });
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+  });
+
   it('fails on a runtime dependency', () => {
     const result = checkPackage(fixture({ dependencies: { leftpad: '1.0.0' } }));
     expect(result.status).toBe(1);

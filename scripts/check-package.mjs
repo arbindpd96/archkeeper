@@ -14,17 +14,30 @@ const HOOK_BUNDLE = /^dist\/hooks\/[^/]+\.mjs$/;
 const readJson = (file) => JSON.parse(readFileSync(file, 'utf8'));
 const kB = (bytes) => `${(bytes / 1000).toFixed(1)} kB`;
 
-/** Runs npm: through the npm that launched this script when known (no shell), else the npm on PATH. */
+/** Finds npm's JS entry: the npm that launched this script, else the npm installed beside this Node.js. */
+function npmCli() {
+  const nodeDirectory = path.dirname(process.execPath);
+  const candidates = [
+    process.env.npm_execpath,
+    path.join(nodeDirectory, 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+    path.join(nodeDirectory, '..', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js'),
+  ];
+  return candidates.find((file) => file !== undefined && /npm-cli\.c?js$/.test(file) && existsSync(file));
+}
+
+/** Runs npm without a shell, through Node.js when npm's entry is found, else the `npm` on PATH. */
 function npm(args, cwd) {
-  const npmCli = process.env.npm_execpath;
-  const viaNode = npmCli !== undefined && /npm-cli\.c?js$/.test(npmCli);
-  const [command, prefix] = viaNode ? [process.execPath, [npmCli]] : ['npm', []];
-  return execFileSync(command, [...prefix, ...args], {
-    cwd,
-    encoding: 'utf8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-    shell: !viaNode && process.platform === 'win32',
-  });
+  const cli = npmCli();
+  const [command, prefix] = cli === undefined ? ['npm', []] : [process.execPath, [cli]];
+  try {
+    return execFileSync(command, [...prefix, ...args], {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+  } catch (error) {
+    return exitWith(`check-package: npm ${args[0]} failed: ${error.message}\nRun it as npm run package.`, 1);
+  }
 }
 
 /** Fails on runtime dependencies beyond the budget and on scripts that run when users install. */
