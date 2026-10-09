@@ -1,6 +1,6 @@
 import type { Brand } from './brand.js';
 import { RenderError } from './errors.js';
-import { relativePathProblem } from './paths.js';
+import { hasControlCharacter, relativePathProblem } from './paths.js';
 
 /** The values a template can read, nested in plain objects: `{{brand.hookDir}}` reads `scope.brand.hookDir`. */
 export interface TemplateScope {
@@ -21,6 +21,34 @@ export function brandScope(brand: Brand): TemplateScope {
 
 function isScope(value: unknown): value is TemplateScope {
   return typeof value === 'object' && value !== null;
+}
+
+/** A template value that may not reach a template: its dotted name and why. */
+export interface UnsafeValue {
+  readonly name: string;
+  readonly problem: string;
+}
+
+function valueProblem(value: string, markers: readonly string[]): string | undefined {
+  if (hasControlCharacter(value)) return 'holds a control character, such as a newline';
+  const marker = markers.find((candidate) => value.toLowerCase().includes(candidate.toLowerCase()));
+  return marker === undefined ? undefined : `holds ${marker}, which marks a managed block`;
+}
+
+/**
+ * Finds the first string in `scope` that holds a control character or one of `markers`. Values carry project
+ * data, such as detected commands, into templates as is: a newline could start an `@` import line in CLAUDE.md
+ * and a marker could end a managed block early.
+ */
+export function unsafeValue(scope: TemplateScope, markers: readonly string[]): UnsafeValue | undefined {
+  for (const [key, value] of Object.entries(scope)) {
+    if (typeof value === 'number') continue;
+    const inner = isScope(value) ? unsafeValue(value, markers) : undefined;
+    if (inner !== undefined) return { ...inner, name: `${key}.${inner.name}` };
+    const problem = typeof value === 'string' ? valueProblem(value, markers) : undefined;
+    if (problem !== undefined) return { name: key, problem };
+  }
+  return undefined;
 }
 
 function lineOf(text: string, offset: number): string {
