@@ -33,7 +33,16 @@ const UV_RUN_VALUES = [
   '--reinstall-package',
   '--refresh-package',
   '--config-setting',
+  '--config-settings-package',
+  '--no-extra',
+  '--exclude-newer-package',
+  '--fork-strategy',
+  '--no-binary-package',
+  '--no-build-package',
+  '--torch-backend',
 ];
+// `uvx` (uv tool run) also takes `--from`, naming the package that provides the command.
+const UVX_VALUES = [...UV_RUN_VALUES, '--from'];
 
 /*
  * Programs that run another command. `short`, `long` and `words` list the options that take a value; `operands`
@@ -90,6 +99,7 @@ const WRAPPERS = new Map([
   ['repeat', { operands: 1 }],
   ['busybox', {}],
   ['uv', { subcommand: 'run', short: 'pfPC', long: UV_RUN_VALUES, stdinProgram: 'python' }],
+  ['uvx', { short: 'pfPC', long: UVX_VALUES }],
 ]);
 
 // zsh expands `=cmd` to the command's path, so `=rm` runs rm. macOS file systems ignore case, so `RM` runs rm too.

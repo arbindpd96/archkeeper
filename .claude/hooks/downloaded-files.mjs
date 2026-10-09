@@ -6,7 +6,8 @@ const CURL = {
     long: ['--output', '--header', '--data', '--user', '--request', '--user-agent', '--referer', '--cookie'],
   },
   output: ['-o', '--output'],
-  savesUnderUrlName: (options) => options.short.has('O') || hasLong(options, '--remote-name', 10),
+  savesUnderUrlName: (options) =>
+    options.short.has('O') || hasLong(options, '--remote-name', 10) || hasLong(options, '--remote-name-all'),
 };
 const WGET = {
   values: {
