@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync, linkSync, symlinkSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -90,6 +91,21 @@ describe.skipIf(!canSymlink())('guard-secrets through symlinks', () => {
     writeFiles(outside, { 'real.ts': tokenStart });
     symlinkSync(path.join(outside, 'real.ts'), path.join(dir, 'link.ts'));
     expect(verdictFor(path.join(dir, 'link.ts'), completesToken, dir).reason).toContain(tokenReason);
+  });
+
+  it('asks before a write through a symlink it cannot resolve, such as one to a missing .env', () => {
+    const dir = tempDir();
+    symlinkSync(path.join(dir, '.env.local'), path.join(dir, 'notes.txt'));
+    const verdict = verdictFor(path.join(dir, 'notes.txt'), { content: 'KEY=value\n' }, dir);
+    expect(verdict.reason).toContain('could not check this write because its path could not be resolved');
+  });
+
+  it.skipIf(process.platform === 'win32')('asks without opening a FIFO behind a symlink', () => {
+    const dir = tempDir();
+    execFileSync('mkfifo', [path.join(dir, 'pipe')]);
+    symlinkSync(path.join(dir, 'pipe'), path.join(dir, 'a.ts'));
+    const verdict = verdictFor(path.join(dir, 'a.ts'), harmlessEdit, dir);
+    expect(verdict.reason).toContain('because it is not a regular file');
   });
 
   it('asks before editing a file whose real name is .env', () => {
