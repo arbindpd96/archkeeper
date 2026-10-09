@@ -56,6 +56,11 @@ function secretsIn(line) {
   return SECRET_PATTERNS.filter(({ pattern }) => pattern.test(line)).map(({ name }) => name);
 }
 
+/** Names, once each, the secret rules that match any of the lines. */
+function secretNames(lines) {
+  return [...new Set(lines.flatMap(secretsIn))].join(', ');
+}
+
 /** Splits text into lines without their line endings. */
 function linesOf(text) {
   return text.split('\n').map((line) => line.replace(/\r$/, ''));
@@ -93,6 +98,56 @@ function judgeMarkedLines(target, lines, helpers) {
   return marked.every((line) => onDisk.has(line)) ? null : decide('ask', NEW_PRAGMA_LINE);
 }
 
+/** Returns the edits of an Edit or MultiEdit call, or null for a call that writes whole text. */
+function editsOf(toolInput) {
+  if (Array.isArray(toolInput.edits)) return toolInput.edits;
+  const isEdit = typeof toolInput.old_string === 'string' || typeof toolInput.new_string === 'string';
+  return isEdit ? [toolInput] : null;
+}
+
+/** Applies one edit as the Edit tool does; null when it is malformed or its old_string is not in the text. */
+function applyEdit(text, edit) {
+  if (typeof edit?.old_string !== 'string' || typeof edit.new_string !== 'string') return null;
+  const search = edit.old_string.replaceAll('\r\n', '\n');
+  const replacement = edit.new_string.replaceAll('\r\n', '\n');
+  if (search === '') return text === '' ? replacement : null;
+  if (!text.includes(search)) return null;
+  if (edit.replace_all === true) return text.split(search).join(replacement);
+  return text.replace(search, () => replacement);
+}
+
+/** Returns the text the edits leave behind, or null when one of them cannot be applied. */
+function editedText(text, edits) {
+  let result = text;
+  for (const edit of edits) {
+    result = applyEdit(result, edit);
+    if (result === null) return null;
+  }
+  return result;
+}
+
+/**
+ * Replays the edits on the file and asks about every new line that holds a likely secret. An edit to part of
+ * a line, such as the token on a marked line, never shows that line in its new_string.
+ */
+function judgeEdits(target, edits, helpers) {
+  const text = textOnDisk(target, helpers);
+  if (text === null) {
+    return decide('ask', 'could not read the file to check this edit. Confirm with the user.');
+  }
+  const before = text.replaceAll('\r\n', '\n');
+  const after = editedText(before, edits);
+  if (after === null) return decide('ask', 'could not replay this edit on the file. Confirm with the user.');
+  const original = new Set(linesOf(before));
+  const added = linesOf(after).filter((line) => !original.has(line) && secretsIn(line).length > 0);
+  if (added.length === 0) return null;
+  if (added.some((line) => line.includes(ALLOW_PRAGMA))) return decide('ask', NEW_PRAGMA_LINE);
+  return decide(
+    'ask',
+    `this edit leaves a new line with a possible ${secretNames(added)}. Confirm with the user.`,
+  );
+}
+
 /** Returns the permission response for a write, or null when the write is safe. */
 function evaluate(toolInput, helpers) {
   const target = toolInput.file_path ?? toolInput.notebook_path;
@@ -101,15 +156,13 @@ function evaluate(toolInput, helpers) {
     return decide('ask', `${fileName} holds secrets. Confirm with the user before editing it.`);
   }
   const lines = linesOf(writtenText(toolInput));
-  const leaks = lines.filter((line) => !line.includes(ALLOW_PRAGMA)).flatMap(secretsIn);
-  if (leaks.length > 0) {
-    return decide(
-      'deny',
-      `possible ${[...new Set(leaks)].join(', ')} in written content. Use an env var instead.`,
-    );
+  const unmarked = lines.filter((line) => !line.includes(ALLOW_PRAGMA));
+  if (unmarked.some((line) => secretsIn(line).length > 0)) {
+    return decide('deny', `possible ${secretNames(unmarked)} in written content. Use an env var instead.`);
   }
   // An agent could add the pragma to its own secret, so only a line already in the file keeps its exemption.
-  return judgeMarkedLines(target, lines, helpers);
+  const edits = editsOf(toolInput);
+  return edits === null ? judgeMarkedLines(target, lines, helpers) : judgeEdits(target, edits, helpers);
 }
 
 try {

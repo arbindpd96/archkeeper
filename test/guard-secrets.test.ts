@@ -3,7 +3,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
-import { REPO_ROOT, hookDecision, permissionDecision, tempDir, writeFiles } from './helpers.js';
+import { REPO_ROOT, hookDecision, hookVerdict, permissionDecision, tempDir, writeFiles } from './helpers.js';
 
 const decision = (toolInput: unknown) => hookDecision('guard-secrets.mjs', toolInput);
 
@@ -46,8 +46,16 @@ describe('guard-secrets env files and robustness', () => {
     expect(decision({ file_path: '/p/.ENV.EXAMPLE', content: 'A=' })).toBe('allow');
   });
 
-  it('does not crash on malformed multi-edit payloads', () => {
-    expect(decision({ file_path: 'a.ts', edits: [null, { new_string: 'ok' }] })).toBe('allow');
+  it('asks rather than crashing on a multi-edit whose edits it cannot replay', () => {
+    const verdict = hookVerdict('guard-secrets.mjs', {
+      file_path: 'a.ts',
+      edits: [null, { new_string: 'ok' }],
+    });
+    expect(verdict.decision).toBe('ask');
+    expect(verdict.reason).toContain('could not replay this edit');
+  });
+
+  it('allows a multi-edit payload whose edits are not a list', () => {
     expect(decision({ file_path: 'a.ts', edits: 'not-an-array' })).toBe('allow');
   });
 });
@@ -72,13 +80,17 @@ describe('guard-secrets allow pragma', () => {
   const pragma = `${BRAND.markerPrefix}:allow-secret`;
   const fixtureLine = (token: string) => `const fixture = 'ghp_${token.repeat(36)}'; // ${pragma}`;
 
+  const askedForPragma = /new line marks a likely secret/;
+
   /** Runs the guard against a file that already holds `onDisk`, in a temp project. */
-  const decideIn = (onDisk: string, toolInput: Record<string, unknown>) => {
+  const verdictIn = (onDisk: string, toolInput: Record<string, unknown>) => {
     const dir = tempDir();
     writeFiles(dir, { 'test/a.test.ts': onDisk });
     const file_path = path.join(dir, 'test', 'a.test.ts');
-    return hookDecision('guard-secrets.mjs', { file_path, ...toolInput }, { CLAUDE_PROJECT_DIR: dir });
+    return hookVerdict('guard-secrets.mjs', { file_path, ...toolInput }, { CLAUDE_PROJECT_DIR: dir });
   };
+  const decideIn = (onDisk: string, toolInput: Record<string, unknown>) =>
+    verdictIn(onDisk, toolInput).decision;
 
   it('asks before writing a new line that marks a secret with the pragma', () => {
     expect(decideIn('', { content: fixtureLine('a') })).toBe('ask');
@@ -86,18 +98,46 @@ describe('guard-secrets allow pragma', () => {
 
   it('allows an edit that keeps a marked line already in the file', () => {
     const line = fixtureLine('a');
-    expect(decideIn(`${line}\r\n`, { new_string: `${line}\nexport {};` })).toBe('allow');
+    expect(decideIn(`${line}\r\n`, { old_string: line, new_string: `${line}\nexport {};` })).toBe('allow');
   });
 
-  it('asks when an edit changes the secret on a marked line', () => {
-    expect(decideIn(`${fixtureLine('a')}\n`, { new_string: fixtureLine('b') })).toBe('ask');
+  it('allows an edit elsewhere in a file that holds a marked line', () => {
+    const toolInput = { old_string: 'const x = 1;', new_string: 'const x = 2;' };
+    expect(decideIn(`${fixtureLine('a')}\nconst x = 1;\n`, toolInput)).toBe('allow');
+  });
+
+  it('asks when an edit replaces a marked line with one that marks another secret', () => {
+    const toolInput = { old_string: fixtureLine('a'), new_string: fixtureLine('b') };
+    expect(verdictIn(`${fixtureLine('a')}\n`, toolInput).reason).toMatch(askedForPragma);
+  });
+
+  it('asks when an edit changes only the token on a marked line', () => {
+    const toolInput = { old_string: 'a'.repeat(36), new_string: 'b'.repeat(36) };
+    expect(verdictIn(`${fixtureLine('a')}\n`, toolInput).reason).toMatch(askedForPragma);
+  });
+
+  it('asks when a multi-edit with replace_all changes the token on a marked line', () => {
+    const onDisk = `const pad = '${'a'.repeat(36)}';\n${fixtureLine('a')}\n`;
+    const edits = [{ old_string: 'a'.repeat(36), new_string: 'b'.repeat(36), replace_all: true }];
+    expect(verdictIn(onDisk, { edits }).reason).toMatch(askedForPragma);
+  });
+
+  it('asks when an edit completes a secret from text already on the line', () => {
+    const toolInput = { old_string: "' + suffix", new_string: `${'d'.repeat(36)}'` };
+    expect(verdictIn("const token = 'ghp_' + suffix;\n", toolInput).reason).toContain(
+      'possible GitHub token',
+    );
+  });
+
+  it('asks when the old_string of an edit is not in the file', () => {
+    const toolInput = { old_string: 'not there', new_string: 'x' };
+    expect(verdictIn(`${fixtureLine('a')}\n`, toolInput).reason).toContain('could not replay this edit');
   });
 
   it('still denies an unmarked secret next to a marked line already in the file', () => {
     const line = fixtureLine('a');
-    expect(decideIn(`${line}\n`, { new_string: `${line}\nconst live = 'ghp_${'c'.repeat(36)}';` })).toBe(
-      'deny',
-    );
+    const toolInput = { old_string: line, new_string: `${line}\nconst live = 'ghp_${'c'.repeat(36)}';` };
+    expect(decideIn(`${line}\n`, toolInput)).toBe('deny');
   });
 
   it('allows a pragma mention that marks no secret', () => {
@@ -109,7 +149,8 @@ describe('guard-secrets allow pragma', () => {
     const outside = tempDir();
     writeFiles(outside, { 'real.ts': `${fixtureLine('a')}\n` });
     symlinkSync(path.join(outside, 'real.ts'), path.join(dir, 'link.ts'));
-    const toolInput = { file_path: path.join(dir, 'link.ts'), new_string: fixtureLine('a') };
+    const line = fixtureLine('a');
+    const toolInput = { file_path: path.join(dir, 'link.ts'), old_string: line, new_string: line };
     expect(hookDecision('guard-secrets.mjs', toolInput, { CLAUDE_PROJECT_DIR: dir })).toBe('ask');
   });
 
