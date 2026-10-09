@@ -71,6 +71,7 @@ Everything the kit keeps lives in `.archkeeper/` (`BRAND.stateDir`):
 **`local/`** holds the active-feature pointer (`local/active-feature`), the pre-compact snapshot (`local/snapshots/latest.json`), caches, hook state ([ADR-0015](0015-hook-runtime.md)) and per-run backups.
 
 - It is gitignored twice: by the base module's `.gitignore` block, and by its own `.archkeeper/local/.gitignore`, which contains `*` and so ignores itself too. A user who deletes the root block therefore cannot commit backups or snapshots by accident.
+- Whatever creates `local/`, the CLI or a hook, writes `local/.gitignore` in the same step, so a `local/` that a user deleted never comes back without it.
 - A backup is a set of compressed, content-addressed blobs, named like the bases, plus a `manifest.json` that maps paths to blobs, under `local/backup/<runId>/`. The last 3 runs are kept.
 - Backups can hold copies of gitignored files, such as a user's `.mcp.json` with tokens, so they are created with mode `0600`, like hook state.
 

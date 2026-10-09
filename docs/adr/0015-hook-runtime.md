@@ -56,7 +56,7 @@ Placeholders in `args` are substituted as plain strings, so project paths with s
 - reads stdin JSON defensively: bad input becomes `{}`, missing fields are tolerated, and unverified fields such as the SessionStart `source` are read with a fallback (reference §12)
 - answers with exit 0 plus JSON, or exit 2 plus stderr, never both
 - never touches the network ([ADR-0018](0018-offline-no-telemetry.md))
-- keeps state only under `.archkeeper/local/` (ADR-0014): every folder on the way must resolve inside the project and must not be a symlink, files are opened without following symlinks (`O_NOFOLLOW`, plus an `lstat` check before the open because Windows lacks that flag) and created with mode `0600`, and a refused write is skipped and reported, never redirected
+- keeps state only under `.archkeeper/local/` (ADR-0014), writing `local/.gitignore` whenever it creates `local/`: every folder on the way must resolve inside the project and must not be a symlink, files are opened without following symlinks (`O_NOFOLLOW`, plus an `lstat` check before the open because Windows lacks that flag) and created with mode `0600`, and a refused write is skipped and reported, never redirected
 - reads or injects into context only files whose real path is inside the project and that are not symlinks
 - runs child processes with `execFile` and argument arrays, never through a shell:
   - Node tools through `process.execPath` and the tool's JS entry file
