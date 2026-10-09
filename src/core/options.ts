@@ -17,6 +17,11 @@ export function optionDefaults(manifest: ModuleManifest): ModuleOptions {
   return Object.fromEntries(Object.entries(manifest.options).map(([name, spec]) => [name, spec.default]));
 }
 
+/** A module's values from `options`, or the defaults its manifest declares when `options` is not given. */
+export function moduleOptions(options: ResolvedOptions | undefined, manifest: ModuleManifest): ModuleOptions {
+  return options?.get(manifest.id) ?? optionDefaults(manifest);
+}
+
 function matchesType(spec: OptionSpec, value: OptionValue): boolean {
   if (spec.type === 'string-list') return Array.isArray(value);
   return typeof value === spec.type;

@@ -2,7 +2,7 @@ import { BRAND, type Brand } from './brand.js';
 import { RenderError } from './errors.js';
 import { type KitModule, templatePath } from './loader.js';
 import { GITIGNORE_FILE, ignoreLineProblem, MCP_FILE, type ModuleManifest } from './manifest-schema.js';
-import { optionDefaults, type ResolvedOptions } from './options.js';
+import { moduleOptions, type ResolvedOptions } from './options.js';
 import { relativePathProblem, targetPathProblem } from './paths.js';
 import { hookScriptPath, type JsonPart, mcpPart, settingsPart, toJson } from './render-json.js';
 import { collectEntries, type Draft, type RenderTree } from './render-tree.js';
@@ -157,7 +157,7 @@ function fileDrafts(job: ModuleRender, file: ManifestFile, index: number): Draft
 
 function moduleDrafts(job: ModuleRender): Draft[] {
   const { manifest } = job.kit;
-  const options = job.context.options?.get(manifest.id) ?? optionDefaults(manifest);
+  const options = moduleOptions(job.context.options, manifest);
   return manifest.files.flatMap((file, index) =>
     whenMismatch(file.when, job.context.stack, options) === undefined ? fileDrafts(job, file, index) : [],
   );
