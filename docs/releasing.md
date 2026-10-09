@@ -27,6 +27,8 @@ The maintainer's runbook for [ADR-0013](adr/0013-release-process.md). CI never c
    npm stage approve <id>    # asks for your 2FA code
    ```
 
+   Run it in a normal terminal. Inside Claude Code, a `!` command has no TTY to prompt on, so pass `--otp=<code>` (docs/mistakes.md).
+
    `npm stage reject <id>` discards a stage, and `npm stage download <id>` fetches its tarball.
 
 5. **Verify.** The workflow polls the registry for an hour. Once you approve, it checks that npm serves exactly the files it built, installs `archkeeper@X.Y.Z` on ubuntu, macOS and Windows, runs `--version`, and creates the GitHub Release from the CHANGELOG section. If you approved later, re-run only the **Wait for the approved publish** job. Re-running the whole workflow before you approve would stage the version a second time.
