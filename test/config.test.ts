@@ -90,6 +90,12 @@ describe('parseConfig', () => {
       'a boolean',
     ],
     ['an older or unknown version', { preset: 'small', version: 0 }, 'version', 'set version to 1'],
+    [
+      'a version that is not a whole number',
+      { preset: 'small', version: 1.5 },
+      'version',
+      'set version to 1',
+    ],
     ['a config that is not an object', ['small'], '', 'schema/config.schema.json'],
   ])('rejects %s with a hint', (_name, value, location, fix) => {
     const error = configError(json(value));

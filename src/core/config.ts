@@ -50,7 +50,7 @@ function unknownKeyWarnings(raw: Record<string, unknown>, file: string): Problem
 
 function refuseNewerVersion(raw: Record<string, unknown>, file: string, brand: Brand): void {
   const { version } = raw;
-  if (typeof version !== 'number' || version <= CONFIG_VERSION) return;
+  if (typeof version !== 'number' || !Number.isInteger(version) || version <= CONFIG_VERSION) return;
   throw new ConfigError({
     file,
     location: 'version',
