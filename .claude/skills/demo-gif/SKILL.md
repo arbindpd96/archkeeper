@@ -7,12 +7,17 @@ argument-hint: <feature-name>
 
 Create the demo for `$ARGUMENTS`.
 
-1. Write `docs/media/tapes/<feature>.tape` (VHS). Keep it under 20 seconds:
-   `Output docs/media/<feature>.gif`, `Set Theme "Catppuccin Mocha"`, `Set FontSize 16`, `Set Width 1100`, `Set Height 560`, typing at a natural speed,
-   and `Sleep` long enough to read each result. Run inside a throwaway fixture project under `examples/`, never the repo root.
-2. Render locally with `vhs docs/media/tapes/<feature>.tape` if `vhs` is installed. Otherwise push and let the
-   **demo-gifs** workflow render it.
-3. In `README.md`, add or update the feature's section: one sentence of value, the GIF
+1. Write `docs/media/tapes/<feature>.tape` (VHS). Keep it under 20 seconds (30 for a hero tape):
+   - Start with `# fixture: <name>`, a throwaway project in `examples/` (`ts-app`, `py-app` or `mixed`), never the repo root.
+   - Add `# live` when the demo needs a real Claude Code session, and `# hero` only for the README hero.
+   - Write commands with brand placeholders, such as `Type "{{brand.binName}} init --yes"`. Never type the product name.
+   - Leave out `Output`, `Source` and font, size or theme settings: `scripts/render-tapes.mjs` adds the output path and `_settings.tape`.
+   - `Wait` for each result (a timeout fails the render), and `Sleep` long enough to read it.
+2. Render it. Never run `vhs` on a tape directly.
+   - Tapes not marked `# live`: push. The **demo-gifs** workflow renders them against the packed CLI and uploads the `demo-gifs` artifact. Copy the GIFs with `npm run gifs:pull -- <run-id>`.
+   - Live tapes: `npm run build`, then `node scripts/render-tapes.mjs --live <feature>`, with VHS 0.12.1 (the version CI pins) and JetBrains Mono installed.
+   - Pushing a new workflow file needs `gh auth refresh -h github.com -s workflow`.
+3. Run `npm run demos`: each GIF must be 2 MB or less and 20 s or less (30 s for the hero). If not, shorten the tape.
+4. In `README.md`, add or update the feature's section: one sentence of value, the GIF
    (`![<feature> demo](docs/media/<feature>.gif)`), and the exact command shown.
-4. Check the GIF is under 2 MB. If not, shorten the tape.
-5. Commit tape, GIF and README together: `docs(readme): add <feature> demo`.
+5. Commit tape, GIF and README together: `docs(readme): add <feature> demo`. The maintainer commits GIFs; CI never does.
