@@ -142,6 +142,10 @@ describe('guard-bash review cases', () => {
     [`${GET} | tclsh`, 'deny'],
     [`${GET} | perl5.34`, 'deny'],
     [`${GET} | awk -f /dev/stdin`, 'deny'],
+    [`${GET} | gawk --file=/dev/stdin f`, 'deny'],
+    [`${GET} | gawk --file /dev/stdin f`, 'deny'],
+    [`${GET} | gawk --include=/dev/stdin '{print}'`, 'deny'],
+    [`${FETCH} | gawk --field-separator , '{print $1}'`, 'allow'],
     ["tcsh -c 'rm -rf ~'", 'deny'],
   ])('wider interpreter list: %s → %s', (command, expected) => {
     expect(judge(command)).toBe(expected);
