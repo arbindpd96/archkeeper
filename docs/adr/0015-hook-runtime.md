@@ -142,7 +142,9 @@ The preset × stack static test checks the frontmatter of every generated skill 
 - Stop hooks return at once when `stop_hook_active` is set.
 - They block at most once per change set, identified by a fingerprint of the working tree.
 - The memory nudge needs an active feature.
-- The stop check runs project scripts, so it ships only in the full preset. It is written into the project and never into the plugin ([ADR-0016](0016-delivery-split.md)), and it runs with `--ignore-scripts` and no shell.
+- The stop check runs project scripts, so it ships only in the full preset, and even there it is off by default: the hook runs nothing until `checks.stop` is set. Interactive `init` proposes the detected test command and sets it only when the user confirms; scripted `init` sets it only when asked explicitly.
+- `checks.stop` is an argument array, never a command line, and its first element must name a runner the hook knows (#38): an npm script, run through npm's JS entry with `--ignore-scripts`; a JS bin from `node_modules/.bin`, run through `process.execPath`; or a Python tool from `.venv` or PATH, run as a real executable. Anything else is skipped with a hint, and nothing runs through a shell.
+- The stop check is written into the project and never into the plugin ([ADR-0016](0016-delivery-split.md)).
 
 ### Budgets
 
