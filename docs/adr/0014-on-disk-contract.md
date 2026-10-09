@@ -1,0 +1,138 @@
+# ADR-0014: On-disk contract and merge-safe lifecycle
+
+- Status: accepted
+- Date: 2026-10-09
+- Deciders: arbindpd96 (owner)
+- Supersedes: none
+
+## Context
+
+The kit writes into existing repos and must never lose a user byte (handoff §3, differentiator 6; feature #19). Whatever the first release writes into users' repos is effectively permanent, so this contract has to be right before 0.1.0.
+
+Relevant inputs:
+
+- ADR-0003 requires a project config file that records the enabled modules.
+- Reference §7.2 defines four update strategies and a lock that also holds the setup answers, with bases stored as plain files under `<state dir>/base/<path>`.
+- The closest competitors either overwrite, or offer only 2-way sidecars with no merge (reference §8).
+- R1 fixed the names in `BRAND` ([ADR-0012](0012-brand-constants.md)): the state dir `.archkeeper` at the project root, outside `.claude/`; the marker prefix; and the sidecar suffix `.archkeeper-new`.
+
+Claude Code discovers instruction files by name and place:
+
+- A subdirectory `CLAUDE.md` or `CLAUDE.local.md` loads lazily when Claude touches that subtree (reference §2.1).
+- Nested `<subdir>/.claude/skills/` folders are discovered (reference §3.1), and every `.md` file under `.claude/rules/` is a rule (reference §2.2).
+
+Verbatim copies of kit files stored under their real names would therefore be loaded as stale instructions. They would also turn up in searches and duplicate checks.
+
+## Decision
+
+### State files
+
+Everything the kit keeps lives in `.archkeeper/` (`BRAND.stateDir`):
+
+| Path                        | Committed | Holds                                                             |
+| --------------------------- | --------- | ----------------------------------------------------------------- |
+| `.archkeeper/config.json`   | yes       | User intent                                                       |
+| `.archkeeper/lock.json`     | yes       | Machine state                                                     |
+| `.archkeeper/base/<sha256>` | yes       | The last kit-written content of each owned file and block         |
+| `.archkeeper/local/`        | no        | Active-feature pointer, snapshots, caches, hook state and backups |
+
+**`config.json`** is the only kit file a user edits by hand. It holds `$schema`, `preset`, `modules {add, remove}`, an optional `stack` override, per-module `options` (for example `blockAiAttribution`, `blockNoVerify` and `checks.stop`), and the Superpowers and Spec Kit choices. `update` re-renders from it. It is validated with zod and exported to `schema/config.schema.json`; unknown keys warn, and invalid values fail with a hint (#19). The setup answers live here, not in the lock as reference §7.2 proposed.
+
+**`lock.json`** is written only by the kit:
+
+```text
+{ lockfileVersion: 1,
+  kit:     { name, version },
+  modules: [ids in install order],
+  files:   { <path>: { module, strategy, hash, base } },
+  blocks:  { <path>: { <blockId>: <base> } },
+  json:    { <path>: <ownedKeys> },
+  removed: [kit files and blocks the user deleted] }
+```
+
+- Paths are project-relative with forward slashes.
+- Hashes are sha256 of LF-normalised content, so an autocrlf checkout is not mistaken for an edit.
+- `hash` is the file as the kit last left it. `base` names the blob of the kit content an owned file was last written from, and each `blocks` entry names the blob of that block's kit content.
+- `ownedKeys` maps each JSON entry the kit owns to the hash of the entry as the kit wrote it, so an entry the user changed is recognised. Entries are keyed by hook `args` path, by exact permission string, and by MCP server name.
+- The zod schema in `src/core`, exported to `schema/lock.schema.json`, is the exact definition.
+
+**Base blobs.** `.archkeeper/base/<sha256>` holds the last kit-written content of each owned file and block.
+
+- Each blob is gzip-compressed with `node:zlib` and named by the sha256 of its uncompressed, LF-normalised content.
+- A blob is written only when absent, and removed when no lock entry references it.
+- A managed `.gitattributes` block marks `.archkeeper/base/**` as `binary linguist-generated`.
+- A blob is valid when its decompressed sha256 matches its name. Either side of a git conflict on a blob is therefore correct, and `doctor` checks integrity.
+
+**`local/`** is gitignored through the base module's `.gitignore` block. It holds the active-feature pointer (`local/active-feature`), the pre-compact snapshot (`local/snapshots/latest.json`), caches, hook state ([ADR-0015](0015-hook-runtime.md)) and per-run backups. A backup is a set of blobs plus a `manifest.json` that maps paths to blobs, under `local/backup/<runId>/`. The last 3 runs are kept.
+
+**Not discoverable.** Nothing under `.archkeeper/` is named `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md` or `SKILL.md`, sits under a `.claude/` folder, or ends in `.md`. Bases and backups are compressed, so a ripgrep search for template text finds nothing there. A test enforces both (#24). The map seeder and, from v0.2, the duplicate checker skip `.archkeeper/`.
+
+### Ownership strategies
+
+Every generated file declares one strategy in its module manifest (#18):
+
+| Strategy      | Typical files                                              | Ownership                                                                                     |
+| ------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `owned`       | Hook scripts, kit skills, kit rules                        | The kit owns the whole file                                                                   |
+| `blocks`      | `CLAUDE.md`, `AGENTS.md`, `.gitignore`, `.gitattributes`   | The kit owns only the regions between its markers; every byte outside them is the user's      |
+| `json`        | `.claude/settings.json`, `.mcp.json`                       | The kit owns individual entries; edits go only through jsonc-parser `modify` and `applyEdits` |
+| `create-only` | Feature-memory template, `decisions.md`, `architecture.md` | Written once when absent, then never touched                                                  |
+
+- **Markers.** Markdown uses `<!-- archkeeper:begin <id> -->` … `<!-- archkeeper:end <id> -->`. Claude Code strips block-level HTML comments from context, so markers cost no tokens (reference §2.1). `.gitignore` and `.gitattributes` use `# archkeeper:begin <id>` … `# archkeeper:end <id>`. Markers derive from `BRAND.markerPrefix`, and parsing also accepts the `BRAND.legacySlugs` prefixes. Malformed or duplicated markers abort the run before any write, naming the line.
+- **JSON.** The kit sets `$schema` only when it is absent. It never modifies or reorders user entries, never writes conflict markers, and aborts before any write when the user's JSON is malformed, citing the file, line and column.
+- **Sidecars.** A sidecar is `<path>` plus `BRAND.sidecarSuffix`, for example `CLAUDE.md.archkeeper-new`. Because the suffix follows the full file name, a sidecar never ends in `.md` or `.mjs` and is never named `SKILL.md`, so Claude Code never loads it as an instruction, rule, skill or hook.
+
+### Writing
+
+- **Planned purely.** Core turns the rendered tree, a snapshot of the project and the lock into ordered operations, each with a reason: `create`, `insertBlock`, `replaceBlock`, `mergeJson`, `sidecar`, `adopt`, `skip`, `delete` and `respectRemoval` (#21). Planning against the state the previous apply left behind yields zero operations.
+- **First contact loses nothing.** An existing file identical to the kit output (after LF normalisation) is adopted. A different existing file at an owned path is never overwritten: it is left alone and reported, and the kit's version goes to a sidecar.
+- **User deletions are respected.** A kit file or block the user deleted is recorded in `removed[]` and never recreated.
+- **Path-checked.** Every write and delete target is refused when it is absolute or contains `..`, resolves (via realpath) through a symlink outside the project root, lies inside `.git/`, or uses a Windows reserved name (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`) or a name ending in a dot or space. Deletes never follow symlinks (#23).
+- **Transactional.** Every touched file is backed up first. Each write goes to a temp sibling and is renamed into place, retrying with backoff on Windows `EPERM` and `EBUSY`. Any failure restores every file byte-identical. The lock is written last, so an interrupted run leaves the previous lock and the next run plans again.
+- **Versions.** A lock with a newer `lockfileVersion` fails with "upgrade archkeeper", and a kit older than `lock.kit.version` refuses to run, so a downgrade cannot rewrite a newer install.
+
+### Updates
+
+**v0.1 never overwrites a user edit.** `update` re-renders from `config.json` with the running kit and compares each file, block and JSON entry on disk with the lock:
+
+| Strategy      | Unchanged since the kit wrote it          | Changed by the user                                                             |
+| ------------- | ----------------------------------------- | ------------------------------------------------------------------------------- |
+| `owned`       | Replaced with the new version             | Kept; the new version goes to a whole-file sidecar                              |
+| `blocks`      | The block is replaced                     | The file is kept; the sidecar holds the whole file with only that block updated |
+| `json`        | Kit entries are added, changed or removed | The diverged entry is kept and reported                                         |
+| `create-only` | Never replaced                            | Never replaced                                                                  |
+
+The command-line contract (#40):
+
+- `update --dry-run` prints a unified diff and writes nothing.
+- `update --json` emits the plan in a documented schema.
+- `update --check` exits 1 when anything would change. The dogfood self-check runs it (#46).
+- `update --restore <path>` backs up and rewrites one kit file from the current kit: a create-only doc, or a file listed in `removed[]`.
+- `update` exits 2 when it wrote sidecars, and lists them with a hint.
+
+`uninstall` removes unmodified kit files, managed blocks, kit-owned JSON entries, the hook folder and `.archkeeper/`. It keeps and lists files the user modified (#41).
+
+**v0.2 adds 3-way merges.** node-diff3 merges owned Markdown and managed blocks against the bases v0.1 already records. Conflicts are written diff3-style with the base inline (labels: yours / base / `archkeeper@<version>`), or as `.rej` files with `--conflict rej`. `.mjs` files keep sidecars, and JSON never gets markers. Because the base is inline, no skill needs to read `.archkeeper/base/`.
+
+**Schema changes.** Until 0.1.0 is published, the shapes may change together with this ADR. After that, any change to the lock or config schema bumps its version (`lockfileVersion` for the lock) and ships a migration; the migration chain lands in v0.2 M1. v1.0 freezes the schemas.
+
+## Consequences
+
+- v0.1 installs upgrade losslessly into v0.2's 3-way merge, because the bases are already recorded and committed.
+- Every teammate's clone holds the bases, so anyone can run a 3-way update.
+- Users see small binary blobs in diffs. `binary` keeps git from diffing or merging them as text, and `linguist-generated` hides them from GitHub's language stats and collapses them in reviews.
+- Base and backup copies cannot be loaded as instructions or matched by Grep.
+- The setup answers move from the lock (reference §7.2) to `config.json`, where users can read and edit them.
+- A file the user deleted stays deleted until they ask for it back.
+- The fast-check property "no user byte lost" (at least 1,000 runs) and the two-version e2e (#43) exercise this contract on the real tarball before 0.1.0 freezes it.
+- After 0.1.0, every schema change costs a migration.
+
+## Alternatives considered
+
+- **Bases as plain mirrored files under their real names.** Claude Code would load them as stale `CLAUDE.md`, rules and skills, and they would show up in searches.
+- **Plain files with a `.base` suffix.** Not discoverable, but still matched by Grep and duplicate checks.
+- **State under `.claude/`.** That is Claude Code's own namespace, and nested `.claude/` folders are scanned for skills.
+- **Answers only in the lock.** No user-editable record of intent.
+- **Local, uncommitted bases.** Teammates cannot 3-way merge.
+- **Overwrite with backups.** Loses trust.
+- **3-way merge in v0.1.** Puts more risk into the first frozen contract.
