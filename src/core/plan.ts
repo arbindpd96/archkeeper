@@ -15,7 +15,7 @@ import {
 } from './lock.js';
 import { assertSafePath } from './path-safety.js';
 import { foldedPath } from './paths.js';
-import type { Ownable, PathOutcome, PathState, PlanOp, Snapshot } from './plan-types.js';
+import type { Ownable, PathOutcome, PathState, PlanOp, ScriptState, Snapshot } from './plan-types.js';
 import type { RenderedEntry, RenderTree, Strategy } from './render-tree.js';
 import { sidecarPath } from './sidecar.js';
 import { compareText } from './text.js';
@@ -101,8 +101,8 @@ interface Planning {
   readonly brand: Brand;
   readonly ownable: Ownable;
   readonly removed: ReadonlySet<string>;
-  /** Whether the next lock gives a hook script a base, known once the owned files are planned. */
-  readonly kitScript: (path: string) => boolean;
+  /** What a hook script holds once the plan is applied, known once the owned files are planned. */
+  readonly script: (path: string) => ScriptState;
 }
 
 // The lock is untrusted, so a lock entry may not name the kit's own state, such as the lock or a blob.
@@ -150,19 +150,34 @@ function planPath(input: Planning, path: string): PathOutcome {
   if (strategy === 'json') {
     const isRemoved = (key: string): boolean => removed.has(removalKey(path, '', key));
     const json = { path, entries, state, sidecar, lock: lock.json.get(path), isRemoved, ownable, brand };
-    return planJson({ ...json, kitScript: input.kitScript });
+    return planJson({ ...json, script: input.script });
   }
   const job = { path, entry: entries[0], state, sidecar, lock: lock.files.get(path), brand };
   return planFile({ ...job, removed: removed.has(removalKey(path)), ownable: ownable(path) });
 }
 
-// JSON files go last: a hook is registered only when its script has a base, which planning the script decides.
+function nextState(state: PathState | undefined, outcome: PathOutcome | undefined): PathState | undefined {
+  const content = outcome?.content;
+  if (content === undefined) return state;
+  return content === null ? undefined : { kind: 'file', content };
+}
+
+// The lock is untrusted, so a base it names never vouches for a script: only the kit's own bytes on disk do.
+function scriptState(input: Planning, path: string, outcome: PathOutcome | undefined): ScriptState {
+  const next = nextState(input.snapshot.get(path), outcome);
+  if (next === undefined) return 'missing';
+  const kit = input.tree.get(path)?.[0]?.content;
+  if (next.kind !== 'file' || kit === undefined) return 'other';
+  return contentHash(next.content) === contentHash(kit) ? 'kit' : 'other';
+}
+
+// JSON files go last: a hook is registered only when its script holds the kit's content once the plan is applied.
 function planPaths(input: Planning, paths: readonly string[]): [string, PathOutcome][] {
   const files = paths.filter((path) => strategyOf(input, path) !== 'json');
   const planned = new Map(files.map((path) => [path, planPath(input, path)]));
-  const kitScript = (path: string): boolean => (planned.get(path)?.file?.base ?? null) !== null;
+  const script = (path: string): ScriptState => scriptState(input, path, planned.get(path));
   for (const path of paths) {
-    if (!planned.has(path)) planned.set(path, planPath({ ...input, kitScript }, path));
+    if (!planned.has(path)) planned.set(path, planPath({ ...input, script }, path));
   }
   return paths.map((path) => [path, planned.get(path) ?? { ops: [], removed: [] }]);
 }
@@ -246,7 +261,7 @@ export function planInstall(
     lock: previous,
     brand,
     ownable: context.ownable ?? (() => false),
-    kitScript: () => false,
+    script: () => 'other',
     removed,
   };
   const paths = [...new Set([...full.keys(), ...lockPaths(previous)])].sort(compareText);

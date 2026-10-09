@@ -46,5 +46,11 @@ export interface PathOutcome {
   readonly removed: readonly Removal[];
 }
 
+/**
+ * What a hook script holds once a plan is applied: exactly the kit's script, nothing, or anything else, such as
+ * a user's own script, a symlink or a kit script the user changed. Only the kit's script is registered (ADR-0014).
+ */
+export type ScriptState = 'kit' | 'missing' | 'other';
+
 /** Whether the current kit could own a path, or a block or JSON entry in it; the lock is untrusted (ADR-0014). */
 export type Ownable = (path: string, entry?: string) => boolean;

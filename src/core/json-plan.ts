@@ -15,7 +15,7 @@ import { entryKey, SCHEMA_KEY } from './json-keys.js';
 import { lineAndColumn } from './json.js';
 import type { Removal } from './lock.js';
 import { SETTINGS_FILE } from './manifest-schema.js';
-import type { OpKind, Ownable, PathOutcome, PathState, PlanOp } from './plan-types.js';
+import type { OpKind, Ownable, PathOutcome, PathState, PlanOp, ScriptState } from './plan-types.js';
 import type { RenderedEntry } from './render-tree.js';
 import { keptSidecarReason, sidecarAction, sidecarPath } from './sidecar.js';
 
@@ -35,8 +35,8 @@ export interface JsonJob {
   readonly lock: ReadonlyMap<string, string> | undefined;
   readonly isRemoved: (key: string) => boolean;
   readonly ownable: Ownable;
-  /** Whether the kit wrote or adopted the hook script at a path; only such a script is registered (ADR-0014). */
-  readonly kitScript: (path: string) => boolean;
+  /** What the hook script at a path holds once the plan is applied; only the kit's script is registered. */
+  readonly script: (path: string) => ScriptState;
   readonly brand: Brand;
 }
 
@@ -138,6 +138,20 @@ function decideEntry(kitHash: string, base: string | undefined, current: string 
   return { kind: 'skip', reason: 'diverged: the user changed it, so it is kept as it is' };
 }
 
+// A hook runs its script, so the kit registers one only where the script holds exactly the kit's content.
+function unregisteredHook(merge: Merge, key: string): boolean {
+  const target = entryKey(key);
+  if (target.match !== 'hook') return false;
+  const script = merge.job.script(target.id);
+  if (script === 'kit') return false;
+  const reason =
+    merge.job.lock?.has(key) === true
+      ? 'its script is not the kit version, so the registration the kit wrote is left as it is'
+      : `its script ${script === 'missing' ? 'is missing' : 'is not the kit version'}, so the kit does not register it`;
+  record(merge, 'skip', key, reason);
+  return true;
+}
+
 function mergeEntry(merge: Merge, entry: KitEntry): void {
   const { key } = entry;
   const { job, owned } = merge;
@@ -145,17 +159,8 @@ function mergeEntry(merge: Merge, entry: KitEntry): void {
     record(merge, 'respectRemoval', key, 'the user deleted it earlier; the kit never adds it back');
     return;
   }
-  const target = entryKey(key);
-  if (target.match === 'hook' && !job.kitScript(target.id)) {
-    record(
-      merge,
-      'skip',
-      key,
-      'its script is not one the kit wrote or adopted, so the kit does not register it',
-    );
-    return;
-  }
-  const found = findEntry(parseDocument(job.path, merge.text), target);
+  if (unregisteredHook(merge, key)) return;
+  const found = findEntry(parseDocument(job.path, merge.text), entryKey(key));
   const step = decideEntry(
     entry.hash,
     job.lock?.get(key),
