@@ -57,7 +57,8 @@ export function interpreterVerdict(commands) {
       const interpreter = readInterpreter(command);
       if (interpreter === null) return null;
       if (command.subs.some(isDownload)) return PIPE_TO_SHELL;
-      if (interpreter.scripts.some(isDownloadedFile)) return RUN_DOWNLOADED;
+      const stdinFile = interpreter.stdin && command.redirects.some(isDownloadedFile);
+      if (stdinFile || interpreter.scripts.some(isDownloadedFile)) return RUN_DOWNLOADED;
       return verdictFor(interpreter, { piped: piped(command), captured });
     }),
   );
