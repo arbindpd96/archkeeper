@@ -71,6 +71,8 @@ const SPECS = [
       value: 'vFl',
       programOperand: true,
       longCode: ['--source'],
+      longScript: ['--file', '--exec', '--include'],
+      longValue: ['--assign', '--field-separator', '--load'],
     }),
   ],
   [/^eval$/, define({ language: 'shell', allCode: true })],
