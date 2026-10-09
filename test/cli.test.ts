@@ -2,9 +2,11 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { main, readPackageInfo, type CliOutput } from '../src/cli/main.js';
+import { readKit } from '../src/cli/kit.js';
+import { main, readPackageInfo, type CliOutput, type PackageInfo } from '../src/cli/main.js';
 import { nodeVersionProblem, SUPPORTED_NODE_RANGE } from '../src/cli/node-version.js';
 import { BRAND } from '../src/core/brand.js';
+import { ManifestError } from '../src/core/errors.js';
 import { REPO_ROOT, tempDir, writeFiles } from './helpers.js';
 
 const manifest = JSON.parse(readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8')) as {
@@ -76,6 +78,46 @@ describe('main', () => {
     expect(stderr).toBe(
       `No package.json found above /x/dist/cli.mjs.\nThe ${BRAND.displayName} install looks damaged. Reinstall it and try again.\n`,
     );
+  });
+
+  it('reports a module catalog that does not load as a damaged install, with its file and fix', () => {
+    let stderr = '';
+    const output: CliOutput = { stdout: () => undefined, stderr: (text) => (stderr += text) };
+    const info = (): PackageInfo => ({ version: '1.0.0', description: 'Kit.' });
+    const broken = (): never => {
+      throw new ManifestError({
+        file: 'modules/base/module.json',
+        location: 'id',
+        problem: 'is wrong',
+        hint: 'fix it',
+      });
+    };
+    expect(main(['--version'], output, info, broken)).toBe(1);
+    expect(stderr).toBe(
+      'modules/base/module.json: id: is wrong\nTry: fix it\n' +
+        `The ${BRAND.displayName} install looks damaged. Reinstall it and try again.\n`,
+    );
+  });
+});
+
+describe('readKit', () => {
+  it('loads the modules and presets this package ships', () => {
+    const catalog = readKit(REPO_ROOT);
+    expect(catalog.modules.has('base')).toBe(true);
+    expect(catalog.presets.map((preset) => preset.name)).toEqual(['small', 'medium', 'full']);
+  });
+
+  it('throws ManifestError for a shipped manifest that does not load', () => {
+    const root = tempDir();
+    writeFiles(root, {
+      'modules/presets.json': readFileSync(path.join(REPO_ROOT, 'modules/presets.json'), 'utf8'),
+    });
+    writeFiles(root, { 'modules/base/module.json': '{"id": "base"}' });
+    expect(() => readKit(root)).toThrow(ManifestError);
+  });
+
+  it('fails when the package has no modules folder', () => {
+    expect(() => readKit(tempDir())).toThrow(/ENOENT/);
   });
 });
 
