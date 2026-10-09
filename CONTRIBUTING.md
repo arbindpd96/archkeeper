@@ -40,7 +40,7 @@ The `Commit authors` CI job checks every commit in a PR. It fails on a bot autho
 | Node.js gate   | CI only                      | The built bin rejects Node.js 18, 20, 22.17.0 and 23 and runs on 22.17.1                       |
 | Commits        | commitlint                   | Conventional Commits, no AI attribution trailers                                               |
 | Commit authors | CI only                      | No bot or AI-tool authors or co-authors (Dependabot only on its own PRs), no AI attribution    |
-| Changeset      | CI only                      | A PR that changes `src/` or `modules/` adds a changeset, or carries the `no-release` label     |
+| Changeset      | CI only                      | A PR touching a published folder adds a changeset, unless it is labelled `no-release`          |
 | PR title       | action-semantic-pull-request | Conventional Commits title (it becomes the squash message)                                     |
 | Security       | CodeQL, dependency review    | Code scanning; no new dependency with a known vulnerability of moderate severity or higher     |
 
@@ -121,7 +121,7 @@ Every user-facing feature ships a README section and a GIF recorded with [VHS](h
 The maintainer versions releases locally with [changesets](https://github.com/changesets/changesets) (ADR-0013). No bot opens version PRs or commits.
 
 - Every user-facing PR adds a changeset: run `npm run changeset`, pick the bump, and write the changelog line. Commit the generated `.changeset/*.md` with the change.
-- CI fails a PR that changes `src/` or `modules/` without a changeset. If the change needs no release, the maintainer labels the PR `no-release` and re-runs the failed `Changeset` job.
+- CI fails a PR that changes `src/`, `modules/`, `packs/` or `schema/` without a changeset. If the change needs no release, the maintainer labels the PR `no-release` and re-runs the failed `Changeset` job.
 - Before tagging, the maintainer runs `npm run version-packages`, which applies the changesets to `package.json` and `CHANGELOG.md`.
 - Release candidates use pre mode: `npx changeset pre enter rc` first, and `npx changeset pre exit` before the final release.
 - Tagging, the staged publish and its 2FA approval are in the maintainer runbook, [docs/releasing.md](docs/releasing.md).

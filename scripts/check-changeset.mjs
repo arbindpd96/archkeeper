@@ -4,7 +4,8 @@ import { exitWith, git, gitRevision } from './lib.mjs';
 const USAGE =
   'Usage: node scripts/check-changeset.mjs <base> <head>\n' +
   'Reads the pull request labels from PR_LABELS, one per line.';
-const RELEASED = /^(src|modules)\//;
+// The folders that reach users: src/ is bundled into dist/, and the rest are published as they are.
+const RELEASED = /^(src|modules|packs|schema)\//;
 const CHANGESET = /^\.changeset\/(?!README\.md$)[^/]+\.md$/;
 const SKIP_LABEL = 'no-release';
 const SHOWN_FILES = 5;
@@ -46,5 +47,5 @@ if (released.length > 0 && !hasChangeset) {
 process.stdout.write(
   released.length > 0
     ? 'check-changeset: the pull request adds a changeset.\n'
-    : 'check-changeset: nothing under src/ or modules/ changed, so no changeset is needed.\n',
+    : 'check-changeset: nothing under src/, modules/, packs/ or schema/ changed, so no changeset is needed.\n',
 );
