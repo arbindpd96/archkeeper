@@ -39,7 +39,7 @@ flowchart LR
 | `plugin/`                 | Generated Claude Code plugin, kept in the repo for the marketplace; never published to npm (ADR-0016)         | _planned v0.3_   |
 | `benchmarks/`             | With-vs-without-kit harness (not published)                                                                   | _planned v0.2_   |
 | `examples/`               | Fixture projects for tests and demo GIFs (not published)                                                      | _planned v0.0_   |
-| `scripts/`                | Repo tooling (comment-policy check; release helpers later)                                                    | active           |
+| `scripts/`                | Repo checks (comments, brand, package), the license-file generator, shared helpers in `lib.mjs`               | active           |
 | `docs/`                   | This map, decisions/ADRs, roadmap, feature memories, research                                                 | active           |
 | `.claude/`                | This repo's own Claude Code setup (dogfooding)                                                                | active           |
 | `test/`                   | Vitest suites for hooks, scripts and lint rules, plus `helpers.ts`; `fixtures/` is kept out of `npm run lint` | active           |
@@ -75,6 +75,7 @@ Add a row whenever something is created. Keep one line per item.
 | `.claude/hooks/bash-rules.mjs`, `git-rules.mjs`, `dangerous-paths.mjs`, `cli-options.mjs`, `glob-match.mjs` | Guard rules per program (`rm`, `find`, `git`, `chmod`, `gh`, publish, `.env` reads, download-into-interpreter)             |
 | `.claude/hooks/env-files.mjs`                                                                               | `.env` secrets-file and template matching shared by both guards                                                            |
 | `.claude/hooks/attribution.mjs`                                                                             | AI-attribution pattern shared by `guard-bash` and `commitlint.config.mjs`                                                  |
+| `scripts/lib.mjs`                                                                                           | Shared script helpers: `exitWith`, and `repositoryFiles` (git-listed files, or git's error and a next step)                |
 | `scripts/check-comments.mjs`                                                                                | Comment-policy checker (TypeScript AST): commented-out code, dividers, untracked TODOs, comment ratio                      |
 | `scripts/third-party-licenses.mjs`                                                                          | Writes `dist/THIRD_PARTY_LICENSES.md` from the `node_modules` paths in the bundles' `//#region` markers                    |
 | `scripts/check-package.mjs`                                                                                 | Package gates: publint, pack-list snapshot, runtime dependencies, install scripts, size budgets, bin smoke                 |

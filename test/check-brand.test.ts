@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
-import { type RunResult, runScript, tempRepo, writeFiles } from './helpers.js';
+import { type RunResult, runScript, tempDir, tempRepo, writeFiles } from './helpers.js';
 
 const SLUG = BRAND.npmName;
 const brandedPackage = (overrides: Record<string, unknown> = {}): string =>
@@ -47,5 +47,15 @@ describe('check-brand', () => {
     const result = checkBrand({ 'package.json': brandedPackage({ bin: { other: 'dist/cli.mjs' } }) });
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('bin must map exactly one command');
+  });
+
+  it("shows git's error and the next step when the root is not a git repository", () => {
+    const root = tempDir();
+    writeFiles(root, { 'package.json': brandedPackage() });
+    const result = runScript('scripts/check-brand.mjs', { args: [root] });
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('git could not list the files');
+    expect(result.stderr).toContain('not a git repository');
+    expect(result.stderr).toContain('pass the repository root as the first argument');
   });
 });

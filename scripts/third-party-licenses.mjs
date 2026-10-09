@@ -1,17 +1,12 @@
 #!/usr/bin/env node
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { exitWith } from './lib.mjs';
 
 const OUTPUT = 'THIRD_PARTY_LICENSES.md';
 const REGION = /^\/\/#region (.+)$/gm;
 const LICENSE_FILE = /^(licen[cs]e|copying|notice)(\.[a-z]+)?$/i;
 const NODE_MODULES = 'node_modules/';
-
-/** Prints a message to stderr and exits with the given code. */
-function exitWith(message, code) {
-  process.stderr.write(`${message}\n`);
-  process.exit(code);
-}
 
 /** Lists every bundle under dist/, sorted so the output never depends on directory order. */
 function bundles(dist) {

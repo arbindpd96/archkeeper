@@ -4,6 +4,7 @@ import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs
 import path from 'node:path';
 import { publint } from 'publint';
 import { formatMessage } from 'publint/utils';
+import { exitWith } from './lib.mjs';
 
 const SNAPSHOT = 'scripts/package-files.txt';
 const RUNTIME_FIELDS = ['dependencies', 'optionalDependencies', 'peerDependencies'];
@@ -118,10 +119,8 @@ const args = process.argv.slice(2);
 const root = path.resolve(args.find((arg) => !arg.startsWith('--')) ?? '.');
 const manifest = readJson(path.join(root, 'package.json'));
 const budgets = readJson(path.join(root, 'budgets.json'));
-if (!existsSync(path.join(root, 'dist'))) {
-  process.stderr.write('check-package: dist/ is missing. Run npm run build first.\n');
-  process.exit(1);
-}
+if (!existsSync(path.join(root, 'dist')))
+  exitWith('check-package: dist/ is missing. Run npm run build first.', 1);
 
 const [pack] = JSON.parse(npm(['pack', '--dry-run', '--json', '--ignore-scripts'], root));
 const files = pack.files.map((entry) => entry.path).sort();
@@ -135,6 +134,5 @@ const problems = [
   ...(await publintProblems(root)),
 ];
 if (problems.length > 0) {
-  process.stderr.write(`Package check failed (budgets.json, ADR-0011, ADR-0017):\n${problems.join('\n')}\n`);
-  process.exit(1);
+  exitWith(`Package check failed (budgets.json, ADR-0011, ADR-0017):\n${problems.join('\n')}`, 1);
 }

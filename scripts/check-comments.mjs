@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { exitWith, repositoryFiles } from './lib.mjs';
 
 const MAX_COMMENT_RATIO = 0.15;
 const MIN_CODE_LINES_FOR_RATIO = 20;
@@ -17,12 +17,6 @@ const UNTRACKED_MARKERS = [
 const DIVIDER = /^\s*[-=*#_~/]{4,}\s*$/;
 
 const ts = await import('typescript').then((module) => module.default).catch(() => null);
-
-/** Prints a message to stderr and exits with the given code. */
-function exitWith(message, code) {
-  process.stderr.write(`${message}\n`);
-  process.exit(code);
-}
 
 /** Picks the TypeScript script kind that matches a file extension. */
 function scriptKindFor(file) {
@@ -139,15 +133,8 @@ function checkFile(file) {
 
 /** Lists tracked and untracked (not ignored) source files in the current git repository. */
 function repositorySourceFiles() {
-  try {
-    const output = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    return output.split('\0').filter((file) => SOURCE_FILE.test(file));
-  } catch {
-    return exitWith('check-comments: not inside a git repository. Pass the files to check as arguments.', 2);
-  }
+  const nextStep = 'Run it inside the git repository, or pass the files to check as arguments.';
+  return repositoryFiles(process.cwd(), nextStep).filter((file) => SOURCE_FILE.test(file));
 }
 
 /** Resolves the files to check: CLI arguments, or every source file in the repository. */
