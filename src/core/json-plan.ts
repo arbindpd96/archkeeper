@@ -138,17 +138,41 @@ function decideEntry(kitHash: string, base: string | undefined, current: string 
   return { kind: 'skip', reason: 'diverged: the user changed it, so it is kept as it is' };
 }
 
-// A hook runs its script, so the kit registers one only where the script holds exactly the kit's content.
+function unregister(merge: Merge, key: string, base: string): void {
+  const found = findEntry(parseDocument(merge.job.path, merge.text), entryKey(key));
+  if (found === undefined) {
+    merge.owned.delete(key);
+    merge.removed.push({ path: merge.job.path, key });
+    const reason = 'the user deleted the kit entry; recorded in removed[] so it is never added back';
+    record(merge, 'respectRemoval', key, reason);
+    return;
+  }
+  if (entryHash(found.node) !== base) {
+    record(merge, 'skip', key, 'its script is gone, but the user changed the registration; kept');
+    return;
+  }
+  edit(merge, key, undefined);
+  merge.owned.delete(key);
+  record(merge, 'delete', key, 'its script is gone, so the kit removes the registration it wrote');
+}
+
+// A hook runs its script, so the kit registers one only where the script holds exactly the kit's content, and
+// takes back a registration it wrote once the user deletes the script, so no tool call runs a missing file.
 function unregisteredHook(merge: Merge, key: string): boolean {
   const target = entryKey(key);
   if (target.match !== 'hook') return false;
   const script = merge.job.script(target.id);
   if (script === 'kit') return false;
-  const reason =
-    merge.job.lock?.has(key) === true
-      ? 'its script is not the kit version, so the registration the kit wrote is left as it is'
-      : `its script ${script === 'missing' ? 'is missing' : 'is not the kit version'}, so the kit does not register it`;
-  record(merge, 'skip', key, reason);
+  const base = merge.job.lock?.get(key);
+  if (base === undefined) {
+    const why = script === 'missing' ? 'is missing' : 'is not the kit version';
+    record(merge, 'skip', key, `its script ${why}, so the kit does not register it`);
+  } else if (script === 'missing') {
+    unregister(merge, key, base);
+  } else {
+    const reason = 'its script is not the kit version, so the registration the kit wrote is left as it is';
+    record(merge, 'skip', key, reason);
+  }
   return true;
 }
 
