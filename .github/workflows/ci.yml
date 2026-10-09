@@ -79,14 +79,17 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci --ignore-scripts
-      - name: Build twice and compare sha256 sums
+      - name: Build here and in a fresh copy elsewhere, then compare sha256 sums
         run: |
-          checksums() { (cd dist && find . -type f -print0 | sort -z | xargs -0 sha256sum); }
+          checksums() { (cd "$1/dist" && find . -type f -print0 | sort -z | xargs -0 sha256sum); }
           npm run build
-          checksums > "$RUNNER_TEMP/first.sha256"
-          rm -rf dist
-          npm run build
-          checksums > "$RUNNER_TEMP/second.sha256"
+          checksums . > "$RUNNER_TEMP/first.sha256"
+          rebuild="$RUNNER_TEMP/rebuild elsewhere"
+          mkdir -p "$rebuild"
+          git archive --format=tar --output "$RUNNER_TEMP/source.tar" HEAD
+          tar -xf "$RUNNER_TEMP/source.tar" -C "$rebuild"
+          (cd "$rebuild" && npm ci --ignore-scripts && npm run build)
+          checksums "$rebuild" > "$RUNNER_TEMP/second.sha256"
           cat "$RUNNER_TEMP/first.sha256"
           diff "$RUNNER_TEMP/first.sha256" "$RUNNER_TEMP/second.sha256"
 
