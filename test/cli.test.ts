@@ -80,7 +80,7 @@ describe('main', () => {
     );
   });
 
-  it('reports a module catalog that does not load as a damaged install, with its file and fix', () => {
+  it('reports a module catalog that does not load as a damaged install, with its file and one fix', () => {
     let stderr = '';
     const output: CliOutput = { stdout: () => undefined, stderr: (text) => (stderr += text) };
     const info = (): PackageInfo => ({ version: '1.0.0', description: 'Kit.' });
@@ -94,7 +94,7 @@ describe('main', () => {
     };
     expect(main(['--version'], output, info, broken)).toBe(1);
     expect(stderr).toBe(
-      'modules/base/module.json: id: is wrong\nTry: fix it\n' +
+      'modules/base/module.json: id: is wrong\n' +
         `The ${BRAND.displayName} install looks damaged. Reinstall it and try again.\n`,
     );
   });
