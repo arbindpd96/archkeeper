@@ -6,6 +6,7 @@ import { globMatches } from './glob-match.mjs';
 import { interpreterVerdict } from './interpreter-rules.mjs';
 import { PIPED_SCRIPT, pipedScriptVerdict } from './piped-scripts.mjs';
 import { parseCommands } from './shell-commands.mjs';
+import { ShellSyntaxError } from './shell-words.mjs';
 import { ask, deny, strictest } from './verdicts.mjs';
 
 const UNKNOWN_PROGRAM = ask('The command name comes from an unquoted expansion. Confirm with the user.');
@@ -99,14 +100,25 @@ function rulesFor(command) {
   return programRule ? [programRule, ...COMMAND_RULES] : COMMAND_RULES;
 }
 
+// Text piped into a shell, or its decoded form, may not parse; that text alone becomes unknown, and the
+// verdicts on the rest of the command still count.
+function judgeScriptAt(depth) {
+  return (script) => {
+    if (depth >= MAX_SCRIPT_DEPTH) return PIPED_SCRIPT;
+    try {
+      return judgeAt(parseCommands(script), depth + 1);
+    } catch (error) {
+      if (error instanceof ShellSyntaxError) return PIPED_SCRIPT;
+      throw error;
+    }
+  };
+}
+
 function judgeAt(commands, depth) {
   const verdicts = commands.flatMap((command) => rulesFor(command).map((rule) => rule(command)));
-  // A shell that reads its program from a pipe runs whatever the previous stage prints, so judge that text too.
-  const judgeScript = (script) =>
-    depth >= MAX_SCRIPT_DEPTH ? PIPED_SCRIPT : judgeAt(parseCommands(script), depth + 1);
   verdicts.push(
     interpreterVerdict(commands),
-    pipedScriptVerdict(commands, judgeScript),
+    pipedScriptVerdict(commands, judgeScriptAt(depth)),
     findPipedToRm(commands),
   );
   return strictest(verdicts);

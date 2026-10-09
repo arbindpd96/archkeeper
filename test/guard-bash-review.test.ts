@@ -130,6 +130,9 @@ describe('guard-bash review cases', () => {
     ['echo -n ls | sh', 'ask'],
     ["printf '%s\\n' ls | sh", 'ask'],
     ['ls | "$PAGER"', 'ask'],
+    ["rm -rf / ; printf '\\x27' | sh", 'deny'],
+    ["printf '\\x27' | sh", 'ask'],
+    ['echo "it\'s" | sh', 'ask'],
     ['echo ls | sh', 'allow'],
   ])('piped scripts: %s → %s', (command, expected) => {
     expect(judge(command)).toBe(expected);
