@@ -95,7 +95,11 @@ Every generated file declares one strategy in its module manifest (#18):
 - **Planned purely.** Core turns the rendered tree, a snapshot of the project and the lock into ordered operations, each with a reason: `create`, `insertBlock`, `replaceBlock`, `mergeJson`, `sidecar`, `adopt`, `skip`, `delete` and `respectRemoval` (#21). Planning against the state the previous apply left behind yields no operation but `skip`, so a second run writes nothing.
 - **First contact loses nothing.** An existing file identical to the kit output (after LF normalisation) is adopted. A different existing file at an owned path is never overwritten: it is left alone with `base: null` and reported, and the kit's version goes to a sidecar.
 - **User deletions are respected.** A kit file, block or JSON entry the user deleted is recorded in `removed[]` and never recreated. A kit-owned JSON entry missing from its file counts as a user deletion, so a deny rule the user removed is never added back.
-- **Path-checked.** Every write and delete target is refused when it is absolute or contains `..`, resolves (via realpath) through a symlink outside the project root, lies inside `.git/`, or uses a Windows reserved name (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`) or a name ending in a dot or space. Deletes never follow symlinks (#23).
+- **Path-checked.** #23 holds the exact rules and tests each case on all three OSes. Deletes never follow symlinks, and every write and delete target, including every path read from the lock, is refused when it:
+  - is absolute, starts with a drive letter or a UNC prefix, or contains a `..` segment, a backslash, a `:` (which also rules out NTFS streams) or a NUL byte
+  - resolves (via realpath) through a symlink outside the project root
+  - lies inside `.git/`, compared case-insensitively and including the 8.3 short name, so `.GIT/` and `GIT~1/` are refused too
+  - uses a Windows reserved name with or without an extension (`CON`, `PRN`, `AUX`, `NUL`, `COM1`–`COM9`, `LPT1`–`LPT9`, so `nul.txt` and `con.md` too), or a name ending in a dot or space
 - **Symlinks are left alone.** A write target that is itself a symlink, even one inside the project such as `CLAUDE.md -> AGENTS.md`, is never written through or replaced. It is left alone and reported, and the kit's content goes to a sidecar.
 - **Transactional.**
   - Every touched path is backed up first. The backup manifest records whether each path was a file, a symlink (with its target) or absent.
