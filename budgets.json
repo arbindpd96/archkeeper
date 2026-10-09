@@ -1,0 +1,6 @@
+{
+  "$comment": "Lightness contract (ADR-0017). scripts/check-package.mjs enforces it in npm run check and CI. Raising a budget needs an ADR note. Sizes are bytes (1 kB = 1000 bytes, as npm reports them).",
+  "tarball": { "maxBytes": 300000 },
+  "runtimeDependencies": { "max": 0 },
+  "hookBundle": { "maxBytes": 30000 }
+}

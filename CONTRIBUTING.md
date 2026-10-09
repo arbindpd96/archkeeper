@@ -32,6 +32,8 @@ Commits are authored by people. Do not add AI co-author trailers or "generated w
 | Brand          | `npm run brand`              | The product slug appears only in `src/core/brand.ts`; `package.json` `name` and `bin` match it |
 | Tests          | `npm test`                   | Vitest: Linux on Node 22/24/26, macOS + Windows on 24                                          |
 | Build          | `npm run build`              | tsdown bundle in `dist/`, licenses of inlined code; CI checks that two builds are identical    |
+| Package        | `npm run package`            | publint, pack-list snapshot, zero runtime deps, no install scripts, `budgets.json` sizes       |
+| Install smoke  | CI only                      | `npm publish --dry-run`; the packed tarball installs and runs on ubuntu, macOS and Windows     |
 | Commits        | commitlint                   | Conventional Commits, no AI attribution trailers                                               |
 | PR title       | action-semantic-pull-request | Conventional Commits title (it becomes the squash message)                                     |
 | Security       | CodeQL, dependency review    | Code scanning; no new dependency with a known vulnerability of moderate severity or higher     |
@@ -46,7 +48,7 @@ The pre-commit hook runs Prettier, ESLint and the comment check on staged files,
 - Strict TypeScript and ESM. No `any`; use `unknown` and narrow. Exported functions declare their types.
 - Validate external input (files, CLI args, network) at the boundary. Trust types inside.
 - Never swallow errors. Throw errors whose message tells the user what to do next.
-- No new runtime dependency without a one-line justification in the PR.
+- No runtime dependencies (ADR-0011). Every library is a devDependency that tsdown inlines, and `budgets.json` caps the size (ADR-0017).
 - Simplicity first: no speculative options, abstractions or "for later" code.
 
 ## Comments

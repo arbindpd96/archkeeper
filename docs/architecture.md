@@ -77,6 +77,7 @@ Add a row whenever something is created. Keep one line per item.
 | `.claude/hooks/attribution.mjs`                                                                             | AI-attribution pattern shared by `guard-bash` and `commitlint.config.mjs`                                                  |
 | `scripts/check-comments.mjs`                                                                                | Comment-policy checker (TypeScript AST): commented-out code, dividers, untracked TODOs, comment ratio                      |
 | `scripts/third-party-licenses.mjs`                                                                          | Writes `dist/THIRD_PARTY_LICENSES.md` from the `node_modules` paths in the bundles' `//#region` markers                    |
+| `scripts/check-package.mjs`                                                                                 | Package gates: publint, pack-list snapshot, runtime dependencies, install scripts, size budgets, bin smoke                 |
 | `scripts/check-brand.mjs`                                                                                   | Brand check: no slug literal outside `src/core/brand.ts` and the allowlist; `package.json` `name` and `bin` match `BRAND`  |
 | `test/helpers.ts`                                                                                           | `runScript`, `tempDir`, `tempRepo`, `writeFiles` for hook and script tests                                                 |
 
@@ -108,6 +109,18 @@ Add a row whenever something is created. Keep one line per item.
 | `dist/THIRD_PARTY_LICENSES.md` | the bundles                | Licenses of every inlined package                                 |
 
 Every bundle may import only `node:` built-ins (tsdown `deps.onlyImport`), so the package needs no runtime dependency. `jsonc-parser` is aliased to its ESM build (reference §7.1). CI builds twice and compares sha256 sums.
+
+## Package gates
+
+`npm run package` (`scripts/check-package.mjs`) checks the built package against `budgets.json`, the lightness contract (ADR-0017):
+
+- publint passes, with warnings treated as errors.
+- The `npm pack --dry-run` file list matches the committed `scripts/package-files.txt` (`npm run package -- --update` after an intended change).
+- `dependencies`, `optionalDependencies` and `peerDependencies` stay within the runtime-dependency budget (0), and there is no `preinstall`, `install` or `postinstall` script.
+- The tarball and each `dist/hooks/*.mjs` bundle stay within their size budgets.
+- The packed bin answers `--version` and `--help`.
+
+CI also runs `npm publish --dry-run` and installs the packed tarball under a path with a space on ubuntu, macOS and Windows.
 
 ## Conventions
 
