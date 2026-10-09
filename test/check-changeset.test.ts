@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commitFiles, runScript, tempRepo, type RunResult } from './helpers.js';
+import { commitFiles, git, runScript, tempRepo, type RunResult } from './helpers.js';
 
 const CHANGESET = "---\n'fixture-kit': minor\n---\n\nAdd init.\n";
 
@@ -22,10 +22,22 @@ describe('check-changeset', () => {
     expect(result.stderr).toContain('label the pull request no-release');
   });
 
-  it('fails a change under modules/ without a changeset', () => {
-    const result = checkChangeset({ 'modules/memory/module.json': '{}\n' });
+  it.each(['modules/memory/module.json', 'packs/languages/python/pack.json', 'schema/lock.schema.json'])(
+    'fails a change to the published %s without a changeset',
+    (file) => {
+      const result = checkChangeset({ [file]: '{}\n' });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(file);
+    },
+  );
+
+  it('does not count a deleted changeset', () => {
+    const repo = tempRepo({ 'src/cli/main.ts': 'export const a = 1;\n', '.changeset/old.md': CHANGESET });
+    git(repo, 'rm', '-q', '.changeset/old.md');
+    commitFiles(repo, { 'src/cli/main.ts': 'export const a = 2;\n' }, { message: 'feat: x' });
+    const result = runScript('scripts/check-changeset.mjs', { args: ['main~1', 'HEAD'], cwd: repo });
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain('modules/memory/module.json');
+    expect(result.stderr).toContain('adds no changeset');
   });
 
   it('passes a change under src/ that adds a changeset', () => {
