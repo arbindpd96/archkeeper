@@ -6,7 +6,8 @@ const ENV_HINT =
 const REFERENCE = String.raw`\$\{[A-Za-z_][A-Za-z0-9_]*\}`;
 const REFERENCE_ONLY = new RegExp(`^${REFERENCE}$`);
 const envReference = z.string().check(z.regex(REFERENCE_ONLY, { error: ENV_HINT }));
-const OBJECT_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+// Names such as __proto__ or toString read as inherited properties when a server list is indexed by name.
+const OBJECT_KEYS = new Set([...Object.getOwnPropertyNames(Object.prototype), 'prototype']);
 const serverName = z.string().check(
   z.regex(/^[A-Za-z0-9_-]+$/, { error: 'use letters, digits, _ and -' }),
   refusing((value) =>
@@ -16,19 +17,37 @@ const serverName = z.string().check(
   ),
 );
 
+/** Each `${...}` in `text`, in order, and the text with each replaced by a space. */
+function scanPlaceholders(text: string): { references: string[]; rest: string } {
+  const references: string[] = [];
+  let rest = '';
+  let from = 0;
+  let start = text.indexOf('${');
+  // Searching from each ${ for its } keeps an unclosed ${ to one scan; a regex would rescan for every ${.
+  while (start !== -1) {
+    const end = text.indexOf('}', start);
+    if (end === -1) break;
+    references.push(text.slice(start, end + 1));
+    rest += `${text.slice(from, start)} `;
+    from = end + 1;
+    start = text.indexOf('${', from);
+  }
+  return { references, rest: rest + text.slice(from) };
+}
+
 const PROJECT_DIR = '${CLAUDE_PROJECT_DIR:-.}';
 const DEFAULT_HINT = `write \${NAME} with no default: only ${PROJECT_DIR} may carry one`;
 // Claude Code reads ${VAR:-default} as its default when VAR is unset (reference §5.1), so a default ships as is.
 const noLiteralDefault = (value: string): Refusal | undefined => {
-  const fallback = [...value.matchAll(/\$\{[^}]*\}/g)]
-    .map(([reference]) => reference)
-    .find((reference) => !REFERENCE_ONLY.test(reference) && reference !== PROJECT_DIR);
+  const fallback = scanPlaceholders(value).references.find(
+    (reference) => !REFERENCE_ONLY.test(reference) && reference !== PROJECT_DIR,
+  );
   return fallback === undefined ? undefined : { problem: `holds ${fallback}`, hint: DEFAULT_HINT };
 };
 
 // A run of 20 or more letters and digits that mixes both, such as a 32-character hex key, is a literal key.
 function holdsLiteralKey(text: string): boolean {
-  const runs = text.replaceAll(/\$\{[^}]*\}/g, ' ').match(/[A-Za-z0-9]{20,}/g) ?? [];
+  const runs = scanPlaceholders(text).rest.match(/[A-Za-z0-9]{20,}/g) ?? [];
   return runs.some((run) => /\d/.test(run) && /[A-Za-z]/.test(run));
 }
 const LITERAL_KEY = 'holds what looks like a literal key or token';
@@ -38,9 +57,9 @@ const CREDENTIAL_NAME = /TOKEN|SECRET|PASSWORD|KEY|AUTH/i;
 const OAUTH_HINT =
   'authenticate the server with OAuth or a headersHelper script: a credential variable reads as empty here';
 const noCredentialVariable = refusing((value) => {
-  const name = [...value.matchAll(/\$\{([^}]*)\}/g)].find((match) => CREDENTIAL_NAME.test(match[1] ?? ''));
-  if (name === undefined) return undefined;
-  return { problem: `uses \${${name[1] ?? ''}}, which Claude Code reads as empty`, hint: OAUTH_HINT };
+  const reference = scanPlaceholders(value).references.find((candidate) => CREDENTIAL_NAME.test(candidate));
+  if (reference === undefined) return undefined;
+  return { problem: `uses ${reference}, which Claude Code reads as empty`, hint: OAUTH_HINT };
 });
 const URL_KEY_HINT = 'keep keys out of the URL: authenticate the server with OAuth or a headersHelper script';
 const noLiteralKey = refusing((value) =>
@@ -78,13 +97,16 @@ const headersHelper = z
   );
 
 const CREDENTIAL_WORD =
-  /^(?:[a-z0-9]*key|token|secret|pass(?:word|wd)?|pwd|auth|cred(?:ential)?s?|bearer|pat)$/i;
-// A flag or variable name is a credential when one of its - or _ separated words is, so --author is not.
+  /^(?:[a-z0-9]*(?:key|token|secret)|pass(?:word|wd|phrase)?|pwd|auth(?:orization)?|cred(?:ential)?s?|bearer|pat)$/i;
+// A name is a credential when one of its -, _, . or camelCase words is, so --clientSecret is and --author is not.
 const namesCredential = (name: string): boolean =>
   name
     .replace(/^--?/, '')
-    .split(/[-_]/)
+    .split(/[-_.]|(?<=[a-z0-9])(?=[A-Z])/)
     .some((word) => CREDENTIAL_WORD.test(word));
+const SCHEME_VALUE = /^(?:bearer|basic)\s/i;
+const SCHEME_REFERENCE = /^(?:bearer|basic|token)\s+\$\{[A-Za-z_]\w*\}$/i;
+const isReference = (value: string): boolean => REFERENCE_ONLY.test(value) || SCHEME_REFERENCE.test(value);
 const ARG_KEY_HINT =
   'pass the key from the environment as ${NAME}, such as --token ${GITHUB_TOKEN}: the kit never writes a secret ' +
   '(ADR-0007)';
@@ -93,32 +115,52 @@ const PROJECT_HINT =
 
 const STARTED_IN = 'is a path relative to the folder Claude Code started in';
 
+function startedInRefusal(value: string): Refusal | undefined {
+  const relative = value === '.' || value === '..' || value.startsWith('./') || value.startsWith('../');
+  return relative ? { problem: STARTED_IN, hint: PROJECT_HINT } : undefined;
+}
+
 function stdioValueRefusal(value: string, name: string | undefined): Refusal | undefined {
-  const fallback = noLiteralDefault(value);
-  if (fallback !== undefined) return fallback;
-  if (value === '.' || value === '..' || value.startsWith('./') || value.startsWith('../')) {
-    return { problem: STARTED_IN, hint: PROJECT_HINT };
-  }
-  if (name !== undefined && namesCredential(name) && !REFERENCE_ONLY.test(value)) {
+  const pathRefusal = noLiteralDefault(value) ?? startedInRefusal(value);
+  if (pathRefusal !== undefined) return pathRefusal;
+  if (name !== undefined && namesCredential(name) && !isReference(value)) {
     return { problem: `gives ${name} a literal value`, hint: ARG_KEY_HINT };
+  }
+  if (SCHEME_VALUE.test(value) && !isReference(value)) {
+    return { problem: 'holds a literal Bearer or Basic credential', hint: ARG_KEY_HINT };
   }
   return holdsLiteralKey(value) ? { problem: LITERAL_KEY, hint: ARG_KEY_HINT } : undefined;
 }
 
-// An argument is a --flag=value or NAME=value pair, or a value for the flag before it.
-function argRefusal(arg: string, previous: string | undefined): Refusal | undefined {
-  const pair = /^(--?[\w-]+|[A-Za-z_]\w*)=(.*)$/.exec(arg);
-  return pair === null ? stdioValueRefusal(arg, previous) : stdioValueRefusal(pair[2] ?? '', pair[1]);
+const PAIR = /^(--?[\w-]+|[A-Za-z_]\w*)=(.*)$/;
+const HEADER = /^([A-Za-z][\w-]*):\s*(.*)$/;
+
+// The value of a pair can be a pair itself, as in --env=API_KEY=value.
+function pairRefusal(name: string, value: string): Refusal | undefined {
+  const inner = PAIR.exec(value);
+  return (
+    stdioValueRefusal(value, name) ??
+    (inner === null ? undefined : stdioValueRefusal(inner[2] ?? '', inner[1]))
+  );
 }
 
-// A command with a slash is a path, so it is absolute or starts at the project (reference §5.1).
-const command = z.string().check(
-  z.minLength(1),
-  refusing((value) => {
-    const relative = value.includes('/') && !value.startsWith('/') && !value.startsWith('${');
-    return relative ? { problem: STARTED_IN, hint: PROJECT_HINT } : stdioValueRefusal(value, undefined);
-  }),
-);
+// An argument is a --flag=value, NAME=value or Name: value pair, or a value for the flag before it.
+function argRefusal(arg: string, previous: string | undefined): Refusal | undefined {
+  const pair = PAIR.exec(arg) ?? HEADER.exec(arg);
+  return pair === null ? stdioValueRefusal(arg, previous) : pairRefusal(pair[1] ?? '', pair[2] ?? '');
+}
+
+// A command with a slash is a path: absolute, or under the project (reference §5.1). A backslash would let
+// Windows read bin\x or .\x.exe from the folder Claude Code started in.
+function commandRefusal(value: string): Refusal | undefined {
+  const projectPath = value.startsWith('/') || value.startsWith(`${PROJECT_DIR}/`);
+  if (value.includes('\\') || (value.includes('/') && !projectPath)) {
+    return { problem: STARTED_IN, hint: PROJECT_HINT };
+  }
+  return stdioValueRefusal(value, undefined);
+}
+
+const command = z.string().check(z.minLength(1), refusing(commandRefusal));
 const args = z.array(z.string()).check(
   z.superRefine((values: string[], context) => {
     for (const [index, arg] of values.entries()) {
