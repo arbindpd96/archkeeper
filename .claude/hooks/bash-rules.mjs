@@ -1,7 +1,9 @@
 import { hasLong, parseOptions } from './cli-options.mjs';
 import { isDangerousPath, isUncheckedPath } from './dangerous-paths.mjs';
+import { isEnvFileName, isEnvTemplateName } from './env-files.mjs';
 import { gitRule, HOOKS_PATH, HUSKY_OFF } from './git-rules.mjs';
 import { globMatches } from './glob-match.mjs';
+import { parseCommands } from './shell-commands.mjs';
 
 const deny = (reason) => Object.freeze({ decision: 'deny', reason });
 const ask = (reason) => Object.freeze({ decision: 'ask', reason });
@@ -17,7 +19,10 @@ const UNCHECKED_VALUE = ask(
 const PIPE_TO_SHELL = deny('Piping a download into a shell is blocked. Download, review, then run.');
 const GITHUB_DELETE = deny('Deleting repositories, releases or other GitHub resources is blocked.');
 const WORLD_WRITABLE = deny('World-writable permissions are blocked.');
-const SECRETS_FILE = ask('This command reads a secrets file (.env). Confirm with the user.');
+const SECRETS_FILE = ask('This command touches a secrets file (.env). Confirm with the user.');
+const PIPED_SCRIPT = ask(
+  'This pipes generated text into a shell, so it cannot be checked. Confirm with the user.',
+);
 const PUBLISH = ask('Publishing to a package registry is outward-facing. Confirm with the user.');
 const SUDO = ask('sudo needs explicit user approval.');
 
@@ -26,8 +31,6 @@ const INTERPRETER =
   /^(?:sh|bash|zsh|dash|ksh|mksh|fish|python[\d.]*|node|nodejs|perl|ruby|php|eval|source|\.)$/;
 const PUBLISH_COMMANDS = new Set(['publish', 'pub', 'unpublish', 'deprecate', 'dist-tag']);
 const PRIVILEGED = new Set(['sudo', 'doas', 'su']);
-const ENV_FILE = /^\.env(?:rc)?(?![a-z0-9_-])/i;
-const ENV_TEMPLATE = /^\.env\.(?:example|sample|template)$/i;
 const ENV_FILE_NAMES = ['.env', '.envrc', '.env.local', '.env.production', '.env.development'];
 const HOOKS_PATH_SETTING = /core\.hookspath/i;
 const HOOK_SETTING_VALUE = /^(?:HUSKY|GIT_CONFIG_\w+)=.*[$`]/;
@@ -117,8 +120,8 @@ function isEnvFile(word) {
   const path = word.replace(/\/+$/, '');
   const name = path.slice(Math.max(path.lastIndexOf('/'), path.lastIndexOf(':'), path.lastIndexOf('=')) + 1);
   const lower = name.toLowerCase();
-  if (ENV_TEMPLATE.test(lower)) return false;
-  if (ENV_FILE.test(lower)) return true;
+  if (isEnvTemplateName(lower)) return false;
+  if (isEnvFileName(lower)) return true;
   return lower.startsWith('.') && /[*?[]/.test(lower) && envGlobMatches(lower);
 }
 
@@ -132,7 +135,16 @@ const unknownProgramRule = ({ splitProgram }) => (splitProgram ? UNKNOWN_PROGRAM
 const runsDownload = (command) =>
   isInterpreter(command) && command.subs.some((sub) => DOWNLOADERS.has(sub.program)) ? PIPE_TO_SHELL : null;
 
-const CODE_FROM_ARGUMENT = new Set(['-c', '-e', '-E', '--eval', '-p', '--print', '-m']);
+const SHELL = /^(?:sh|bash|zsh|dash|ksh|mksh|fish)$/;
+const CODE_FLAGS = [
+  [SHELL, ['-c']],
+  [/^python[\d.]*$/, ['-c', '-m']],
+  [/^(?:node|nodejs)$/, ['-e', '--eval', '-p', '--print']],
+  [/^perl$/, ['-e', '-E']],
+  [/^ruby$/, ['-e']],
+  [/^php$/, ['-r']],
+];
+const codeFlagsFor = (program) => CODE_FLAGS.find(([pattern]) => pattern.test(program))?.[1] ?? [];
 const STDIN_PATHS = new Set(['-', '/dev/stdin', '/proc/self/fd/0']);
 
 const EXECUTES_INPUT =
@@ -142,7 +154,7 @@ const EXECUTES_INPUT =
 function runsStdinAsCode({ program, args, dynamicProgram, subs }) {
   if (dynamicProgram || subs.length > 0 || ['eval', 'source', '.'].includes(program)) return true;
   if (args.includes('-s') || args.some((arg) => EXECUTES_INPUT.test(arg))) return true;
-  if (args.some((arg) => CODE_FROM_ARGUMENT.has(arg))) return false;
+  if (args.some((arg) => codeFlagsFor(program).includes(arg))) return false;
   const [first] = args;
   return first === undefined || first.startsWith('-') || STDIN_PATHS.has(first) || !/[./]/.test(first);
 }
@@ -158,6 +170,32 @@ function downloadPipedToInterpreter(commands) {
     pipes.some(({ pipeline, stage }) => (earliestDownload.get(pipeline) ?? Infinity) < stage);
   const executesDownload = (command) => isInterpreter(command) && runsStdinAsCode(command) && fed(command);
   return commands.some(executesDownload) ? PIPE_TO_SHELL : null;
+}
+
+const MAX_SCRIPT_DEPTH = 3;
+const sameStage = (pipe, pipeline, stage) => pipe.pipeline === pipeline && pipe.stage === stage;
+const producerOf = (commands, { pipeline, stage }) =>
+  commands.find((command) => command.pipes.some((pipe) => sameStage(pipe, pipeline, stage - 1)));
+
+function scriptFedBy(producer) {
+  if (producer.heredocs.length > 0) return producer.heredocs.join('\n');
+  return ['echo', 'printf'].includes(producer.program) ? producer.args.join(' ') : null;
+}
+
+// A shell that reads its program from a pipe runs whatever the previous stage prints, so judge that text too.
+function pipedScriptVerdict(commands, depth) {
+  const shells = commands.filter((command) => SHELL.test(command.program) && runsStdinAsCode(command));
+  const verdicts = shells.flatMap((shell) =>
+    shell.pipes
+      .filter((pipe) => pipe.stage > 0)
+      .map((pipe) => {
+        const producer = producerOf(commands, pipe);
+        const script = producer ? scriptFedBy(producer) : null;
+        if (script === null || depth >= MAX_SCRIPT_DEPTH) return PIPED_SCRIPT;
+        return judgeAt(parseCommands(script), depth + 1);
+      }),
+  );
+  return strictest(verdicts);
 }
 
 const PROGRAM_RULES = new Map([
@@ -178,10 +216,18 @@ function rulesFor(command) {
   return programRule ? [programRule, ...COMMAND_RULES] : COMMAND_RULES;
 }
 
-/** Judges parsed commands and returns the strictest verdict ({decision, reason}, deny beats ask) or null. */
-export function judgeCommands(commands) {
-  const verdicts = commands.flatMap((command) => rulesFor(command).map((rule) => rule(command)));
-  verdicts.push(downloadPipedToInterpreter(commands));
+function strictest(verdicts) {
   const found = verdicts.filter(Boolean);
   return found.find((verdict) => verdict.decision === 'deny') ?? found[0] ?? null;
+}
+
+function judgeAt(commands, depth) {
+  const verdicts = commands.flatMap((command) => rulesFor(command).map((rule) => rule(command)));
+  verdicts.push(downloadPipedToInterpreter(commands), pipedScriptVerdict(commands, depth));
+  return strictest(verdicts);
+}
+
+/** Judges parsed commands and returns the strictest verdict ({decision, reason}, deny beats ask) or null. */
+export function judgeCommands(commands) {
+  return judgeAt(commands, 0);
 }

@@ -22,6 +22,7 @@ const UNCHECKED = ask(
 const hasExpansion = (word) => /[$`]/.test(word);
 const HOOKS_PATH_SETTING = /core\.hookspath/i;
 const ALIAS_SETTING = /^alias\./i;
+const CLEAN_UNGUARDED = /clean\.requireforce/i;
 const GLOBAL_VALUE_OPTIONS = new Set(['-C', '-c', '--git-dir', '--work-tree', '--namespace', '--config-env']);
 
 const PUSH_VALUES = { short: 'o', long: ['--push-option', '--repo', '--receive-pack', '--exec'] };
@@ -93,6 +94,7 @@ function setsKey(operands, key) {
 
 function judgeConfig({ operands }) {
   if (setsKey(operands, HOOKS_PATH_SETTING)) return HOOKS_PATH;
+  if (setsKey(operands, CLEAN_UNGUARDED)) return DISCARDS_WORK;
   if (setsKey(operands, ALIAS_SETTING)) return GIT_ALIAS;
   return operands.slice(0, -1).some(hasExpansion) ? UNCHECKED : null;
 }
@@ -134,6 +136,12 @@ function judgeBranch(options) {
   return forced ? DISCARDS_WORK : null;
 }
 
+const judgeRm = (options) => (options.short.has('f') || options.long.has('--force') ? DISCARDS_WORK : null);
+const judgeWorktree = (options) =>
+  options.operands[0] === 'remove' && (options.short.has('f') || options.long.has('--force'))
+    ? DISCARDS_WORK
+    : null;
+
 const SUBCOMMANDS = new Map([
   ['push', { judge: judgePush, values: PUSH_VALUES }],
   ['commit', { judge: judgeCommit, values: COMMIT_VALUES }],
@@ -148,6 +156,8 @@ const SUBCOMMANDS = new Map([
   ['log', { judge: judgeOutput }],
   ['show', { judge: judgeOutput }],
   ['config', { judge: judgeConfig, values: CONFIG_VALUES }],
+  ['rm', { judge: judgeRm }],
+  ['worktree', { judge: judgeWorktree }],
 ]);
 
 /** Judges a git invocation: hook bypasses, destructive pushes, and commands that discard work or escape the repo. */
@@ -157,6 +167,8 @@ export function gitRule(command) {
   if (skipsHooks) return HOOKS_PATH;
   if (configs.some((setting) => ALIAS_SETTING.test(setting))) return GIT_ALIAS;
   if (configs.some(hasExpansion)) return UNCHECKED;
+  if (subcommand === 'clean' && configs.some((setting) => CLEAN_UNGUARDED.test(setting)))
+    return DISCARDS_WORK;
   const rule = SUBCOMMANDS.get(subcommand);
   const options = parseOptions(rest, rule?.values);
   if (hasLong(options, '--no-verify', 6)) return NO_VERIFY;

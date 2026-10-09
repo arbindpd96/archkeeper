@@ -1,8 +1,16 @@
 import { spawnSync } from 'node:child_process';
 import { copyFileSync } from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { REPO_ROOT, runScript, tempDir } from './helpers.js';
+
+interface ShellModule {
+  parseCommands: (source: string) => unknown[];
+}
+interface RulesModule {
+  judgeCommands: (commands: unknown[]) => { decision: string } | null;
+}
 
 interface PermissionOutput {
   hookSpecificOutput?: { permissionDecision?: string; permissionDecisionReason?: string };
@@ -139,6 +147,10 @@ describe('guard-bash', () => {
     'git clean --force',
     'git checkout -- .',
     'git checkout README.md',
+    'git -c clean.requireForce=false clean -dx',
+    'git config clean.requireForce false',
+    'git rm -rf .',
+    'git worktree remove --force ../wt',
     'git checkout HEAD package.json',
     'git checkout -f',
     'git restore .',
@@ -192,6 +204,10 @@ describe('guard-bash', () => {
     'git restore --staged a.ts',
     'git checkout main',
     'git checkout -b feat/x origin/feat/x',
+    'grep -rn "Co-authored-by: Claude" docs',
+    'git log --grep="Generated with Claude Code"',
+    'git rm --cached secrets.txt',
+    'git worktree remove ../wt',
     'git checkout -b feat/x',
     'git clean -n',
     'git branch -d merged',
@@ -241,19 +257,21 @@ describe('guard-bash', () => {
     expect(decisionOf(run.stdout)).toBe('ask');
   });
 
-  it('asks about a 10,000-character adversarial command in under a second', () => {
+  it('asks about a command over the length limit without parsing it', () => {
     const command = `rm -${'rf'.repeat(4_983)}; git push --force origin main`;
-    const started = performance.now();
     expect(command).toHaveLength(10_000);
     expect(decision('guard-bash.mjs', { command })).toBe('ask');
-    expect(performance.now() - started).toBeLessThan(1_000);
   });
 
-  it('parses an adversarial command just under the length limit in under a second', () => {
+  it('parses and judges an adversarial command just under the length limit in under 200 ms', async () => {
+    const hooks = path.join(REPO_ROOT, '.claude', 'hooks');
+    const shell = (await import(pathToFileURL(path.join(hooks, 'shell-commands.mjs')).href)) as ShellModule;
+    const rules = (await import(pathToFileURL(path.join(hooks, 'bash-rules.mjs')).href)) as RulesModule;
     const command = `rm -${'rf'.repeat(3_900)}; git push --force origin main`;
     const started = performance.now();
-    expect(decision('guard-bash.mjs', { command })).toBe('deny');
-    expect(performance.now() - started).toBeLessThan(1_000);
+    const verdict = rules.judgeCommands(shell.parseCommands(command));
+    expect(performance.now() - started).toBeLessThan(200);
+    expect(verdict?.decision).toBe('deny');
   });
 
   it('allows a payload whose command is not a string without crashing', () => {

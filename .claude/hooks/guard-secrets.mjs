@@ -21,9 +21,6 @@ const SECRET_PATTERNS = [
   },
 ];
 
-const ENV_FILE = /^\.env(?:rc)?(?![a-z0-9_-])/i;
-const ENV_TEMPLATE = /^\.env\.(?:example|sample|template)$/i;
-
 /** Collects every string the tool call would write into the file. */
 function writtenText(toolInput) {
   const edits = Array.isArray(toolInput.edits) ? toolInput.edits : [];
@@ -49,10 +46,10 @@ function decide(permissionDecision, reason) {
 }
 
 /** Returns the permission response for a write, or null when the write is safe. */
-function evaluate(toolInput) {
+function evaluate(toolInput, isEnvFileName) {
   const target = toolInput.file_path ?? toolInput.notebook_path;
   const fileName = typeof target === 'string' ? path.basename(target) : '';
-  if (ENV_FILE.test(fileName) && !ENV_TEMPLATE.test(fileName)) {
+  if (isEnvFileName(fileName)) {
     return decide('ask', `${fileName} holds secrets. Confirm with the user before editing it.`);
   }
   const leaks = writtenText(toolInput)
@@ -67,8 +64,11 @@ function evaluate(toolInput) {
 }
 
 try {
-  const { readInput, respond } = await import('./lib.mjs');
-  const response = evaluate(readInput().tool_input ?? {});
+  const [{ readInput, respond }, { isEnvFileName }] = await Promise.all([
+    import('./lib.mjs'),
+    import('./env-files.mjs'),
+  ]);
+  const response = evaluate(readInput().tool_input ?? {}, isEnvFileName);
   if (response) respond(response);
 } catch {
   // Fail closed: if the hook cannot load or crashes, the write must not go through unchecked.

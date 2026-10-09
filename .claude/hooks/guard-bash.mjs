@@ -1,4 +1,5 @@
 const MAX_COMMAND_LENGTH = 8000;
+const WRITES_AUTHORED_TEXT = /\bgit\b[\s\S]*\b(?:commit|tag|notes|merge)\b|\bgh\s+(?:pr|issue|release)\b/;
 
 const TOO_LONG = {
   decision: 'ask',
@@ -19,7 +20,7 @@ async function judge() {
   const command = readInput()?.tool_input?.command;
   if (typeof command !== 'string') return null;
   if (command.length > MAX_COMMAND_LENGTH) return TOO_LONG;
-  if (AI_ATTRIBUTION.test(command)) return AI_AUTHORED;
+  if (WRITES_AUTHORED_TEXT.test(command) && AI_ATTRIBUTION.test(command)) return AI_AUTHORED;
   return judgeCommands(parseCommands(command));
 }
 
