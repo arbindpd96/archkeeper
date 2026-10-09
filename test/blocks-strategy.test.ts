@@ -161,6 +161,27 @@ describe('the blocks strategy', () => {
     expect(outcome.blocks?.get('a')).toEqual(base('Old.\n', 'New.\n'));
   });
 
+  it('never overwrites a blocks sidecar the user edited outside its blocks', () => {
+    const outcome = plan([blockEntry('a', 'Newer.\n')], {
+      state: file(`top\n${block('a', 'Mine.\n')}`),
+      sidecar: file(`top\n${block('a', 'New.\n')}MY MERGE NOTES\n`),
+      lock: { a: base('Old.\n', 'New.\n') },
+    });
+    expect(outcome.ops[0]?.kind).toBe('skip');
+    expect(outcome.sidecar).toBeUndefined();
+    expect(outcome.blocks?.get('a')).toEqual(base('Old.\n', 'New.\n'));
+  });
+
+  it('never overwrites a blocks sidecar the user edited in a block that has no pending version', () => {
+    const outcome = plan([blockEntry('a', 'Newer.\n'), blockEntry('b', 'B.\n')], {
+      state: file(`${block('a', 'Mine.\n')}${block('b', 'B.\n')}`),
+      sidecar: file(`${block('a', 'New.\n')}${block('b', 'B, with my notes.\n')}`),
+      lock: { a: base('Old.\n', 'New.\n'), b: base('B.\n') },
+    });
+    expect(outcome.ops.map((op) => op.kind)).toEqual(['skip', 'skip']);
+    expect(outcome.sidecar).toBeUndefined();
+  });
+
   it('rewrites a blocks sidecar the kit wrote when the kit content changes again', () => {
     const outcome = plan([blockEntry('a', 'Newer.\n')], {
       state: file(block('a', 'Mine.\n')),
