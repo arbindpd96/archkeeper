@@ -5,6 +5,9 @@
   "description": "One command to give Claude Code a memory of your architecture, decisions and design system.",
   "license": "MIT",
   "type": "module",
+  "bin": {
+    "archkeeper": "dist/cli.mjs"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/arbindpd96/archkeeper.git"
@@ -26,11 +29,12 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p tsconfig.json",
     "comments": "node scripts/check-comments.mjs",
+    "brand": "node scripts/check-brand.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "check:quick": "npm run typecheck && npm test",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run comments && npm test",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run comments && npm run brand && npm test",
     "prepare": "husky"
   },
   "lint-staged": {

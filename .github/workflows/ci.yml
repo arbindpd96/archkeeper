@@ -37,6 +37,8 @@ jobs:
         run: npm run typecheck
       - name: Comment policy
         run: npm run comments
+      - name: Brand (slug only in src/core/brand.ts)
+        run: npm run brand
       - name: Tests
         run: npm test
 

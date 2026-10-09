@@ -45,12 +45,12 @@ The full guide is in `CONTRIBUTING.md`.
 
 ## Commands
 
-| Command               | Purpose                                                  |
-| --------------------- | -------------------------------------------------------- |
-| `npm install`         | Install the toolchain and the git hooks                  |
-| `npm run check`       | Everything CI runs: format, lint, types, comments, tests |
-| `npm run check:quick` | Types and tests (fast loop)                              |
-| `npm test`            | Tests only                                               |
+| Command               | Purpose                                                         |
+| --------------------- | --------------------------------------------------------------- |
+| `npm install`         | Install the toolchain and the git hooks                         |
+| `npm run check`       | Everything CI runs: format, lint, types, comments, brand, tests |
+| `npm run check:quick` | Types and tests (fast loop)                                     |
+| `npm test`            | Tests only                                                      |
 
 ## Git
 

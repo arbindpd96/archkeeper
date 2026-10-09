@@ -52,9 +52,9 @@ Add a row whenever something is created. Keep one line per item.
 
 ### Source layers
 
-| Path       | Purpose | Key exports |
-| ---------- | ------- | ----------- |
-| _none yet_ |         |             |
+| Path                | Purpose                                                                                 | Key exports      |
+| ------------------- | --------------------------------------------------------------------------------------- | ---------------- |
+| `src/core/brand.ts` | The only place the product slug is written; every name, path and marker derives from it | `BRAND`, `Brand` |
 
 ### Modules
 
@@ -73,6 +73,7 @@ Add a row whenever something is created. Keep one line per item.
 | `.claude/hooks/env-files.mjs`                                                                               | `.env` secrets-file and template matching shared by both guards                                                            |
 | `.claude/hooks/attribution.mjs`                                                                             | AI-attribution pattern shared by `guard-bash` and `commitlint.config.mjs`                                                  |
 | `scripts/check-comments.mjs`                                                                                | Comment-policy checker (TypeScript AST): commented-out code, dividers, untracked TODOs, comment ratio                      |
+| `scripts/check-brand.mjs`                                                                                   | Brand check: no slug literal outside `src/core/brand.ts` and the allowlist; `package.json` `name` and `bin` match `BRAND`  |
 | `test/helpers.ts`                                                                                           | `runScript`, `tempDir`, `tempRepo`, `writeFiles` for hook and script tests                                                 |
 
 ## This repo's Claude Code setup
@@ -94,6 +95,7 @@ Add a row whenever something is created. Keep one line per item.
 
 ## Conventions
 
+- Brand: never write the product slug. Import `BRAND` from `src/core/brand.ts`. Core APIs that need a name, path or marker take `brand: Brand` as a parameter that defaults to `BRAND`, so tests can pass another brand and a rename touches one file.
 - Feature work: `docs/features/<feature>/MEMORY.md`, using the template in `docs/features/_template/`.
 - Decisions: `docs/decisions.md` index, with one ADR per big decision in `docs/adr/`.
 - Failures not to repeat: `docs/mistakes.md`. Terms: `docs/glossary.md`.
