@@ -12,3 +12,4 @@ paths:
 - A Stop hook must check `stop_hook_active` so it cannot loop.
 - Write state only under `.claude/state/` (gitignored).
 - Test every rule with sample payloads (see `scripts/` and the hooks tests) before committing.
+- `settings.json` allows `git diff/log/show *` without a prompt. That is safe only because guard-bash asks on `--output` and `--no-index`; keep that rule if the allow-list changes.
