@@ -8,6 +8,7 @@ import { hookScriptPath, type JsonPart, mcpPart, settingsPart, toJson } from './
 import { collectEntries, type Draft, type RenderTree } from './render-tree.js';
 import type { Stack } from './schema-parts.js';
 import { importProblem } from './imports.js';
+import { markerIn } from './markers.js';
 import { findSecret } from './secrets.js';
 import { reservedTarget } from './targets.js';
 import { brandScope, renderTemplate, type TemplateScope, unsafeValue } from './template.js';
@@ -198,10 +199,24 @@ function refuseImports(tree: RenderTree): void {
   }
 }
 
+// A template can hold a marker itself, which would end its own block early when the file is parsed again.
+function refuseMarkers(tree: RenderTree, brand: Brand): void {
+  for (const [path, entries] of tree) {
+    for (const { content, module, strategy } of entries) {
+      const marker = strategy === 'blocks' ? markerIn(content, brand) : undefined;
+      if (marker === undefined) continue;
+      throw new RenderError({
+        file: path,
+        location: '',
+        problem: `would get ${marker} from ${module}, which marks a managed block`,
+        hint: 'remove the marker from the template: the kit writes the markers around each block itself',
+      });
+    }
+  }
+}
+
 function checkValues(values: TemplateScope | undefined, brand: Brand): void {
-  const prefixes = [brand.markerPrefix, ...brand.legacySlugs];
-  const markers = prefixes.flatMap((prefix) => [`${prefix}:begin`, `${prefix}:end`]);
-  const unsafe = values === undefined ? undefined : unsafeValue(values, markers);
+  const unsafe = values === undefined ? undefined : unsafeValue(values, brand);
   if (unsafe === undefined) return;
   throw new RenderError({
     file: 'template values',
@@ -215,7 +230,8 @@ function checkValues(values: TemplateScope | undefined, brand: Brand): void {
  * Renders modules into a virtual tree of project paths (#20). The same modules, context and brand give the same
  * bytes on every run and OS and in any module order: output is LF, sorted, and reads no clock, path or
  * environment. JSON is built from objects. A template value with a control character or a block marker, two
- * modules writing one owned path, block or JSON entry, or output that holds a likely secret throw RenderError.
+ * modules writing one owned path, block or JSON entry, a block that holds a marker, or output that holds a likely
+ * secret throw RenderError.
  */
 export function render(
   modules: readonly KitModule[],
@@ -228,5 +244,6 @@ export function render(
   const tree = collectEntries(drafts);
   refuseSecrets(tree);
   refuseImports(tree);
+  refuseMarkers(tree, brand);
   return tree;
 }

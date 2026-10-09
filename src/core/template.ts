@@ -1,6 +1,7 @@
 import type { Brand } from './brand.js';
 import { RenderError } from './errors.js';
 import { importProblem } from './imports.js';
+import { markerIn, type MarkerBrand } from './markers.js';
 import { hasControlCharacter, relativePathProblem } from './paths.js';
 
 /** The values a template can read, nested in plain objects: `{{brand.hookDir}}` reads `scope.brand.hookDir`. */
@@ -30,21 +31,21 @@ export interface UnsafeValue {
   readonly problem: string;
 }
 
-function valueProblem(value: string, markers: readonly string[]): string | undefined {
+function valueProblem(value: string, markers: MarkerBrand): string | undefined {
   if (hasControlCharacter(value)) return 'holds a control character, such as a newline';
   const imported = importProblem(value);
   if (imported !== undefined) return imported;
-  const marker = markers.find((candidate) => value.toLowerCase().includes(candidate.toLowerCase()));
+  const marker = markerIn(value, markers);
   return marker === undefined ? undefined : `holds ${marker}, which marks a managed block`;
 }
 
 /**
  * Finds the first string in `scope` that holds a control character, an `@` import that `importProblem` refuses,
- * or one of `markers`. Values carry project data, such as detected commands, into templates as is: an `@path`
- * in CLAUDE.md is an import, and a marker could end a managed block early. Imports of ordinary project files,
- * such as `toImport('AGENTS.md')`, stay allowed.
+ * or a block marker of `markers` (see `markerPattern`). Values carry project data, such as detected commands,
+ * into templates as is: an `@path` in CLAUDE.md is an import, and a marker could end a managed block early.
+ * Imports of ordinary project files, such as `toImport('AGENTS.md')`, stay allowed.
  */
-export function unsafeValue(scope: TemplateScope, markers: readonly string[]): UnsafeValue | undefined {
+export function unsafeValue(scope: TemplateScope, markers: MarkerBrand): UnsafeValue | undefined {
   for (const [key, value] of Object.entries(scope)) {
     if (typeof value === 'number') continue;
     const inner = isScope(value) ? unsafeValue(value, markers) : undefined;
