@@ -295,16 +295,20 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
-      # The script is dependency-free, so this job installs nothing. Labels are read live rather than
-      # from the event, so re-running the job after adding no-release sees the label.
-      - name: Require a changeset for changes to published folders unless labelled no-release
+      # Labels are read live rather than from the event, so re-running the job after adding no-release
+      # sees the label. Only this step holds the token; the PR's own script runs without it.
+      - name: Read the pull request labels
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json labels --jq '.labels[].name' > "$RUNNER_TEMP/pr-labels.txt"
+      # The script is dependency-free, so this job installs nothing.
+      - name: Require a changeset for changes to published folders unless labelled no-release
+        env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          PR_LABELS="$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json labels --jq '.labels[].name')"
+          PR_LABELS="$(cat "$RUNNER_TEMP/pr-labels.txt")"
           export PR_LABELS
           node scripts/check-changeset.mjs "$BASE_SHA" "$HEAD_SHA"
 
