@@ -135,6 +135,60 @@ describe('module manifest schema', () => {
       'user:password@',
     ],
     [
+      'a literal secret in an MCP URL query',
+      (m) => (server(m, 0).url = 'https://api.example.com/mcp?api_key=sk-live-123'),
+      'mcpServers[0].url',
+      'query values are ${NAME} references',
+    ],
+    [
+      'an MCP URL query key without a value',
+      (m) => (server(m, 0).url = 'https://api.example.com/mcp?sk-live-123'),
+      'mcpServers[0].url',
+      'query values are ${NAME} references',
+    ],
+    [
+      'an MCP URL with a fragment',
+      (m) => (server(m, 0).url = 'https://api.example.com/mcp#token=x'),
+      'mcpServers[0].url',
+      'no #fragment',
+    ],
+    [
+      'a credential variable in an MCP URL query',
+      (m) => (server(m, 0).url = 'https://api.example.com/mcp?key=${API_KEY}'),
+      'mcpServers[0].url',
+      'OAuth or a headersHelper script',
+    ],
+    [
+      'a credential variable in a remote MCP header',
+      (m) => (server(m, 0).headers = { Authorization: '${API_TOKEN}' }),
+      'mcpServers[0].headers.Authorization',
+      'OAuth or a headersHelper script',
+    ],
+    [
+      'an inline headersHelper command',
+      (m) => (server(m, 0).headersHelper = `echo '{"Authorization":"Bearer abc"}'`),
+      'mcpServers[0].headersHelper',
+      'name a script in the project',
+    ],
+    [
+      'a headersHelper with arguments',
+      (m) => (server(m, 0).headersHelper = '${CLAUDE_PROJECT_DIR:-.}/scripts/headers.sh --token abc'),
+      'mcpServers[0].headersHelper',
+      'with no arguments',
+    ],
+    [
+      'a headersHelper outside the project',
+      (m) => (server(m, 0).headersHelper = '${CLAUDE_PROJECT_DIR:-.}/../headers.sh'),
+      'mcpServers[0].headersHelper',
+      'name a script in the project',
+    ],
+    [
+      'an absolute headersHelper',
+      (m) => (server(m, 0).headersHelper = '/opt/bin/headers.sh'),
+      'mcpServers[0].headersHelper',
+      'name a script in the project',
+    ],
+    [
       'an option default of the wrong type',
       (m) => (option(m, 'blockNoVerify').default = 'no'),
       'options.blockNoVerify.default',
@@ -173,6 +227,17 @@ describe('module manifest schema', () => {
     expect(error.location).toBe(location);
     expect(error.message).toContain(`modules/rich/module.json: ${location}: `);
     expect(error.hint).toContain(fix);
+  });
+
+  it('accepts referenced query values, a project headers script and credential variables for stdio', () => {
+    const manifest = richManifest();
+    Object.assign(server(manifest, 0), {
+      url: 'https://api.example.com/mcp?team=${TEAM_ID}&region=${REGION}',
+      headersHelper: '${CLAUDE_PROJECT_DIR:-.}/.claude/mcp-headers.sh',
+    });
+    server(manifest, 1).env = { GITHUB_TOKEN: '${GITHUB_TOKEN}' };
+    const read = memoryReader({ 'modules/rich/module.json': JSON.stringify(manifest), ...richSources() });
+    expect(loadModule('rich', read).manifest.mcpServers).toHaveLength(2);
   });
 
   it('names the offending path and value in the problem', () => {
