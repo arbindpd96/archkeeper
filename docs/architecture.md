@@ -30,7 +30,7 @@ flowchart LR
 | Path                      | Purpose                                                                                                       | Status           |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------- |
 | `src/cli/`                | npx entry: Node version check, `--version`, `--help`; commands, prompts and output from v0.1                  | active           |
-| `src/core/`               | Brand, typed errors, manifest schema and loader; later the config, renderer, detection, planner and lockfile  | active           |
+| `src/core/`               | Brand, typed errors, manifests, project config, resolution and renderer; later detection, planner, lockfile   | active           |
 | `src/hooks/`              | Hook sources (one self-contained bundle each) and the shared hook runtime in `src/hooks/runtime/`             | _planned v0.1_   |
 | `modules/<id>/`           | One switchable feature: `module.json` and `files/`; `modules/presets.json` holds the preset chain             | active           |
 | `packs/languages/<lang>/` | Language rules, linter configs, detection (TS/JS, Python first)                                               | _planned v0.1–2_ |
