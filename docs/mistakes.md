@@ -4,6 +4,8 @@ Record approaches that failed, so no session repeats them. Newest first.
 
 Format: `- YYYY-MM-DD — <what we tried> → <what went wrong> → <what to do instead>`
 
+- 2026-10-10 — Removing an atomic write's temp file only when the rename fails → a failed write or fsync (a full disk) left a `.<name>.<hex>.tmp` copy, possibly holding a token, in the project → wrap the write, chmod, fsync and rename in one try that removes the temp file on any failure.
+- 2026-10-10 — Restoring a rollback through absolute paths computed before the run → a folder swapped for a symlink mid-run made the rollback unlink or overwrite a file outside the project → confine every path again before restoring it, and skip one that now resolves outside.
 - 2026-10-10 — Refusing a stale plan by the paths it writes alone → the lock, read again at apply time, was overwritten even when a newer kit had written it since planning → record the hash of the lock the plan read too.
 - 2026-10-10 — Proving "a second run plans only skips" only from first contact → a removal recorded earlier still planned `respectRemoval` on every later run, so a settled project never planned zero changes → plan once more after an update in the property, and report a removal already recorded as `skip`.
 - 2026-10-10 — Counting a file in `base/` as known kit content by its name → a planted empty file named by the hash of a user edit made a lock rebuild call that edit kit content and overwrite it → check each blob with `readBlob` before it vouches for anything.
