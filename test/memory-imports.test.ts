@@ -211,5 +211,7 @@ describe('skipsMemoryFile', () => {
     expect(skipsMemoryFile('a'.repeat(4 * MIB))).toBe(false);
     expect(skipsMemoryFile('a'.repeat(4 * MIB + 1))).toBe(true);
     expect(skipsMemoryFile('é'.repeat(2 * MIB + 1))).toBe(true);
+    expect(skipsMemoryFile('€'.repeat(1_398_101))).toBe(false);
+    expect(skipsMemoryFile('€'.repeat(1_398_102))).toBe(true);
   });
 });
