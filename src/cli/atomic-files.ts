@@ -20,7 +20,7 @@ const EXCLUSIVE_WRITE = constants.O_WRONLY | constants.O_CREAT | constants.O_EXC
 const RETRIED = new Set(['EPERM', 'EBUSY']);
 const BACKOFF_MS = [10, 20, 40, 80, 160, 320];
 
-/** Renames a path. */
+/** The rename {@link renameWithRetry} calls, injectable so a test can raise EPERM or EBUSY on chosen attempts. */
 export type Rename = (from: string, to: string) => void;
 
 function pause(milliseconds: number): void {
