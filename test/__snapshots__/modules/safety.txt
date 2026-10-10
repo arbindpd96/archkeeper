@@ -1,4 +1,51 @@
 ##### safety on examples/ts-app
+=== .claude/hooks/acmekit/guard-bash.mjs (owned, safety)
+// Stand-in for the guard-bash bundle that npm run build makes.
+=== .claude/hooks/acmekit/guard-secrets.mjs (owned, safety)
+// Stand-in for the guard-secrets bundle that npm run build makes.
+=== .claude/settings.json (json, safety)
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/guard-bash.mjs"
+            ],
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/guard-secrets.mjs"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/.envrc)",
+      "Bash(rm -rf:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)"
+    ]
+  }
+}
 === .gitignore (blocks, base, block base)
 CLAUDE.local.md
 .claude/settings.local.json
@@ -27,6 +74,15 @@ Rules for AI coding agents, such as Claude Code, Codex, Cursor, Gemini CLI and C
 | `npm run test` | Run the tests |
 | `npm run lint` | Lint |
 | `npm run format` | Format |
+=== AGENTS.md (blocks, safety, block safety)
+## Safety guards
+
+Two hooks guard this repository. guard-bash denies destructive shell commands and asks before irreversible ones. guard-secrets denies likely secrets in written files and asks before edits to `.env` files. When a guard blocks a call, change the approach; never work around it.
+
+- Native deny rules back the guards and still apply when a hook cannot run, such as when Node.js is missing.
+- Deny rules match on the command prefix only, so the guards are the fine-grained layer. `Bash(rm -rf:*)` denies every command that starts with `rm -rf`, safe ones such as `rm -rf dist` included: ask the user to run those.
+- `Read(**/.env.*)` also blocks reading templates such as `.env.example` with the Read tool.
+- Keep secrets in environment variables. A test fixture that needs a token-like value takes `acmekit:allow-secret` on its line, and the user confirms each new one.
 === CLAUDE.md (blocks, base, block agents-import)
 @AGENTS.md
 === CLAUDE.md (blocks, base, block claude-code)
@@ -37,6 +93,53 @@ Rules for AI coding agents, such as Claude Code, Codex, Cursor, Gemini CLI and C
 - Claude Code reads .claude/settings.json and its hooks at startup, so restart it after changing them.
 
 ##### safety on examples/py-app
+=== .claude/hooks/acmekit/guard-bash.mjs (owned, safety)
+// Stand-in for the guard-bash bundle that npm run build makes.
+=== .claude/hooks/acmekit/guard-secrets.mjs (owned, safety)
+// Stand-in for the guard-secrets bundle that npm run build makes.
+=== .claude/settings.json (json, safety)
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/guard-bash.mjs"
+            ],
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/guard-secrets.mjs"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/.envrc)",
+      "Bash(rm -rf:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)"
+    ]
+  }
+}
 === .gitignore (blocks, base, block base)
 CLAUDE.local.md
 .claude/settings.local.json
@@ -64,6 +167,15 @@ Rules for AI coding agents, such as Claude Code, Codex, Cursor, Gemini CLI and C
 | `pytest` | Run the tests |
 | `ruff check .` | Lint |
 | `ruff format .` | Format |
+=== AGENTS.md (blocks, safety, block safety)
+## Safety guards
+
+Two hooks guard this repository. guard-bash denies destructive shell commands and asks before irreversible ones. guard-secrets denies likely secrets in written files and asks before edits to `.env` files. When a guard blocks a call, change the approach; never work around it.
+
+- Native deny rules back the guards and still apply when a hook cannot run, such as when Node.js is missing.
+- Deny rules match on the command prefix only, so the guards are the fine-grained layer. `Bash(rm -rf:*)` denies every command that starts with `rm -rf`, safe ones such as `rm -rf dist` included: ask the user to run those.
+- `Read(**/.env.*)` also blocks reading templates such as `.env.example` with the Read tool.
+- Keep secrets in environment variables. A test fixture that needs a token-like value takes `acmekit:allow-secret` on its line, and the user confirms each new one.
 === CLAUDE.md (blocks, base, block agents-import)
 @AGENTS.md
 === CLAUDE.md (blocks, base, block claude-code)

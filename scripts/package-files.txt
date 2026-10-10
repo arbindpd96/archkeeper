@@ -15,6 +15,7 @@ modules/feature-memory/module.json
 modules/format-on-edit/module.json
 modules/knowledge/module.json
 modules/presets.json
+modules/safety/files/agents-safety.md
 modules/safety/module.json
 modules/stop-check/module.json
 package.json
