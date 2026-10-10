@@ -28,6 +28,11 @@ export function quoted(text: string): string {
   return escapeUnprintable(JSON.stringify(text));
 }
 
+/** True when a parsed JSON value is an object, not an array or null. */
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 /** The text that starts a file with a byte-order mark. */
 export const BYTE_ORDER_MARK = String.fromCodePoint(0xfeff);
 

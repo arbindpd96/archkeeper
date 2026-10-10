@@ -14,7 +14,8 @@ import {
 } from 'node:fs';
 import path from 'node:path';
 import { PathSafetyError } from '../core/errors.js';
-import { lstatOrUndefined, NO_FOLLOW } from './project-files.js';
+import { NO_FOLLOW } from '../hooks/runtime/project.js';
+import { lstatOrUndefined } from './project-files.js';
 
 const EXCLUSIVE_WRITE = constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | NO_FOLLOW;
 const RETRIED = new Set(['EPERM', 'EBUSY']);

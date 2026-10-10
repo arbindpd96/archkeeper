@@ -1,11 +1,11 @@
 import path from 'node:path';
 import { BRAND } from '../../../core/brand.js';
 import { secretKinds } from '../../../core/secrets.js';
-import { escapeUnprintable } from '../../../core/text.js';
+import { escapeUnprintable, isRecord } from '../../../core/text.js';
 import { isEnvFileName } from '../env-files.js';
-import { type Answer, type HookInput, isRecord, noAnswer, permission, stringField } from '../io.js';
+import { type Answer, type HookInput, noAnswer, permission, stringField } from '../io.js';
 import type { HookContext, HookModule, Sample } from '../launch.js';
-import { slashed } from '../project.js';
+import { isInside, slashed } from '../project.js';
 import { editedText, type Edit, editsOf, writtenText } from './edits.js';
 import { locate, type Location, MAX_CHECKED_SIZE, readTarget } from './target.js';
 
@@ -25,7 +25,7 @@ const ask = (reason: string): Answer => permission('ask', reason);
 // bidirectional characters escaped, so a crafted name cannot dress up the prompt the user reads. Display only.
 function shown(file: string, projectDir: string): string {
   const relative = path.relative(projectDir, file);
-  const inside = relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
+  const inside = relative !== '' && isInside(projectDir, file);
   return escapeUnprintable(slashed(inside ? relative : file));
 }
 

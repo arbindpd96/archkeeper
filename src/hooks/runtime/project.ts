@@ -6,7 +6,8 @@ const optional: Partial<typeof constants> = constants;
 /** Opens a path without following a symlink where the platform supports it. */
 export const NO_FOLLOW = optional.O_NOFOLLOW ?? 0;
 const NON_BLOCKING = optional.O_NONBLOCK ?? 0;
-const READ_FLAGS = constants.O_RDONLY | NO_FOLLOW | NON_BLOCKING;
+/** Opens a path for reading without following a symlink or waiting on a FIFO, where the platform supports it. */
+export const SAFE_READ = constants.O_RDONLY | NO_FOLLOW | NON_BLOCKING;
 
 /**
  * The project folder a hook works in: `CLAUDE_PROJECT_DIR`, or the working folder when it is unset or empty. Both
@@ -45,7 +46,7 @@ export function isInside(root: string, real: string): boolean {
  * FIFO; null for anything else, or for a file that grew past the cap. Throws when the path cannot be opened.
  */
 export function readRegularFile(file: string, maxBytes: number): string | null {
-  const descriptor = openSync(file, READ_FLAGS);
+  const descriptor = openSync(file, SAFE_READ);
   try {
     const stats = fstatSync(descriptor);
     return stats.isFile() && stats.size <= maxBytes ? readFileSync(descriptor, 'utf8') : null;

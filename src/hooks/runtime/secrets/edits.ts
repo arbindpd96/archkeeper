@@ -1,4 +1,4 @@
-import { isRecord } from '../io.js';
+import { isRecord } from '../../../core/text.js';
 import { MAX_CHECKED_SIZE, type TargetText } from './target.js';
 
 // Characters the edits of one MultiEdit may scan, counted as they grow the text, so a replay stays far below the

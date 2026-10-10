@@ -4,13 +4,13 @@ import {
   type Answer,
   type HookInput,
   type HookStreams,
-  isRecord,
   noAnswer,
   type Payload,
   permission,
   readInput,
   respond,
 } from './io.js';
+import { isRecord } from '../../core/text.js';
 import { projectDirOf } from './project.js';
 
 /** What a hook does when it cannot do its job (ADR-0015): `ask`, which fails closed, or `open`, which lets the action go on. */

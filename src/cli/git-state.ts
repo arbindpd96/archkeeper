@@ -1,6 +1,6 @@
-import { spawnSync } from 'node:child_process';
-import { accessSync, constants, realpathSync, statSync } from 'node:fs';
 import path from 'node:path';
+import { isInside, realOrUndefined } from '../hooks/runtime/project.js';
+import { findProgram, runProgram, type ToolRun } from '../hooks/runtime/tools.js';
 
 /**
  * What git says about a project folder: nothing to commit, uncommitted changes, no repository, a folder its
@@ -10,31 +10,9 @@ export type GitState = 'clean' | 'dirty' | 'not-a-repo' | 'ignored' | 'unknown' 
 
 // No fsmonitor, so a repository's config cannot start its fsmonitor hook; no optional locks, so git writes nothing.
 const SAFE = ['--no-optional-locks', '-c', 'core.fsmonitor=false'];
-const GIT_FILE = process.platform === 'win32' ? 'git.exe' : 'git';
 const FILTER_PROGRAMS = String.raw`^filter\..*\.(clean|process)$`;
 
-interface GitRun {
-  readonly status: number | null;
-  readonly stdout: string;
-  readonly stderr: string;
-}
-
-function isInside(root: string, real: string): boolean {
-  const relative = path.relative(root, real);
-  return relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
-}
-
-function realOrUndefined(absolute: string): string | undefined {
-  try {
-    return realpathSync.native(absolute);
-  } catch {
-    return undefined;
-  }
-}
-
-// Windows looks for a bare `git` in the child's working folder before PATH, and an empty or relative PATH entry
-// means that folder on POSIX, so a project that ships git.exe or git would run. Only absolute folders outside the
-// project count, for finding git and for any program git itself starts.
+// Programs git starts come only from absolute PATH folders outside the project too.
 function trustedPath(root: string): string[] {
   return (process.env.PATH ?? '')
     .split(path.delimiter)
@@ -46,21 +24,6 @@ function trustedPath(root: string): string[] {
     });
 }
 
-function isProgram(file: string): boolean {
-  try {
-    accessSync(file, constants.X_OK);
-    return statSync(file).isFile();
-  } catch {
-    return false;
-  }
-}
-
-function gitProgram(root: string, folders: readonly string[]): string | undefined {
-  return folders
-    .map((folder) => path.join(folder, GIT_FILE))
-    .find((file) => isProgram(file) && !isInside(root, realOrUndefined(file) ?? root));
-}
-
 // A git hook or `rebase --exec` exports GIT_DIR and friends, which would point git at another repository than the
 // project's; git's messages stay English, so a missing repository reads the same in every locale.
 function gitEnv(folders: readonly string[]): NodeJS.ProcessEnv {
@@ -68,28 +31,18 @@ function gitEnv(folders: readonly string[]): NodeJS.ProcessEnv {
   return { ...Object.fromEntries(kept), PATH: folders.join(path.delimiter), LC_ALL: 'C' };
 }
 
-function gitRunner(root: string): ((args: readonly string[]) => GitRun) | undefined {
+function gitRunner(root: string): ((args: readonly string[]) => ToolRun) | undefined {
   const rootReal = realOrUndefined(root) ?? root;
   const folders = trustedPath(rootReal);
-  const git = gitProgram(rootReal, folders);
+  const git = findProgram('git', rootReal, folders.join(path.delimiter));
   if (git === undefined) return undefined;
   const env = gitEnv(folders);
-  return (args) => {
-    const run = spawnSync(git, [...SAFE, ...args], {
-      cwd: root,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: 10_000,
-      env,
-    });
-    return { status: run.error === undefined ? run.status : null, stdout: run.stdout, stderr: run.stderr };
-  };
+  return (args) => runProgram(git, [...SAFE, ...args], { cwd: root, env });
 }
 
-// git status runs a filter's clean or process program on a file whose stat data changed, and a repository that
-// arrives with its .git folder, as in a zip, can set one in its own config, or in a submodule's, which status
-// then never enters (--ignore-submodules=all); global and system config are the user's.
-function setsFilterProgram(git: (args: readonly string[]) => GitRun): boolean | undefined {
+// status runs a filter's program on a changed file, and a repository that arrives with its .git folder (a zip) can
+// set one in its own or a submodule's config, which status never enters; global and system config are the user's.
+function setsFilterProgram(git: (args: readonly string[]) => ToolRun): boolean | undefined {
   const config = git(['config', '--show-scope', '--get-regexp', FILTER_PROGRAMS]);
   if (config.status === 1) return false;
   if (config.status !== 0) return undefined;
