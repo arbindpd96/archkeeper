@@ -132,37 +132,60 @@ const ROWS: readonly (readonly [text: string, imports: boolean])[] = [
 const MIB = 1_048_576;
 const fill = (unit: string, length: number): string => unit.repeat(Math.ceil(length / unit.length));
 
+// Sizes just under where the kit refuses a text for its per-call and per-character costs alone, so that each row
+// below reaches marked: about 250,000 characters lexed once, 166,000 lexed twice (in a list item or a quote, or
+// around emphasis) and 94,000 of one-line list items, each lexed on its own.
+const ONCE = 240_000;
+const TWICE = 160_000;
+const backtickRuns = (count: number): string =>
+  Array.from({ length: count }, (_, run) => `${'`'.repeat(run + 1)} x `).join('');
+
 // Text a hostile repository could commit to keep init busy, where marked itself is slow (deep nesting, emphasis
-// openers, lazy lines, masked spans) or was for the hand-written reader. Each must finish within a second.
+// openers, lazy lines, masked spans) or was for the hand-written reader. Each must finish within a second; the
+// rows from unclosed comments on take seconds without bounded-lexer.ts's estimates.
 const ADVERSARIAL: readonly (readonly [name: string, text: string])[] = [
-  ['dots after an @', `@${'.'.repeat(200_000)}x`],
-  [
-    'backtick runs of every length',
-    Array.from({ length: 600 }, (_, run) => `${'`'.repeat(run + 1)} x `).join(''),
-  ],
-  ['unclosed comments', '<!--'.repeat(50_000)],
-  ['unclosed comments after a closed one', `<!-- -->${'<!--'.repeat(120_000)}@AGENTS.md`],
-  ['unclosed images', '![a'.repeat(70_000)],
-  ['unclosed tag quotes', '<a b="'.repeat(35_000)],
-  ['emphasis openers', '**@a** '.repeat(30_000)],
-  ['list items', '- a\n'.repeat(50_000)],
-  ['lazy quote lines', `> a\n${'b\n'.repeat(100_000)}`],
+  ['dots after an @', `@${'.'.repeat(ONCE)}x`],
+  ['one-line list items', `@a\n\n${fill('- a\n', 90_000)}`],
+  ['lazy quote lines', `> @a\n${fill('b\n', TWICE)}`],
+  ['unclosed images', `@a ${fill('![a', ONCE)}`],
+  ['unclosed tag quotes', `@a ${fill('<a b="', ONCE)}`],
+  ['emphasis openers', fill('**@a** ', TWICE)],
+  ['code spans beside imports', fill('`a` @b ', ONCE)],
   ["the security review's nested list", `${'- '.repeat(4000)}x\n${'y\n'.repeat(4000)}@AGENTS.md`],
-  ['nested bullets on one line, 1 MiB', `${fill('- ', MIB / 2)}x\n${fill('y\n', MIB / 2)}@AGENTS.md`],
-  ['nested numbers on one line, 1 MiB', `${fill('1. ', MIB / 2)}x\n${fill('y\n', MIB / 2)}@AGENTS.md`],
-  ['nested quotes on one line, 1 MiB', `${fill('> ', MIB / 2)}x\n${fill('y\n', MIB / 2)}@AGENTS.md`],
-  ['quotes in lists on one line, 1 MiB', `${fill('> - ', MIB / 2)}x\n${fill('y\n', MIB / 2)}@a`],
-  ['tabs after bullets, 1 MiB', `${fill('-\t', MIB)}@a`],
+  ['nested bullets on one line', `${fill('- ', ONCE / 2)}x\n${fill('y\n', ONCE / 2)}@AGENTS.md`],
+  ['nested numbers on one line', `${fill('1. ', ONCE / 2)}x\n${fill('y\n', ONCE / 2)}@AGENTS.md`],
+  ['nested quotes on one line', `${fill('> ', ONCE / 2)}x\n${fill('y\n', ONCE / 2)}@AGENTS.md`],
+  ['quotes in lists on one line', `${fill('> - ', ONCE / 2)}x\n${fill('y\n', ONCE / 2)}@a`],
+  ['tabs after bullets', `${fill('-\t', ONCE)}@a`],
   [
-    'lists nested by indentation, 1 MiB',
-    Array.from({ length: 1000 }, (_, level) => `${' '.repeat(2 * level)}- @a\n`).join(''),
+    'lists nested by indentation',
+    Array.from({ length: 490 }, (_, level) => `${' '.repeat(2 * level)}- @a\n`).join(''),
   ],
-  ['emphasis openers before imports, 1 MiB', fill('*@a ', MIB)],
-  ['an underscore run in a list item', `1. ${'_'.repeat(100_000)}@a`],
-  ['lazy lines in a list item, 1 MiB', `- @a\n${fill('a\n', MIB)}`],
-  ['a last line of tildes, 1 MiB', `@a\n${'~'.repeat(MIB)}`],
-  ['lazy lines between nested quotes, 1 MiB', fill('    @a>\n> > ()\n', MIB)],
-  ['code spans beside imports, 1 MiB', fill('`a` @b ', MIB)],
+  [
+    'emphasis nested past the depth limit without an @',
+    `${'*'.repeat(ONCE / 2)}x${'*'.repeat(ONCE / 2)}\n\n@a`,
+  ],
+  ['backtick runs of every length', `@a ${backtickRuns(690)}`],
+  ['unclosed comments', `@a ${fill('<!--', ONCE)}`],
+  ['unclosed comments after a closed one', `<!-- -->${fill('<!--', ONCE)}@AGENTS.md`],
+  ['emphasis openers before imports', fill('*@a ', ONCE)],
+  ['an underscore run in a list item', `1. ${'_'.repeat(TWICE)}@a`],
+  ['lazy lines in a list item', `- @a\n${fill('a\n', TWICE)}`],
+  ['a last line of tildes', `@a\n${'~'.repeat(ONCE)}`],
+  ['lazy lines between nested quotes', fill('    @a>\n> > ()\n', ONCE)],
+];
+
+// One text per superlinear cost in bounded-lexer.ts, each holding an import Claude Code reads, that the kit refuses
+// for that cost: without it, the estimate stays under the budget and the kit counts the import.
+const COSTLY: readonly (readonly [cost: string, text: string])[] = [
+  ["a list item's lazy lines rescanned", `- @AGENTS.md\n${'a\n'.repeat(5000)}`],
+  ["a quote's lazy lines copying its rest", `@AGENTS.md\n\n${'> a\nb\n'.repeat(12_000)}`],
+  ['a last line of tildes backtracking', `@AGENTS.md\n${'~'.repeat(20_000)}`],
+  ['emphasis openers scanning the runs after them', `@AGENTS.md ${'*a '.repeat(2000)}`],
+  ['an emphasis opener scanning a long run', `@AGENTS.md ${'_'.repeat(8000)}`],
+  ['unclosed tags scanning the rest', `@AGENTS.md ${'<?'.repeat(10_000)}`],
+  ['escapes masked one copy at a time', `@AGENTS.md ${'\\. '.repeat(13_000)}`],
+  ['nested quotes re-read at each lazy line', `@AGENTS.md\n\n${'    @a>\n> > ()\n'.repeat(1000)}`],
 ];
 
 describe('memoryImports', () => {
@@ -215,6 +238,10 @@ describe('memoryImports', () => {
   it('counts nothing in a text that takes more lexing work than the kit spends', () => {
     expect(memoryImports(`@AGENTS.md ${'*a '.repeat(500)}`)).toEqual(['AGENTS.md']);
     expect(memoryImports(`@AGENTS.md ${'*a '.repeat(20_000)}`)).toEqual([]);
+  });
+
+  it.each(COSTLY)('counts nothing in a text dominated by %s, past the work the kit spends', (_cost, text) => {
+    expect(memoryImports(text)).toEqual([]);
   });
 
   it.each(ADVERSARIAL)('reads %s within a second', (_name, text) => {
