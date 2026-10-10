@@ -1,5 +1,8 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { memoryImports, skipsMemoryFile } from '../src/core/memory-imports.js';
+import { REPO_ROOT } from './helpers.js';
 
 // A CLAUDE.md text and whether Claude Code 2.1.295 imports AGENTS.md from it, each checked by running the
 // extractor and the marked copied out of its binary. The rows from the hand-written reader's fuzzing come first,
@@ -261,5 +264,16 @@ describe('skipsMemoryFile', () => {
     expect(skipsMemoryFile('é'.repeat(2 * MIB + 1))).toBe(true);
     expect(skipsMemoryFile('€'.repeat(1_398_101))).toBe(false);
     expect(skipsMemoryFile('€'.repeat(1_398_102))).toBe(true);
+  });
+});
+
+describe('the marked that memoryImports lexes with', () => {
+  it('stays the version Claude Code 2.1.295 bundles, which Dependabot never bumps', () => {
+    const manifest = JSON.parse(readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8')) as {
+      devDependencies: Record<string, string>;
+    };
+    const dependabot = readFileSync(path.join(REPO_ROOT, '.github', 'dependabot.yml'), 'utf8');
+    expect(manifest.devDependencies.marked).toBe('15.0.6');
+    expect(dependabot).toMatch(/^ {6}- dependency-name: marked$/m);
   });
 });

@@ -14,6 +14,8 @@ updates:
       # Types track the oldest supported Node (22), so newer APIs fail to type-check.
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
+      # marked is pinned to the version the Claude Code binary bundles, not npm's latest (reference §2.1).
+      - dependency-name: marked
     groups:
       dev-dependencies:
         dependency-type: development
