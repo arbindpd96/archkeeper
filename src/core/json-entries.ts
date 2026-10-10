@@ -13,7 +13,7 @@ import { contentHash } from './hash.js';
 import { lineAndColumn, parseErrorWords } from './json.js';
 import type { EntryKey } from './json-keys.js';
 import { hookArgument } from './render-json.js';
-import { compareText } from './text.js';
+import { compareText, quoted } from './text.js';
 
 /** A kit-owned entry found in a JSON document: its JSON path for edits and its syntax node. */
 export interface FoundEntry {
@@ -23,15 +23,52 @@ export interface FoundEntry {
 
 const LENIENT = { allowTrailingComma: true, disallowComments: false, allowEmptyContent: false };
 
+function repeatedName(object: Node): Node | undefined {
+  const names = new Set<unknown>();
+  for (const property of object.children ?? []) {
+    const [name] = property.children ?? [];
+    if (names.has(name?.value)) return name;
+    names.add(name?.value);
+  }
+  return undefined;
+}
+
+function duplicateKey(node: Node): Node | undefined {
+  const repeated = node.type === 'object' ? repeatedName(node) : undefined;
+  if (repeated !== undefined) return repeated;
+  for (const child of node.children ?? []) {
+    const found = duplicateKey(child);
+    if (found !== undefined) return found;
+  }
+  return undefined;
+}
+
+// JSON.parse, and so Claude Code, keeps the last of two equal keys, but jsonc-parser finds the first: the kit
+// would edit an object nobody reads, such as a dead `permissions`, and report its rules as in place.
+function refuseDuplicateKeys(path: string, text: string, root: Node): void {
+  const repeated = duplicateKey(root);
+  if (repeated === undefined) return;
+  throw new MergeError({
+    file: path,
+    location: lineAndColumn(text, repeated.offset),
+    problem: `holds the key ${quoted(String(repeated.value))} twice in one object, and JSON readers use only the last one`,
+    hint: 'merge the two into one key and run again; the kit wrote nothing',
+  });
+}
+
 /**
  * Parses a co-owned JSON file, comments and trailing commas allowed, and returns its root object. Malformed JSON,
- * or a root that is not an object, throws MergeError naming the file, line and column, before any write.
+ * a root that is not an object, or a key repeated in one object throws MergeError naming the file, line and
+ * column, before any write.
  */
 export function parseDocument(path: string, text: string): Node {
   const errors: ParseError[] = [];
   const root = parseTree(text, errors, LENIENT);
   const [first] = errors;
-  if (first === undefined && root?.type === 'object') return root;
+  if (first === undefined && root?.type === 'object') {
+    refuseDuplicateKeys(path, text, root);
+    return root;
+  }
   const problem =
     first === undefined ? 'must hold a JSON object' : `is not valid JSON (${parseErrorWords(first.error)})`;
   throw new MergeError({

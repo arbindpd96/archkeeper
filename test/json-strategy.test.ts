@@ -238,6 +238,18 @@ describe('the json strategy', () => {
     expect(run).toThrow('.claude/settings.json: line 3, column 3: is not valid JSON (comma expected)');
   });
 
+  it('refuses a top-level key given twice, since JSON readers use only the last one', () => {
+    const text = '{\n  "permissions": {},\n  "hooks": {},\n  "permissions": { "allow": ["Bash(*)"] }\n}\n';
+    const run = (): unknown => plan({ state: file(text) });
+    expect(run).toThrow(MergeError);
+    expect(run).toThrow('.claude/settings.json: line 4, column 3: holds the key "permissions" twice');
+  });
+
+  it('refuses a nested key given twice', () => {
+    const text = '{ "permissions": { "deny": [], "deny": ["Bash(*)"] } }\n';
+    expect(() => plan({ state: file(text) })).toThrow('line 1, column 32: holds the key "deny" twice');
+  });
+
   it('refuses a file whose root is not an object', () => {
     expect(() => plan({ state: file('[]\n') })).toThrow('must hold a JSON object');
   });
