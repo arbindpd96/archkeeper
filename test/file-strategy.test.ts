@@ -133,10 +133,16 @@ describe('the owned strategy', () => {
     expect(outcome.file).toBeUndefined();
   });
 
-  it('respects an earlier removal', () => {
+  it('skips a removal recorded earlier, so a later run changes nothing', () => {
     const outcome = plan({ removed: true });
-    expect(outcome.ops[0]?.kind).toBe('respectRemoval');
+    expect(outcome.ops[0]?.kind).toBe('skip');
     expect(outcome.content).toBeUndefined();
+  });
+
+  it('drops a lock entry left beside an earlier removal', () => {
+    const outcome = plan({ removed: true, lock: owned(contentHash(OLD)) });
+    expect(outcome.ops[0]?.kind).toBe('respectRemoval');
+    expect(outcome.file).toBeUndefined();
   });
 
   it.each([

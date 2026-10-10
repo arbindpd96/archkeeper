@@ -104,8 +104,9 @@ describe('planInstall', () => {
     expect(second.lock.removed).toEqual([{ path: '.claude/rules/acmekit/a.md' }]);
     expect(second.writes.has('.claude/rules/acmekit/a.md')).toBe(false);
     const third = planInstall(TREE, applied(state, second), second.lock, CONTEXT);
-    expect(third.ops.find((op) => op.path === '.claude/rules/acmekit/a.md')?.kind).toBe('respectRemoval');
+    expect(third.ops.find((op) => op.path === '.claude/rules/acmekit/a.md')?.kind).toBe('skip');
     expect(third.writes.size).toBe(0);
+    expect(third.lockText).toBe(second.lockText);
   });
 
   it('plans only skips against the state its own apply left, so a second run writes nothing', () => {
@@ -159,7 +160,7 @@ describe('planInstall', () => {
     expect(second.lock.json.get(SETTINGS)?.has(HOOK_KEY)).toBe(false);
     const third = planInstall(HOOK_TREE, applied(state, second), second.lock, CONTEXT);
     expect(third.writes.size).toBe(0);
-    expect(third.ops.filter((op) => !['skip', 'respectRemoval'].includes(op.kind))).toEqual([]);
+    expect(third.ops.filter((op) => op.kind !== 'skip')).toEqual([]);
   });
 
   it('keeps a registration whose script the user changed, and reports why', () => {

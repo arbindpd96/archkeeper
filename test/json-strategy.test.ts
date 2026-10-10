@@ -213,6 +213,17 @@ describe('the json strategy', () => {
     expect(outcome.content ?? '').not.toContain('rm -rf');
   });
 
+  it('skips a removal recorded earlier, so a later run changes nothing', () => {
+    const key = 'permissions.deny Bash(rm -rf:*)';
+    const outcome = plan({
+      entries: [jsonEntry({ permissions: { deny: ['Bash(rm -rf:*)'] } }, [key])],
+      state: file('{ "permissions": { "deny": [] } }\n'),
+      removed: [key],
+    });
+    expect(outcome.ops.find((op) => op.entry === key)?.kind).toBe('skip');
+    expect(outcome.content).toBeUndefined();
+  });
+
   it('gives .mcp.json no $schema', () => {
     const outcome = plan({
       path: '.mcp.json',

@@ -174,8 +174,10 @@ export function planFile(job: FileJob): PathOutcome {
   const { entry, lock } = job;
   if (entry === undefined) return lock === undefined ? { ops: [], removed: [] } : planDropped(job, lock);
   if (job.removed) {
+    // Only a lock entry left beside the removal, as a rebuilt lock can hold, still changes the lock.
+    const kind = lock === undefined ? 'skip' : 'respectRemoval';
     const reason = 'the user deleted it earlier; the kit never recreates it';
-    return { ops: [{ kind: 'respectRemoval', path: job.path, reason }], removed: [] };
+    return { ops: [{ kind, path: job.path, reason }], removed: [] };
   }
   const file = kitFile(job, entry);
   return entry.strategy === 'create-only' ? planCreateOnly(file) : planOwned(file);

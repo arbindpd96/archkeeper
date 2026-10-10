@@ -2,7 +2,7 @@ import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { parseBlocks } from '../src/core/blocks-file.js';
 import { readLock } from '../src/core/lock.js';
-import { planInstall } from '../src/core/plan.js';
+import { type Plan, planInstall } from '../src/core/plan.js';
 import type { PathState } from '../src/core/plan-types.js';
 import type { RenderedEntry, RenderTree } from '../src/core/render-tree.js';
 import { BYTE_ORDER_MARK } from '../src/core/text.js';
@@ -78,19 +78,23 @@ function projectFor(
   return snapshotOf(files);
 }
 
+// Planning against what `plan` left once applied to `before` yields only skips, writes nothing, keeps the lock.
+function expectSettled(tree: RenderTree, before: ReadonlyMap<string, PathState>, plan: Plan): void {
+  const read = readLock(plan.lockText, TEST_KIT, TEST_BRAND);
+  if (read.conflicted) throw new Error('the lock text holds conflict markers');
+  const next = planInstall(tree, applied(before, plan), read.lock, CONTEXT);
+  expect(next.ops.filter((op) => op.kind !== 'skip')).toEqual([]);
+  expect(next.writes.size).toBe(0);
+  expect(next.lockText).toBe(plan.lockText);
+}
+
 describe('planning against the state the previous apply left (#21)', () => {
   it('yields only skip operations and writes nothing', () => {
     fc.assert(
       fc.property(kitVersion, existing, (kit, found) => {
         const tree = treeFor(kit);
         const project = projectFor(kit, found);
-        const first = planInstall(tree, project, undefined, CONTEXT);
-        const read = readLock(first.lockText, TEST_KIT, TEST_BRAND);
-        if (read.conflicted) throw new Error('the lock text holds conflict markers');
-        const second = planInstall(tree, applied(project, first), read.lock, CONTEXT);
-        expect(second.ops.filter((op) => op.kind !== 'skip')).toEqual([]);
-        expect(second.writes.size).toBe(0);
-        expect(second.lockText).toBe(first.lockText);
+        expectSettled(tree, project, planInstall(tree, project, undefined, CONTEXT));
       }),
       { numRuns: 500 },
     );
@@ -249,6 +253,7 @@ describe('user edits through a kit update (#22)', () => {
         );
         for (const rule of deleted) expect(settings.permissions.deny).not.toContain(rule);
         expect(userServers(final)).toEqual(userServers(edited));
+        expectSettled(treeFor(run.v2), edited, second);
       }),
       { numRuns: 1000 },
     );
