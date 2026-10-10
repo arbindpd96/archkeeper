@@ -36,7 +36,7 @@ The `Commit authors` CI job checks every commit in a PR. It fails on a bot autho
 | Demo GIFs      | `npm run demos`              | GIFs come from tapes within 2 MB and 20 s (30 s hero); each module and command declares a demo or internal |
 | Tests          | `npm test`                   | Vitest: Linux on Node 22/24/26, macOS + Windows on 24                                                      |
 | Build          | `npm run build`              | tsdown bundle in `dist/`, licenses of inlined code; CI checks that two builds are identical                |
-| Context budget | `npm run context`            | Each preset's always-on context, from the built CLI's `init`, stays within `budgets.json` (ADR-0017)       |
+| Context budget | `npm run context`            | Each preset's always-on context and the warm `init` time, from the built CLI, stay within `budgets.json`   |
 | Package        | `npm run package`            | publint, pack snapshot, 0 runtime deps, no install scripts, budgets; CI adds publish dry run               |
 | Release        | CI only                      | Dry run: release guards (reported), prepare strip, release package checks, `npm stage publish`             |
 | Install smoke  | CI only                      | The packed tarball installs under a path with a space and runs on ubuntu, macOS and Windows                |

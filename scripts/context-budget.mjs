@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { appendFileSync, cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { performance } from 'node:perf_hooks';
 import { alwaysOnContext } from './context-rules.mjs';
 import { exitWith } from './lib.mjs';
 
@@ -20,15 +21,20 @@ function readJson(file) {
   }
 }
 
+// Each init's wall time in ms, in run order; the first run warms the disk and compile caches.
+const initTimes = [];
+
 /** Runs the built CLI's `init --yes` for a preset in a fresh copy of a fixture, exiting with its error on failure. */
 function initCopy(work, preset, fixture) {
   const project = path.join(work, preset, fixture);
   cpSync(path.join(root, 'examples', fixture), project, { recursive: true });
   try {
+    const start = performance.now();
     execFileSync(process.execPath, [bin, 'init', '--yes', '--preset', preset, '--cwd', project], {
       stdio: ['ignore', 'pipe', 'pipe'],
       encoding: 'utf8',
     });
+    initTimes.push(performance.now() - start);
   } catch (error) {
     exitWith(
       `context-budget: init --preset ${preset} failed on examples/${fixture}:\n${error.stderr ?? error.message}`,
@@ -47,21 +53,32 @@ function measurePreset(work, { name, defaults }) {
   return measured.reduce((worst, next) => (next.tokens > worst.tokens ? next : worst));
 }
 
-/** Prints the table, and appends it to the GitHub job summary when one is available. */
-function report(rows) {
+/** Prints the table and the warm init line, and appends both to the GitHub job summary when one is available. */
+function report(rows, initLine) {
   const table = [
     '| Preset | Always-on tokens | Budget | Largest on | CLAUDE.md and imports | Rules | Skills | SessionStart cap |',
     '| --- | --- | --- | --- | --- | --- | --- | --- |',
     ...rows.map((row) => `| ${row.join(' | ')} |`),
   ];
-  process.stdout.write(`${table.join('\n')}\n`);
+  process.stdout.write(`${table.join('\n')}\n\n${initLine}\n`);
   if (process.env.GITHUB_STEP_SUMMARY) {
-    appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### Always-on context\n\n${table.join('\n')}\n`);
+    const summary = `### Always-on context\n\n${table.join('\n')}\n\n${initLine}\n`;
+    appendFileSync(process.env.GITHUB_STEP_SUMMARY, summary);
   }
 }
 
+/** Holds the slowest warm init, every run after the first, to `budgets.json` `warmInit.maxMs`. */
+function checkInitTime(budget, problems) {
+  const warm = initTimes.slice(1);
+  const slowest = Math.round(Math.max(...warm));
+  if (typeof budget !== 'number') problems.push('budgets.json has no warmInit.maxMs.');
+  else if (slowest > budget) problems.push(`A warm init took ${slowest} ms, over its ${budget} ms.`);
+  return `Warm init: slowest ${slowest} ms of ${warm.length} runs (budget ${budget} ms).`;
+}
+
 if (!existsSync(bin)) exitWith('context-budget: dist/cli.mjs is missing. Run npm run build first.', 1);
-const budgets = readJson('budgets.json').alwaysOnContext ?? {};
+const allBudgets = readJson('budgets.json');
+const budgets = allBudgets.alwaysOnContext ?? {};
 const { presets } = readJson('modules/presets.json');
 const work = mkdtempSync(path.join(tmpdir(), 'context-budget-'));
 process.on('exit', () => rmSync(work, { recursive: true, force: true }));
@@ -80,10 +97,10 @@ for (const preset of presets) {
   const chars = [instructions, rules, skills, sessionStart].map((value) => `${value} chars`);
   rows.push([preset.name, String(worst.tokens), String(budget), worst.fixture, ...chars]);
 }
-report(rows);
+report(rows, checkInitTime(allBudgets.warmInit?.maxMs, problems));
 if (problems.length > 0) {
   exitWith(
-    `Context budget exceeded (ADR-0017; raising a budget needs an ADR note):\n${problems.join('\n')}`,
+    `Context or init budget exceeded (ADR-0017; raising a budget needs an ADR note):\n${problems.join('\n')}`,
     1,
   );
 }
