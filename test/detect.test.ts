@@ -136,7 +136,7 @@ describe('detectStack', () => {
   });
 
   it('reads a monorepo root only, reporting the workspace flag', () => {
-    const profile = expectedOf('monorepo');
+    const profile = detectStack(projectView(projectOf('monorepo')));
     expect(profile.monorepo).toBe(true);
     expect(profile.tools.testRunners).toEqual([]);
   });
