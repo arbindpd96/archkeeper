@@ -39,17 +39,24 @@ export interface RunResult {
 
 // Git exports these to hooks and `git rebase --exec` commands. A child git that inherits them works on the
 // caller's repository, so a test's `git init` in a temp folder re-initialised this repo and set core.bare.
+// The list is `git rev-parse --local-env-vars` (git 2.50).
 const CALLER_GIT_ENV = new Set(
   [
-    'GIT_DIR',
-    'GIT_WORK_TREE',
-    'GIT_INDEX_FILE',
-    'GIT_COMMON_DIR',
-    'GIT_OBJECT_DIRECTORY',
     'GIT_ALTERNATE_OBJECT_DIRECTORIES',
-    'GIT_PREFIX',
-    'GIT_CONFIG_PARAMETERS',
+    'GIT_COMMON_DIR',
+    'GIT_CONFIG',
     'GIT_CONFIG_COUNT',
+    'GIT_CONFIG_PARAMETERS',
+    'GIT_DIR',
+    'GIT_GRAFT_FILE',
+    'GIT_IMPLICIT_WORK_TREE',
+    'GIT_INDEX_FILE',
+    'GIT_NO_REPLACE_OBJECTS',
+    'GIT_OBJECT_DIRECTORY',
+    'GIT_PREFIX',
+    'GIT_REPLACE_REF_BASE',
+    'GIT_SHALLOW_FILE',
+    'GIT_WORK_TREE',
   ].map((name) => name.toLowerCase()),
 );
 const CALLER_GIT_CONFIG_PAIR = /^git_config_(?:key|value)_\d+$/;

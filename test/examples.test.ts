@@ -149,6 +149,11 @@ describe("the caller's git environment", () => {
     expect(existsSync(path.join(dir, '.git'))).toBe(true);
   });
 
+  it('covers every variable git itself lists as local to a repository', () => {
+    const local = execFileSync('git', ['rev-parse', '--local-env-vars'], { encoding: 'utf8' });
+    expect(local.split('\n').filter((name) => name !== '' && !isCallerGitEnv(name))).toEqual([]);
+  });
+
   it.each(['GIT_DIR', 'git_dir', 'GIT_CONFIG_PARAMETERS', 'GIT_CONFIG_KEY_12', 'GIT_PREFIX'])(
     'is left out of a child environment: %s',
     (name) => {
