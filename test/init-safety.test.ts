@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fixtureCopy } from './helpers.js';
@@ -23,6 +23,18 @@ describe('init writes nothing without a yes', () => {
     expect(upgraded.stderr).toContain('pass --yes to apply the plan');
     expect(read(dir, LOCK)).toBe(lock);
     expect(upgraded.stdout).toContain('the lock and base blobs');
+  });
+
+  it('needs --yes when a re-run would only restore a deleted base blob', async () => {
+    const { dir } = fixtureCopy('ts-app');
+    await runInit(dir, ['--yes']);
+    const blobs = path.join(dir, TEST_BRAND.stateDir, 'base');
+    const [blob = ''] = readdirSync(blobs);
+    rmSync(path.join(blobs, blob));
+    const again = await runInit(dir);
+    expect(again.code).toBe(1);
+    expect(again.stderr).toContain('pass --yes to apply the plan');
+    expect(existsSync(path.join(blobs, blob))).toBe(false);
   });
 
   it('asks nothing, about git or a yes, when a re-run has nothing to write', async () => {
