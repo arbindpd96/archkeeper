@@ -103,7 +103,21 @@ describe('init with the safety guards left out', () => {
     const { dir } = fixtureCopy('ts-app');
     const result = await runInit(dir, ['--yes', '--modules', '-safety']);
     expect(result.stderr).toContain('leaves out safety');
+    expect(result.stderr).toContain('are off for everyone');
     expect(result.code).toBe(0);
+  });
+
+  it('says on a re-init that the guards it installed earlier stay, and keeps them', async () => {
+    const { dir } = fixtureCopy('ts-app');
+    await runInit(dir, ['--yes']);
+    const hooks = readdirSync(path.join(dir, TEST_BRAND.hookDir)).sort();
+    const settings = read(dir, '.claude/settings.json');
+    const result = await runInit(dir, ['--yes', '--modules', '-safety']);
+    expect(result.code).toBe(0);
+    expect(result.stderr).toContain('leaves out safety, but init removes nothing it installed earlier');
+    expect(result.stderr).not.toContain('are off for everyone');
+    expect(readdirSync(path.join(dir, TEST_BRAND.hookDir)).sort()).toEqual(hooks);
+    expect(read(dir, '.claude/settings.json')).toBe(settings);
   });
 });
 
