@@ -93,19 +93,20 @@ export function withoutImportedBlocks(
   return kept;
 }
 
-/** A kit import block left out because its import resolves where the kit never imports from. */
+/** A kit import block left out, with the reason its import was refused. */
 export interface RefusedImport {
   readonly file: string;
   readonly target: string;
+  readonly reason: string;
 }
 
 /**
- * Leaves out each rendered block made only of `@` imports with an import `refused` turns down, such as AGENTS.md
- * linked to a file outside the project, and lists each one with its file and project-relative target.
+ * Leaves out each rendered block made only of `@` imports with an import `refusal` gives a reason against, such as
+ * AGENTS.md linked to a private file, and lists each one with its file, project-relative target and that reason.
  */
 export function withoutRefusedImports(
   tree: RenderTree,
-  refused: (target: string) => boolean,
+  refusal: (target: string, file: string) => string | undefined,
 ): { readonly tree: RenderTree; readonly refused: readonly RefusedImport[] } {
   const kept = new Map<string, readonly RenderedEntry[]>();
   const found: RefusedImport[] = [];
@@ -113,7 +114,10 @@ export function withoutRefusedImports(
     const refusedIn = (entry: RenderedEntry): RefusedImport[] => {
       if (markerStyle(path) !== 'html' || !isImportBlock(entry)) return [];
       const targets = importLines(entry).map((line) => resolved(folderOf(path), line.slice(1)));
-      return targets.filter(refused).map((target) => ({ file: path, target }));
+      return targets.flatMap((target) => {
+        const reason = refusal(target, path);
+        return reason === undefined ? [] : [{ file: path, target, reason }];
+      });
     };
     const left = entries.filter((entry) => {
       const refusals = refusedIn(entry);
