@@ -11,7 +11,7 @@ export interface AlwaysOnContext {
   readonly tokens: number;
 }
 
-/** The `@path` imports Claude Code reads in Markdown text, cut at `#`: in text, not in code, HTML or frontmatter. */
+/** The `@path` imports Claude Code 2.1.295 reads in a memory file, as written: cut at `#`, unescaped, trimmed. */
 export declare function importsOf(text: string): string[];
 
 /** Estimates the context Claude Code loads in every session of the project at `root` (ADR-0017). */
