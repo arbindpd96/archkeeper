@@ -121,20 +121,28 @@ function readExactly(absolute: string): Buffer {
   }
 }
 
-function save(absolute: string, folder: string): Saved {
+function held(absolute: string): Saved {
   const stats = lstatOrUndefined(absolute);
   if (stats === undefined) return { type: 'absent' };
   if (stats.isSymbolicLink()) return { type: 'symlink', target: readlinkSync(absolute) };
   if (!stats.isFile()) return { type: 'other' };
   const bytes = readExactly(absolute);
-  const blob = exactHash(bytes);
+  return { type: 'file', blob: exactHash(bytes), mode: stats.mode & 0o777, bytes };
+}
+
+/** What each path an apply will touch holds now, read without following a symlink and without writing anything. */
+export function currentPaths(targets: readonly { relative: string; absolute: string }[]): SavedPath[] {
+  return targets.map((target) => ({ ...target, saved: held(target.absolute) }));
+}
+
+function writeBlob(folder: string, saved: Saved): void {
+  if (saved.type !== 'file') return;
   try {
-    writeFileSync(path.join(folder, blob), compressed(bytes), { flag: 'wx', mode: PRIVATE_FILE });
+    writeFileSync(path.join(folder, saved.blob), compressed(saved.bytes), { flag: 'wx', mode: PRIVATE_FILE });
   } catch (error) {
     // Two paths with the same bytes share one content-addressed blob.
     if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
   }
-  return { type: 'file', blob, mode: stats.mode & 0o777, bytes };
 }
 
 function manifest(paths: readonly SavedPath[]): string {
@@ -148,20 +156,16 @@ function manifest(paths: readonly SavedPath[]): string {
 }
 
 /**
- * Backs up every path an apply will touch (#24): each file as a compressed blob named by the sha256 of its
- * bytes, plus a `manifest.json` that records whether each path was a file, a symlink (with its target) or
- * absent. Backups can hold copies of gitignored files, so every file in them is created with mode 0600.
+ * Backs up every path an apply will touch, as {@link currentPaths} read them (#24): each file as a compressed
+ * blob named by the sha256 of its bytes, plus a `manifest.json` that records whether each path was a file, a
+ * symlink (with its target) or absent. Backups can hold copies of gitignored files, so each file is mode 0600.
  */
-export function backUp(
-  rootReal: string,
-  targets: readonly { relative: string; absolute: string }[],
-  brand: Brand,
-): Backup {
+export function backUp(rootReal: string, paths: readonly SavedPath[], brand: Brand): Backup {
   ensureLocalFolder(rootReal, brand);
   const relative = `${backupsFolder(brand)}/${runId()}`;
   const folder = confinedPath(rootReal, relative, 'the kit backup folder');
   ensureFolder(folder, [], PRIVATE_FOLDER);
-  const paths = targets.map((target) => ({ ...target, saved: save(target.absolute, folder) }));
+  for (const { saved } of paths) writeBlob(folder, saved);
   writeFileSync(path.join(folder, 'manifest.json'), manifest(paths), { flag: 'wx', mode: PRIVATE_FILE });
   return { folder: relative, paths };
 }
