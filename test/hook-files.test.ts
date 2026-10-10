@@ -149,6 +149,12 @@ describe('module options from the project config', () => {
     expect(readModuleOptions(dir, 'safety', TEST_BRAND)).toEqual({ values: { blockNoVerify: true } });
   });
 
+  it('reads a config saved with a byte-order mark, as editors on Windows may save it', () => {
+    const dir = tempDir();
+    config(dir, '\uFEFF{"options":{"safety":{"blockNoVerify":true}}}');
+    expect(readModuleOptions(dir, 'safety', TEST_BRAND)).toEqual({ values: { blockNoVerify: true } });
+  });
+
   it.each(['{', '{"options":{"safety":[]}}'])('names the problem with the config %j', (text) => {
     const dir = tempDir();
     config(dir, text);
