@@ -1,12 +1,12 @@
-import { type ImportText, importTexts } from './markdown-blocks.js';
+import { importTexts } from './markdown-blocks.js';
+import type { ImportText } from './skipped-blocks.js';
 
-const ESCAPE = /\\[!-/:-@[-`{-~]/g;
 const MASKED_START = /\\[!-/:-@[-`{-~]|`+|<|!\[|\]\(/g;
 const CLOSING_TAG = /<\/[a-zA-Z][\w:-]*\s*>/y;
 const OPENING_TAG =
   /<[a-zA-Z][\w-]*(?:\s+[a-zA-Z:_][\w.:-]*(?:\s*=\s*"[^"]*"|\s*=\s*'[^']*'|\s*=\s*[^\s"'=<>`]+)?)*?\s*\/?>/y;
 const DECLARATION = /<![a-zA-Z]+\s/y;
-const SIMPLE_LINK = /!?\[[^[\]`]*\]\([^\s()`<>]*\)/g;
+const SIMPLE_LINK = /(?=!?\[)(?<!(?<!\\)\\(?:\\\\)*)!?\[(?:\\[^[\]`]|[^[\]`\\])*\]\([^\s()`<>\\]*\)/g;
 const HIDDEN = '\u0000';
 const EMPHASIS_SKIP = /\[[^[\]]*?\]\((?:\\.|[^\\()]|\((?:\\.|[^\\()])*\))*\)|`[^`]*?`|<[^<>]*?>/g;
 const CANDIDATE = /(?<![^\s*_[])@((?:[^\s\\]|\\ )+)/g;
@@ -22,6 +22,7 @@ interface Masking {
   readonly closing: (from: number, length: number) => number | undefined;
   readonly firstFound: Map<string, number>;
   readonly links: ReadonlyMap<number, RegExpExecArray>;
+  readonly firstBracket: number;
   unsure: boolean;
 }
 
@@ -37,7 +38,7 @@ interface Inline {
   readonly written: string;
   readonly masked: string;
   readonly skipsEmphasis: (at: number) => boolean;
-  readonly delimitersPaired: (at: number) => boolean;
+  readonly noOpenerBefore: (at: number) => boolean;
   readonly noLinkBefore: (at: number) => boolean;
   readonly firstMasked: number;
 }
@@ -96,7 +97,7 @@ function span(start: number, end: number | undefined, fill = ' '): Span | undefi
   return end === undefined ? undefined : { start, end, fill };
 }
 
-/** The simple links and images of a text, by where their `](` stands. */
+/** The simple links and images of a text, by where their `](` stands; no bracket in one is escaped. */
 function simpleLinks(text: string): Map<number, RegExpExecArray> {
   return new Map([...text.matchAll(SIMPLE_LINK)].map((link) => [link.index + link[0].indexOf(']('), link]));
 }
@@ -112,6 +113,17 @@ function linkSpan(masking: Masking, found: string, start: number): Span | undefi
   masking.unsure ||= found === '](' && link === undefined;
   if (image) return span(start, start + link[0].length);
   return found === '](' && link !== undefined ? span(start, link.index + link[0].length, HIDDEN) : undefined;
+}
+
+/**
+ * A code span or inline HTML that holds a link's `](`, after a `[`, may be in the link's text instead, since
+ * marked reads a link from its `[` on; the reader cannot tell, so the text is unsure.
+ */
+function hidesLinkEnd(masking: Masking, found: RegExpExecArray, part: Span): boolean {
+  const code = found[0].startsWith('`') || found[0] === '<';
+  return (
+    code && masking.firstBracket < part.start && masking.text.slice(part.start, part.end + 1).includes('](')
+  );
 }
 
 function maskedSpan(masking: Masking, found: RegExpExecArray): Span | undefined {
@@ -131,13 +143,21 @@ function maskedSpan(masking: Masking, found: RegExpExecArray): Span | undefined 
  */
 function masked(text: string): string | undefined {
   const links = simpleLinks(text);
-  const masking: Masking = { text, closing: closingRuns(text), firstFound: new Map(), links, unsure: false };
+  const masking: Masking = {
+    text,
+    closing: closingRuns(text),
+    firstFound: new Map(),
+    links,
+    firstBracket: text.indexOf('['),
+    unsure: false,
+  };
   const pattern = new RegExp(MASKED_START);
   let kept = '';
   let copied = 0;
   for (let found = pattern.exec(text); found !== null; found = pattern.exec(text)) {
     const part = maskedSpan(masking, found);
     if (part === undefined) continue;
+    masking.unsure ||= hidesLinkEnd(masking, found, part);
     kept += text.slice(copied, part.start) + part.fill.repeat(part.end - part.start);
     copied = part.end;
     pattern.lastIndex = part.end;
@@ -156,38 +176,13 @@ function emphasisSkips(text: string): (at: number) => boolean {
   };
 }
 
-/** The text as marked looks for emphasis closers in it, with links, backtick pairs, brackets and escapes blank. */
-function skippedText(written: string): string {
-  const blank = (skipped: string): string => ' '.repeat(skipped.length);
-  return written.replace(EMPHASIS_SKIP, blank).replace(ESCAPE, blank);
-}
-
-function pairedInBoth(
-  first: (at: number) => boolean,
-  second: (at: number) => boolean,
-): (at: number) => boolean {
-  return (at) => first(at) && second(at);
-}
-
 /**
- * Whether the `*` and `_` before `at`, and their runs, come in even numbers. An emphasis that opens earlier may
- * wrap a later one, or take a code span's backticks into its text, and change how marked reads what follows.
+ * Whether no `*` or `_` stands before `at` outside code and HTML. An emphasis that opens earlier may wrap a later
+ * one, or take a code span's backticks into its text, as marked pairs them, and change what it reads there.
  */
-function delimiterParity(visible: string): (at: number) => boolean {
-  const counts = new Map<string, number>();
-  const add = (key: string): void => {
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  };
-  let read = 0;
-  return (at) => {
-    for (; read < at; read += 1) {
-      const mark = visible[read] ?? '';
-      if (mark !== '*' && mark !== '_') continue;
-      add(mark);
-      if (visible[read - 1] !== mark) add(`${mark} run`);
-    }
-    return [...counts.values()].every((count) => count % 2 === 0);
-  };
+function noOpenerBefore(masked: string): (at: number) => boolean {
+  const first = masked.search(/[*_]/);
+  return (at) => first === -1 || first >= at;
 }
 
 function firstDifference(written: string, hidden: string): number {
@@ -206,7 +201,7 @@ function openingRun(inline: Inline, at: number): string | undefined {
   const mark = written[at - 1] ?? '';
   let start = at - 1;
   while (start > 0 && at - start < 4 && written[start - 1] === mark) start -= 1;
-  const opens = at - start <= 3 && startsWord(written, start) && inline.delimitersPaired(start);
+  const opens = at - start <= 3 && startsWord(written, start) && inline.noOpenerBefore(start);
   return opens ? written.slice(start, at) : undefined;
 }
 
@@ -232,10 +227,10 @@ function cutByMask(inline: Inline, at: number, word: string): boolean {
   return !startsWord(inline.written, at) || (after !== undefined && !SPACE.test(after));
 }
 
-/** A word after a masked span, or one that a masked span ends, counts only after paired `*` and `_`. */
+/** A word after a masked span, or one that a masked span ends, counts only with no `*` or `_` before it. */
 function plainTarget(inline: Inline, at: number, word: string): string | undefined {
   const masks = cutByMask(inline, at, word) || inline.firstMasked < at;
-  return masks && !inline.delimitersPaired(at) ? undefined : word;
+  return masks && !inline.noOpenerBefore(at) ? undefined : word;
 }
 
 /** `[@AGENTS.md](AGENTS.md)` opens a link whose text starts with the `@`; the link's `](` ends the path. */
@@ -266,7 +261,7 @@ function importsIn(text: ImportText): string[] {
     skipsEmphasis: emphasisSkips(text.text),
     noLinkBefore: (at) => firstOpen === -1 || firstOpen >= at,
     firstMasked: firstDifference(text.text, hidden),
-    delimitersPaired: pairedInBoth(delimiterParity(hidden), delimiterParity(skippedText(text.text))),
+    noOpenerBefore: noOpenerBefore(hidden),
   };
   return [...inline.masked.matchAll(CANDIDATE)].flatMap((found) =>
     importPath(writtenTarget(inline, found.index, found[1] ?? '')),

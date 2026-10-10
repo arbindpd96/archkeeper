@@ -2,8 +2,10 @@ import { htmlBlock } from './markdown-html.js';
 import { BYTE_ORDER_MARK } from './text.js';
 
 const FRONTMATTER = /^---\s*\n[\s\S]*?---\s*\n?/;
-const LIST_MARKERS = /^(?: {0,3}(?:[*+-]|\d{1,9}[.)])(?:[ \t]+|$))+/;
-const BARE_BULLET = / {0,3}(?:[*+-]|\d{1,9}[.)])[ \t]$/;
+const LIST_MARKERS =
+  /^(?: {0,3}(?:[*+-]|\d{1,9}[.)])(?:[ \t]{1,4}(?![ \t])|[ \t]*$))*(?: {0,3}(?:[*+-]|\d{1,9}[.)])[ \t]{5,})?/;
+const BARE_BULLET = /(?:^ {0,3})?(?:[*+-]|\d{1,9}[.)])[ \t]$/;
+const SPACE_OR_TAB = /^[ \t]$/;
 const CODE_AFTER_MARKER = /(?:[*+-]|\d[.)]) {5}/;
 
 export const QUOTE_MARKER = /^ {0,3}>[ \t]?/;
@@ -53,9 +55,9 @@ export function indentOf(content: string): number {
   return content.length - content.trimStart().length;
 }
 
-/** The line as marked reads a list item's lines, with each leading tab as four spaces. */
+/** The line as marked reads a list item's later lines, with each tab as four spaces. */
 export function expanded(content: string): string {
-  return content.replace(/^[ \t]+/, (lead) => lead.replaceAll('\t', '    '));
+  return content.replaceAll('\t', '    ');
 }
 
 /** The column the text of `content` starts at, each leading tab counting four. */
@@ -65,12 +67,31 @@ export function columnsOf(content: string): number {
 
 /**
  * The list bullets that start `content`, with the spaces after each, or an empty string. A bullet followed by one
- * space and nothing else starts no list for marked, though it is an item in one.
+ * space and nothing else starts no list for marked, though it is an item in one; one followed by five spaces or
+ * more is the last, since the item's text after it is code.
  */
 export function listMarker(content: string, inList: boolean): string {
-  const marker = LIST_MARKERS.exec(content)?.[0] ?? '';
+  const marker = (LIST_MARKERS.exec(content)?.[0] ?? '').slice(0, ruleFrom(content));
   const outer = marker === content ? marker.replace(BARE_BULLET, '') : marker;
   return outer === '' && inList ? marker : outer;
+}
+
+/** Where a rule of three or more `-` or `*` that ends `content` starts, so that no bullet opens there. */
+function ruleFrom(content: string): number {
+  const text = content.trimEnd();
+  const mark = text.at(-1);
+  let from = content.length;
+  if (mark !== '-' && mark !== '*') return from;
+  let marks = 0;
+  for (
+    let at = text.length - 1;
+    at >= 0 && (text[at] === mark || SPACE_OR_TAB.test(text[at] ?? ''));
+    at -= 1
+  ) {
+    if (text[at] === mark) marks += 1;
+    if (marks >= 3 && text[at] === mark) from = at;
+  }
+  return from;
 }
 
 /** Whether marked would read `content` as text of a setext heading rather than as a new block. */
