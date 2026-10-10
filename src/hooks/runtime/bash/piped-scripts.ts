@@ -1,8 +1,7 @@
 import { decodeEscapes } from '../shell/ansi-c-quote.js';
 import type { Command } from '../shell/commands.js';
-import { isShell } from '../shell/syntax.js';
 import type { PipePosition } from '../shell/types.js';
-import { readInterpreter } from './interpreters.js';
+import { type InterpreterRun, readInterpreter } from './interpreters.js';
 import { ask, strictest, type Verdict } from './verdicts.js';
 
 /** Verdict for text piped into a shell that the guard cannot read in full. */
@@ -11,17 +10,24 @@ export const PIPED_SCRIPT = ask(
 );
 
 const ECHO_OPTION = /^-[neE]+$/;
+const HIDDEN: Printed = { texts: [], escaped: true };
 
 interface Printed {
   readonly texts: readonly string[];
   readonly escaped: boolean;
 }
 
-// A shell whose script is stdin, or a program named by an expansion (it may be a shell), runs what a pipe feeds it.
-function readsPipedScript(command: Command): boolean {
-  if (!command.dynamicProgram && !isShell(command.program)) return false;
-  const run = readInterpreter(command);
-  return run !== null && (run.stdin || run.unknownScript);
+type JudgeScript = (script: string) => Verdict | null;
+
+/**
+ * How a command reads its program from text another command makes: as shell code the guard can judge, as code in
+ * another language it can only see is hidden, or not at all. A program named by an expansion may be a shell.
+ */
+type Feed = 'shell' | 'code' | null;
+
+function feedOf(run: InterpreterRun): Feed {
+  if (run.language === 'shell') return run.stdin || run.unknownScript ? 'shell' : null;
+  return run.stdin ? 'code' : null;
 }
 
 const producersOf = (commands: readonly Command[], { pipeline, stage }: PipePosition): Command[] =>
@@ -46,39 +52,56 @@ function echoScript(args: readonly string[]): Printed {
   return { texts: escaped ? [text, decoded] : [text], escaped };
 }
 
+// echo and printf print their arguments and never read stdin; only a plain `cat` copies a here-document as it is.
+// Any other program, such as base64 -d, xxd -r, tr, rev or openssl, transforms what it reads, so its text is hidden.
 function printedScript(producer: Command): Printed {
-  if (producer.heredocs.length > 0) return { texts: producer.heredocs, escaped: false };
   if (producer.program === 'printf') return printfScript(producer.args);
   if (producer.program === 'echo') return echoScript(producer.args);
-  return { texts: [], escaped: true };
+  const copiesHeredoc = producer.program === 'cat' && producer.args.every((arg) => arg === '-');
+  return copiesHeredoc && producer.heredocs.length > 0
+    ? { texts: producer.heredocs, escaped: false }
+    : HIDDEN;
 }
 
 // Only one plain echo, printf or here-document can be read in full; several producers or expansions hide text.
-function feedVerdict(
-  producers: readonly Command[],
-  judgeScript: (script: string) => Verdict | null,
-): Verdict | null {
+function feedVerdict(producers: readonly Command[], judgeScript: JudgeScript | null): Verdict | null {
   const scripts = producers.map(printedScript);
   const expanded = producers.some((producer) => producer.subs.length > 0 || producer.expands.some(Boolean));
   const hidden = producers.length !== 1 || expanded || scripts.some((script) => script.escaped);
-  const verdicts = scripts.flatMap((script) => script.texts.map(judgeScript));
+  const verdicts = judgeScript === null ? [] : scripts.flatMap((script) => script.texts.map(judgeScript));
   return strictest([...verdicts, hidden ? PIPED_SCRIPT : null]);
 }
 
-/**
- * Judges what a shell reads from a pipe: each producer's text is judged with `judgeScript`, and the command asks
- * when several producers, an expansion, an escape or a format may change that text.
- */
-export function pipedScriptVerdict(
+// A here-document or here-string a reader takes as its program: shell code is judged, and other code built from a
+// substitution is hidden. `sh < <(…)` and `bash <(…)` run what another command prints, which is hidden too.
+function ownInputVerdict(command: Command, run: InterpreterRun, judgeScript: JudgeScript): Verdict | null {
+  const feed = feedOf(run);
+  const fromSubstitution = feed !== null && command.redirects.some((target) => target.startsWith('<('));
+  if (run.substitutedScript || fromSubstitution) return PIPED_SCRIPT;
+  if (feed === 'shell') return strictest(command.heredocs.map(judgeScript));
+  return feed === 'code' && command.heredocs.length > 0 && command.subs.length > 0 ? PIPED_SCRIPT : null;
+}
+
+function readerVerdict(
+  command: Command,
   commands: readonly Command[],
-  judgeScript: (script: string) => Verdict | null,
+  judgeScript: JudgeScript,
 ): Verdict | null {
-  const verdicts = commands
-    .filter(readsPipedScript)
-    .flatMap((shell) =>
-      shell.pipes
-        .filter((pipe) => pipe.stage > 0)
-        .map((pipe) => feedVerdict(producersOf(commands, pipe), judgeScript)),
-    );
-  return strictest(verdicts);
+  const run = readInterpreter(command);
+  if (run === null) return null;
+  const feed = feedOf(run);
+  const judge = feed === 'shell' ? judgeScript : null;
+  const piped = command.pipes
+    .filter((pipe) => feed !== null && pipe.stage > 0)
+    .map((pipe) => feedVerdict(producersOf(commands, pipe), judge));
+  return strictest([...piped, ownInputVerdict(command, run, judgeScript)]);
+}
+
+/**
+ * Judges what a shell or interpreter reads as its program from a pipe, a here-document or a process substitution:
+ * shell text from one plain echo, printf or `cat <<EOF` is judged with `judgeScript`, and the command asks when
+ * several producers, an expansion, an escape or a transforming program such as `base64 -d` may change that text.
+ */
+export function pipedScriptVerdict(commands: readonly Command[], judgeScript: JudgeScript): Verdict | null {
+  return strictest(commands.map((command) => readerVerdict(command, commands, judgeScript)));
 }

@@ -120,4 +120,18 @@ describe('hook bundles (#30, ADR-0015)', () => {
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({ hookSpecificOutput: { permissionDecision: 'deny' } });
   });
+
+  // The commands are only sent to the hook as JSON text; the base64 spells `rm -rf ~` and is never decoded.
+  it.each([
+    'base64 -d <<< cm0gLXJmIH4= | sh',
+    'base64 -d <<EOF | bash\ncm0gLXJmIH4=\nEOF',
+    'echo cm0gLXJmIH4= | base64 --decode | zsh',
+    'sh < <(base64 -d <<< cm0gLXJmIH4=)',
+    'xxd -r -p <<< 726d202d7266207e | sh',
+  ])('asks before decoded text runs in a shell, given on stdin: %s', (command) => {
+    const payload = JSON.stringify({ tool_name: 'Bash', tool_input: { command } });
+    const result = run(isolatedCopy('guard-bash'), payload);
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({ hookSpecificOutput: { permissionDecision: 'ask' } });
+  });
 });
