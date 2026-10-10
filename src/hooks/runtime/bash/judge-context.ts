@@ -2,6 +2,9 @@ import type { Command } from '../shell/commands.js';
 import type { PathContext } from './dangerous-paths.js';
 import type { Verdict } from './verdicts.js';
 
+/** The module whose `options` in the project config hold guard-bash's options. */
+export const SAFETY_MODULE = 'safety';
+
 /** The safety module's guard-bash options, off by default (ADR-0015): repo policies and extra denied commands. */
 export interface BashOptions {
   /** Deny AI co-author trailers and "Generated with" lines in commit and PR commands. */

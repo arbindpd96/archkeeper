@@ -8,7 +8,7 @@ import { commandName } from '../shell/wrappers.js';
 import { parseOptions } from './cli-options.js';
 import { globMatches } from './glob-match.js';
 import { HUSKY_OFF } from './git-rules.js';
-import type { JudgeContext, Rule } from './judge-context.js';
+import { type JudgeContext, type Rule, SAFETY_MODULE } from './judge-context.js';
 import { ask, deny, type Verdict } from './verdicts.js';
 
 const UNKNOWN_PROGRAM = ask('The command name comes from an unquoted expansion. Confirm with the user.');
@@ -124,5 +124,5 @@ export function denyCommandsRule(command: Command, { options }: JudgeContext): V
   const denied = options.denyCommands.find((entry) => matchesDenied(command, entry));
   if (denied === undefined) return null;
   const shown = escapeUnprintable(denied.trim());
-  return deny(`"${shown}" is denied by options.safety.denyCommands in ${configFile(BRAND)}.`);
+  return deny(`"${shown}" is denied by options.${SAFETY_MODULE}.denyCommands in ${configFile(BRAND)}.`);
 }

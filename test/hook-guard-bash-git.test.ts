@@ -206,6 +206,7 @@ describe('guard-bash hook answers', () => {
     '{',
     '{"options":{"safety":{"blockNoVerify":"yes"}}}',
     '{"options":{"safety":{"denyCommands":"x"}}}',
+    '{"options":{"safety":{"denyCommands":["terraform destroy","  "]}}}',
   ])('asks, naming the config, when the options in %j cannot be used', (config) => {
     const { outcome, reason } = hookAnswer(guardBash, bash('ls'), { projectDir: project(config) });
     expect(outcome).toBe('ask');

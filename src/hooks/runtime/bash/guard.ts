@@ -7,11 +7,10 @@ import { realOrUndefined } from '../project.js';
 import { parseCommands } from '../shell/commands.js';
 import { ShellSyntaxError } from '../shell/syntax.js';
 import { pathContext } from './dangerous-paths.js';
-import type { BashOptions, JudgeContext } from './judge-context.js';
+import { type BashOptions, type JudgeContext, SAFETY_MODULE as MODULE } from './judge-context.js';
 import { judgeCommands } from './rules.js';
 import { ask, deny, type Verdict } from './verdicts.js';
 
-const MODULE = 'safety';
 const MAX_COMMAND_LENGTH = 8000;
 const WRITES_AUTHORED_TEXT = /\bgit\b[\s\S]*\b(?:commit|tag|notes|merge)\b|\bgh\s+(?:pr|issue|release)\b/;
 const AI_ATTRIBUTION =
@@ -32,6 +31,9 @@ function bashOptions(projectDir: string): BashOptions | string {
   const denyCommands = stringListOption(read.values, 'denyCommands');
   if (blockAiAttribution === undefined || blockNoVerify === undefined || denyCommands === undefined) {
     return `options.${MODULE} in ${configFile()} has a value of the wrong type`;
+  }
+  if (denyCommands.some((entry) => entry.trim() === '')) {
+    return `options.${MODULE}.denyCommands in ${configFile()} has an entry that names no command`;
   }
   return { blockAiAttribution, blockNoVerify, denyCommands };
 }
