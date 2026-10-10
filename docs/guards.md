@@ -13,6 +13,7 @@ guard-bash runs before every Bash call. It parses the command line the way a she
 | A download piped into a shell or interpreter, or run once downloaded     | `npm publish`, `unpublish`, `deprecate`, `dist-tag`, `npm stage approve`    |
 | `chmod 777` and other world-writable modes                               | Any command that names a `.env`, `.env.*` or `.envrc` file, templates aside |
 | `gh repo delete`, `gh release delete` and API `DELETE` calls             | git config or `GIT_*` variables through which git runs a program            |
+|                                                                          | Text a program such as `base64 -d`, `xxd -r`, `tr` or `rev` feeds a shell   |
 |                                                                          | Anything it cannot read, and any command over 8,000 characters              |
 
 `git push --force-with-lease` to a feature branch, `rm -rf dist` and `cat .env.example` pass guard-bash. A pager or editor that runs nothing else, such as `GIT_PAGER=cat` or `GIT_EDITOR=true`, passes too.

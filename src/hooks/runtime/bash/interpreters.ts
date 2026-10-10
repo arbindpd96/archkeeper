@@ -5,8 +5,12 @@ import { INTERPRETERS, type InterpreterSpec } from './interpreter-specs.js';
 
 /** What an interpreter runs, as its arguments say. */
 export interface InterpreterRun {
+  /** The language it runs, such as `shell` (sh, eval, source) or `python`. */
+  readonly language: string;
   /** It runs code read from stdin. */
   readonly stdin: boolean;
+  /** A process substitution (`<(…)`) names its script, so another command writes the code it runs. */
+  readonly substitutedScript: boolean;
   /** An expansion or a bare word names its script. */
   readonly unknownScript: boolean;
   /** An expansion names its script. */
@@ -47,7 +51,9 @@ const LIST_OF_ROLE: Partial<Record<LetterRole, 'codes' | 'modules' | 'scripts'>>
 };
 const LEADING_DIGITS = /^(?:x[\da-fA-F]*|[0-7]*)/;
 const UNKNOWN_PROGRAM: InterpreterRun = {
+  language: 'shell',
   stdin: true,
+  substitutedScript: false,
   unknownScript: false,
   expandedScript: false,
   scripts: [],
@@ -196,8 +202,10 @@ function summarize(found: Found, spec: InterpreterSpec, command: Command): Inter
     ...found.modules.map((module) => classifyModule(module.text, expanding(module))),
   ];
   return {
+    language: spec.language,
     stdin:
       found.stdin || programFromXargs(found, command) || literalScripts.some(({ text }) => isStdinPath(text)),
+    substitutedScript: found.scripts.some(({ text }) => text.startsWith('<(')),
     unknownScript: found.scripts.some((script) => expanding(script) || !/[./]/.test(script.text)),
     expandedScript: found.scripts.some(expanding),
     scripts: literalScripts.map((script) => script.text),
