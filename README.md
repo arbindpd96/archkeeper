@@ -70,6 +70,23 @@ your-project/
 
 `update` merges new versions into these files and never overwrites your edits. `uninstall` removes everything it added.
 
+## Presets
+
+`init` asks for a preset, medium by default, or takes `--preset small|medium|full`. Each preset holds the one before it, and `--modules +knowledge,-format-on-edit` adds or leaves out single modules. The presets in v0.1:
+
+| Module                       | Sets up                                                                  | small       | medium    | full        |
+| ---------------------------- | ------------------------------------------------------------------------ | ----------- | --------- | ----------- |
+| base                         | CLAUDE.md, AGENTS.md, ignore rules, settings                             | yes         | yes       | yes         |
+| safety                       | guard hooks, deny rules                                                  | yes         | yes       | yes         |
+| feature-memory               | MEMORY template, mistakes log, memory hooks, `/new-feature`, `/handoff`  | yes         | yes       | yes         |
+| knowledge                    | decisions, ADRs, glossary, `/why`, `/adr`                                |             | yes       | yes         |
+| architecture-map             | `docs/architecture.md`, `/update-map`                                    |             | yes       | yes         |
+| format-on-edit               | formats and lints each edited file with the project's own tools          |             | yes       | yes         |
+| stop-check                   | runs the project's tests before Claude stops, once you turn the check on |             |           | yes         |
+| **Always-on context budget** |                                                                          | 1.5k tokens | 3k tokens | 4.5k tokens |
+
+The budget caps what Claude Code loads in every session: CLAUDE.md with its imports, rules without `paths:`, the descriptions of skills Claude may invoke, and the SessionStart output counted at its cap. CI holds each preset to it, and `init` shows it when it asks for the preset.
+
 ## Works with
 
 **Claude Code** gets the full setup: hooks, skills, rules and memory. **Codex, Cursor, Gemini CLI and GitHub Copilot** read the same rules from `AGENTS.md`. archkeeper also composes with workflow tools such as [Superpowers](https://github.com/obra/superpowers) and [Spec Kit](https://github.com/github/spec-kit) instead of replacing them.
