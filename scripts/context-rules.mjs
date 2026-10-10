@@ -1,18 +1,15 @@
 import { lstatSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { importsOf } from './markdown-imports.mjs';
+
+export { importsOf };
 
 /** Characters per token in the estimate ADR-0017 fixes. */
 export const CHARS_PER_TOKEN = 4;
 
 // Claude Code follows imports up to four hops deep (reference §2.1).
 const MAX_IMPORT_DEPTH = 4;
-const FENCE = /^ {0,3}(?:`{3,}|~{3,})/;
 const COMMENT_LINE = /^\s*<!--.*-->\s*$/;
-const CODE_SPAN = /`[^`]*`/g;
-// Claude Code reads an `@path` after a space or right after inline markdown, such as **@AGENTS.md**, never inside
-// a word such as an email address, and the path ends where that markdown closes (reference §2.1).
-const IMPORT = /(?<![\w@])@((?:\\ |[^\s])+)/g;
-const MARKDOWN_CLOSE = /[*_~)\],.;:!?]+$/;
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 const MISSING = new Set(['ENOENT', 'ENOTDIR']);
 
@@ -37,21 +34,6 @@ function loadedText(text) {
     .split(/\r?\n/)
     .filter((line) => !COMMENT_LINE.test(line))
     .join('\n');
-}
-
-/** The `@path` imports of Markdown text (after a space or inline markdown), outside code fences and spans. */
-export function importsOf(text) {
-  const found = [];
-  let fenced = false;
-  for (const line of text.split('\n')) {
-    if (FENCE.test(line)) fenced = !fenced;
-    else if (!fenced) {
-      for (const match of line.replace(CODE_SPAN, ' ').matchAll(IMPORT)) {
-        found.push(match[1].replace(MARKDOWN_CLOSE, '').replaceAll('\\ ', ' '));
-      }
-    }
-  }
-  return found;
 }
 
 function inside(root, file) {

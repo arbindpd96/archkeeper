@@ -4,18 +4,34 @@ import { withoutImportedBlocks } from '../src/core/import-blocks.js';
 import type { RenderTree } from '../src/core/render.js';
 import { blockEntry, TEST_BRAND } from './kit-fixtures.js';
 
-// The two readers of the @ import grammar stay separate on purpose (the M3 memory says why); one table keeps them equal.
+// The two readers of the @ import grammar stay separate on purpose (the M3 memory says why); one table keeps them
+// equal. Each row says what Claude Code 2.1.295 imports, as its lexer (marked 15 without GFM) reads the text.
 const CASES: readonly (readonly [text: string, imports: boolean])[] = [
   ['@AGENTS.md', true],
-  ['Shared rules: @AGENTS.md.', true],
+  ['Shared rules: @AGENTS.md.', false],
+  ['See @AGENTS.md, then code.', false],
+  ['Did you read @AGENTS.md?', false],
+  ['See @AGENTS.md: rules', false],
+  ['@AGENTS.md*', false],
   ['**@AGENTS.md**', true],
-  ['(@AGENTS.md)', true],
-  ['[@AGENTS.md], then more', true],
+  ['_@AGENTS.md_', true],
+  ['(@AGENTS.md)', false],
+  ['The shared rules (@AGENTS.md) apply.', false],
+  ['[@AGENTS.md], then more', false],
+  ['[@AGENTS.md](AGENTS.md)', true],
+  ['[rules](@AGENTS.md)', false],
+  ['rules-@AGENTS.md', false],
+  ['see/@AGENTS.md', false],
+  ['\\@AGENTS.md', false],
+  ['~~@AGENTS.md~~', false],
+  ['Read @AGENTS.md#principles first.', true],
+  ['@AGENTS.md\\ ', true],
   ['run `npm test`@AGENTS.md', true],
   ['run`npm test`@AGENTS.md', true],
   ['mail docs@AGENTS.md', false],
   ['@@AGENTS.md', false],
   ['`@AGENTS.md`', false],
+  ['``@AGENTS.md``', false],
   ['see ` @AGENTS.md ` here', false],
   ['```\n@AGENTS.md\n```', false],
   ['   ~~~md\n@AGENTS.md\n   ~~~', false],
