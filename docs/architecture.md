@@ -1,7 +1,7 @@
 # Architecture map
 
 > The living map of archkeeper. Read it before creating anything new; update it (or run `/update-map`) after adding a
-> source layer, module, pack or shared util. Status: **v0.1 M3 `init` works end to end: pure stack detection, the commander CLI with a command registry, the base module, and `init` on M1's renderer and M2's install engine** (see `docs/ROADMAP.md`). Rows marked _planned_ are the agreed target (handoff §8, ADR-0002/0003/0011).
+> source layer, module, pack or shared util. Status: **v0.1 M4 safety: the hook runtime and the guard-bash and guard-secrets bundles from `src/hooks`, and the safety module's guards and deny rules in every preset, on M3's `init`** (see `docs/ROADMAP.md`). Rows marked _planned_ are the agreed target (handoff §8, ADR-0002/0003/0011).
 
 ## Overview
 
@@ -260,7 +260,7 @@ Every bundle may import only `node:` built-ins (tsdown `deps.onlyImport`), so th
 - The `npm pack --dry-run` file list matches the committed `scripts/package-files.txt` (`npm run package -- --update` after an intended change).
 - `dependencies`, `optionalDependencies` and `peerDependencies` stay within the runtime-dependency budget (0), and there is no `preinstall`, `install` or `postinstall` script.
 - With `--release`, `prepare` counts as an install script too, and `publishConfig` or a package-root `.npmrc` fails the check, since either could override the registry, tag, access or auth the workflow passes. The release workflow deletes husky's dev-only `prepare` (`npm pkg delete scripts.prepare`) and then checks the manifest it publishes this way.
-- The tarball and each `dist/hooks/*.mjs` bundle stay within their size budgets.
+- The tarball and each `dist/hooks/*.mjs` bundle stay within their size budgets; a hook that `hookBundle.overrides` names has its own (guard-bash: 120 kB, ADR-0017's note).
 - The built bin answers `--version` with the package version, and `--help`.
 - The bin, and every chunk it imports statically, imports no `node:` built-in, so Node.js reaches its version check before it links one.
 - `budgets.json` itself defines every budget as a non-negative number.
