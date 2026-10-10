@@ -4,6 +4,11 @@ Record approaches that failed, so no session repeats them. Newest first.
 
 Format: `- YYYY-MM-DD — <what we tried> → <what went wrong> → <what to do instead>`
 
+- 2026-10-10 — Listing `.claude` for stack detection through `confinedPath` → a `.claude` linked to a dotfiles folder threw PathSafetyError, so init failed before planning although nothing it wrote was under `.claude` → `lstat` the folder first and list a symlink as empty; planning still refuses any write through it.
+- 2026-10-10 — Driving clack prompts through `expect` with the PTY's default size → the terminal had 0 columns, clack wrapped every character onto its own line, and no prompt text matched → set `stty columns 140 rows 50 < $spawn_out(slave,name)` right after `spawn`.
+- 2026-10-10 — Typing the command registry's setups as `Record<CommandName, CommandSetup>` while the registry was still empty → `never` is not callable, and typescript-eslint refuses a type that resolves to `{}` → keep the setups in a `Map` and throw for a missing one: every run of `main` registers every command, so the first test catches it.
+- 2026-10-10 — Checking in the same test file that every module has a file snapshot → vitest writes new file snapshots only when the file finishes, so the folder was missing on a first run → let CI's no-write snapshot mode fail a missing snapshot, and check only for orphans, tolerating a missing folder.
+
 - 2026-10-10 — Removing an atomic write's temp file only when the rename fails → a failed write or fsync (a full disk) left a `.<name>.<hex>.tmp` copy, possibly holding a token, in the project → wrap the write, chmod, fsync and rename in one try that removes the temp file on any failure.
 - 2026-10-10 — Restoring a rollback through absolute paths computed before the run → a folder swapped for a symlink mid-run made the rollback unlink or overwrite a file outside the project → confine every path again before restoring it, and skip one that now resolves outside.
 - 2026-10-10 — Refusing a stale plan by the paths it writes alone → the lock, read again at apply time, was overwritten even when a newer kit had written it since planning → record the hash of the lock the plan read too.
