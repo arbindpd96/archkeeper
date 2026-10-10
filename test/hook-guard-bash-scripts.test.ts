@@ -80,3 +80,26 @@ describe('guard-bash: decoded or transformed text read as a program', () => {
     expect(bashDecision(command)).toBe('allow');
   });
 });
+
+describe('guard-bash: aliases defined in the same command line', () => {
+  it.each([
+    ['shopt -s expand_aliases; alias x=rm\nx -fr /', 'deny'],
+    ['alias x=rm\nx -fr /', 'deny'],
+    ["alias x='rm -rf'; x ~", 'deny'],
+    ['alias x="rm -rf"; sudo x /', 'deny'],
+    ["alias x=''\nx rm -rf /", 'deny'],
+    ['alias a=b b=rm\na -rf ~', 'deny'],
+    ["alias rm='rm -i'\nrm -rf ~", 'deny'],
+    ["eval 'alias x=rm'; x -rf /", 'deny'],
+    ["alias x='cd /; rm'\nx -rf usr", 'deny'],
+    ['alias g=git; g push origin main -f', 'deny'],
+    ["alias x=sh\necho 'rm -rf ~' | x", 'deny'],
+    ['alias x=rm; x $FLAGS /', 'deny'],
+    ['alias x=rm; x -rf "$DIR"', 'ask'],
+    ['alias x=rm; x -f notes.txt', 'allow'],
+    ["alias ll='ls -l'; ll src", 'allow'],
+    ["alias rm='rm -i'\nrm -rf /tmp/scratch", 'allow'],
+  ])('judges each use as the alias value with its arguments: %s → %s', (command, expected) => {
+    expect(bashDecision(command)).toBe(expected);
+  });
+});

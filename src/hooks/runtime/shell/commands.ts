@@ -3,12 +3,13 @@ import { readFindExpression } from './find-expression.js';
 import { hasExpansion, isShell, SHELL_VALUE_OPTIONS, ShellSyntaxError } from './syntax.js';
 import { newCommand, type PipePosition, type RawCommand } from './types.js';
 import { tokenize } from './words.js';
-import { unwrap } from './wrappers.js';
+import { commandName, unwrap } from './wrappers.js';
 
 const MAX_SCRIPT_DEPTH = 8;
 const MAX_ARGV = 4096;
 const MAX_SCRIPT_TEXT = 64_000;
 const MAX_BRACE_WORK = 1_000_000;
+const MAX_ALIAS_ROUNDS = 4;
 
 /** One simple command as the guard judges it, with wrappers unwrapped and braces expanded. */
 export interface Command {
@@ -147,11 +148,49 @@ function parseScript(source: string, outer: Outer, depth: number, charge: Charge
   return commands;
 }
 
+function aliasDefinitions(commands: readonly Command[]): [name: string, value: string][] {
+  return commands
+    .filter(({ program, definesFunction }) => program === 'alias' && !definesFunction)
+    .flatMap(({ args }) => args.filter((arg) => arg.includes('=')))
+    .map((definition) => {
+      const equals = definition.indexOf('=');
+      return [commandName(definition.slice(0, equals)), definition.slice(equals + 1)];
+    });
+}
+
+// The use's literal words are quoted again; a word with an expansion keeps its source text, so it still expands.
+function aliasUse(value: string, { args, expands }: Command): string {
+  const words = args.map((arg, index) =>
+    expands[index] === true ? arg : `'${arg.replaceAll("'", `'\\''`)}'`,
+  );
+  return [value, ...words].join(' ');
+}
+
+// bash expands an alias defined earlier in a -c or eval string, so a command named like any alias of the line is
+// also judged as the alias value followed by its arguments: `alias x=rm` then `x -fr /` is `rm -fr /`.
+function aliasExpansions(commands: readonly Command[], charge: Charge): Command[] {
+  const aliases = aliasDefinitions(commands);
+  const expanded: Command[] = [];
+  let uses = commands;
+  for (let round = 0; round < MAX_ALIAS_ROUNDS && aliases.length > 0 && uses.length > 0; round += 1) {
+    uses = uses.flatMap((use) =>
+      aliases
+        .filter(([name]) => name === use.program && !use.dynamicProgram && !use.definesFunction)
+        .flatMap(([, value]) => parseScript(aliasUse(value, use), use, 1, charge)),
+    );
+    expanded.push(...uses);
+  }
+  return expanded;
+}
+
 /**
  * Parses shell source into the simple commands the guard judges. Braces are expanded, and code run by `sh -c`,
  * `eval`, `env -S`, `trap`, `alias`, `watch`, `su -c`, `find -exec` or a here-document fed to a shell is parsed
- * too, inheriting the outer assignments, wrappers and pipes. Throws ShellSyntaxError when it cannot.
+ * too, inheriting the outer assignments, wrappers and pipes; so is each use of an alias. Throws ShellSyntaxError
+ * when it cannot.
  */
 export function parseCommands(source: string): Command[] {
-  return parseScript(source, TOP_LEVEL, 0, workBudget());
+  const charge = workBudget();
+  const commands = parseScript(source, TOP_LEVEL, 0, charge);
+  return [...commands, ...aliasExpansions(commands, charge)];
 }
