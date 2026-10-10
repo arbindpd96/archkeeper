@@ -24,7 +24,7 @@ export function readModuleOptions(projectDir: string, moduleId: string, brand: B
   if ('problem' in read) return { problem: read.problem };
   let config: unknown;
   try {
-    config = JSON.parse(read.text);
+    config = JSON.parse(read.text.replace(/^\uFEFF/, ''));
   } catch {
     return { problem: 'it is not valid JSON' };
   }
