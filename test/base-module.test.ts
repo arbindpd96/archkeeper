@@ -129,6 +129,7 @@ describe('withoutImportedBlocks', () => {
     ['the import only in a code fence', '```md\n@AGENTS.md\n```\n'],
     ['the import only in an HTML comment', '<!-- @AGENTS.md -->\n'],
     ['the import only in a code span', 'Write `@AGENTS.md` to import it.\n'],
+    ['the import only in a code span with spaces', 'Write ` @AGENTS.md ` to import it.\n'],
     [
       "the import only in the kit's own block",
       `${marker('begin', 'agents-import')}\n@AGENTS.md\n${marker('end', 'agents-import')}\n`,
