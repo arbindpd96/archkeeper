@@ -1,15 +1,15 @@
 336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49  state        .acmekit/base/336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
-3cde2e415766dbe7a71caf9e88eea76c722199bb830605c195250d48a3e9ef23  state        .acmekit/base/3cde2e415766dbe7a71caf9e88eea76c722199bb830605c195250d48a3e9ef23
 78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7  state        .acmekit/base/78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7
 863aa344b1d719be44b9cd1b056ad390825da91cb77f8de1f652bfacd66fc7f3  state        .acmekit/base/863aa344b1d719be44b9cd1b056ad390825da91cb77f8de1f652bfacd66fc7f3
 b14df213662c8f70aa222047cc5093c9975c21005343db864945fe72a13946b4  state        .acmekit/base/b14df213662c8f70aa222047cc5093c9975c21005343db864945fe72a13946b4
+beab0e8a02e38248bf3c8a2eea8dbbd29b4a2575038107b24811cd42fde5a4af  state        .acmekit/base/beab0e8a02e38248bf3c8a2eea8dbbd29b4a2575038107b24811cd42fde5a4af
 6d80fbac1f9cfb3d9063a6ee397772df29bf5900f29b6fce94791c4cfe564c19  state        .acmekit/config.json
 cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b  state        .acmekit/local/.gitignore
-14fa8b0a0256bf55cdff043fd6aa8009d59a2388e7c6ffd63057c84f1ea8e70a  state        .acmekit/lock.json
+ae7fd07ea99c7b2d7cf9308ff187bafd223aa7be3745a07d1f3a691c52aaa401  state        .acmekit/lock.json
 cd7366ce9cbf42d295cad1b0bfc1900a96028d33afe15008be380ab9bba0265c  blocks       .gitattributes
 491e2e47d3979f026ba67314885071414ac11c06d84e74857f6ba84cc6c98f0b  blocks       .gitignore
 5ee4fc48ce1a6d7a61c01569add8ed1f1df0238f76fb9a0b34764a8c9ceb3fef  blocks       AGENTS.md
-5bce2ada44fe2da10d6401b84051be5f0bf86ffba04efe0969dcc3046ecff5ee  blocks       CLAUDE.md
+031024b53fb74cc63dfb2b442b9bf02a31bb03886e654db37d0994f6ae28f0c0  blocks       CLAUDE.md
 c58f52088b11f6419abfbde0f2df33e767e73cf88b808e70f7f7f1b50e0581b5  user         pyproject.toml
 7d180e1afb7777ad22495996b5c0d3fa3cf8df9e420f400e2dc7782dcfaec91b  user         src/py_app/__init__.py
 0400be510b1b4b3be091e08e9627fc7827edf81b4bc9a1e91111e8405ef9671a  user         tests/test_greet.py
@@ -22,7 +22,7 @@ c58f52088b11f6419abfbde0f2df33e767e73cf88b808e70f7f7f1b50e0581b5  user         p
 <!-- acmekit:begin claude-code -->
 ## Claude Code
 
-- AGENTS.md holds the rules every AI tool shares, and this file imports it: change shared rules there.
+- AGENTS.md holds the rules every AI tool shares: change shared rules there.
 - Keep personal notes in CLAUDE.local.md, which git ignores.
 - Claude Code reads .claude/settings.json and its hooks at startup, so restart it after changing them.
 <!-- acmekit:end claude-code -->

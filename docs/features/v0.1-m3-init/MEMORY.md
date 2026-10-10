@@ -70,7 +70,7 @@ v0.1 milestone M3 (issues #25, #26, #27, #28, #29): `npx <bin> init` works end t
 
 Region sizes are the unminified `//#region` sums over the three chunks, re-measured after the third review split the bin from the program; the split also shrank zod and commander a little, since the program chunk exports only `main` and rolldown drops the namespace objects a single file kept. Most of the growth is M2's engine reaching the bundle for the first time (M2 predicted about 26 kB of gzip) and commander, whose unminified source is mostly JSDoc. (Corrected after the third review) The earlier claim here, that the bin printed the upgrade message with `process.versions.node` faked to 18.20.8, was wrong: faking the version never links the bundle on an old Node.js, and a real Node.js 18.20.8 failed with `SyntaxError: ... does not provide an export named 'styleText'` before the check ran. With the split, a real Node.js 18.20.8 binary prints the upgrade message and exits 1, and Node.js 26 prints the version.
 
-Always-on context measured by `npm run context` (largest of ts-app, py-app and mixed; mixed here): small 610 of 1,500 tokens, medium 1,060 of 3,000, full 1,310 of 4,500. CLAUDE.md with AGENTS.md is 1,239 characters; the rest is each preset's SessionStart cap.
+Always-on context measured by `npm run context` (largest of ts-app, py-app and mixed; mixed here): small 604 of 1,500 tokens, medium 1,054 of 3,000, full 1,304 of 4,500. CLAUDE.md with AGENTS.md is 1,213 characters (after the third review shortened the AGENTS.md pointer line); the rest is each preset's SessionStart cap.
 
 ## Done
 
