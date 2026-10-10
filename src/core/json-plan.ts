@@ -223,6 +223,15 @@ function dropUnrendered(merge: Merge, kit: readonly KitEntry[]): void {
   }
 }
 
+// `$schema` serves the kit's entries, so the kit adds it only where it owns another entry; its op still leads.
+function mergeSchema(merge: Merge, schema: KitEntry): void {
+  const others = merge.ops.splice(0);
+  const owns = [...merge.owned.keys()].some((key) => key !== SCHEMA_KEY);
+  if (owns || merge.job.lock?.has(SCHEMA_KEY) === true) mergeEntry(merge, schema);
+  else record(merge, 'skip', SCHEMA_KEY, 'the kit owns no other entry in this file, so it adds no $schema');
+  merge.ops.push(...others);
+}
+
 function unwritable(job: JsonJob, kit: readonly KitEntry[], what: string): PathOutcome {
   const merge: Merge = { job, owned: new Map(), ops: [], removed: [], text: NEW_DOCUMENT, edited: false };
   for (const entry of kit.filter((candidate) => !job.isRemoved(candidate.key))) {
@@ -253,7 +262,8 @@ function unwritable(job: JsonJob, kit: readonly KitEntry[], what: string): PathO
  * Plans a co-owned JSON file (#22, ADR-0014) through jsonc-parser `modify`, keeping comments and formatting.
  * Entries are owned by key: a key the kit never wrote but the user has stays the user's; a kit entry the user
  * changed is kept and reported as diverged; one the user deleted goes to `removed[]`. User entries are never
- * changed or reordered, `$schema` is set only where absent, and malformed JSON throws MergeError before any write.
+ * changed or reordered, `$schema` is set only where absent and the kit owns another entry, and malformed JSON
+ * throws MergeError before any write.
  */
 export function planJson(job: JsonJob): PathOutcome {
   const kit = kitEntries(job);
@@ -266,8 +276,10 @@ export function planJson(job: JsonJob): PathOutcome {
   const text = content.slice(bom.length);
   refuseBadContainers(job, text, kit);
   const merge: Merge = { job, owned: new Map(job.lock), ops: [], removed: [], text, edited: false };
-  for (const entry of kit) mergeEntry(merge, entry);
+  const schema = kit.find((entry) => entry.key === SCHEMA_KEY);
+  for (const entry of kit.filter((candidate) => candidate !== schema)) mergeEntry(merge, entry);
   dropUnrendered(merge, kit);
+  if (schema !== undefined) mergeSchema(merge, schema);
   const written = merge.edited ? { content: bom + merge.text } : {};
   return { ops: merge.ops, removed: merge.removed, json: merge.owned, ...written };
 }
