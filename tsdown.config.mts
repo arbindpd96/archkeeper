@@ -57,8 +57,8 @@ function hookFiles(): string[] {
     .sort();
 }
 
-// One build per hook keeps every hook bundle self-contained; with no hook sources there are no hook builds.
-const hookBuilds = hookFiles().map((file): UserConfig => ({
+/** One build per hook keeps every hook bundle self-contained; vitest's global setup runs them before the tests. */
+export const hookBuilds: UserConfig[] = hookFiles().map((file): UserConfig => ({
   ...shared,
   entry: { [`hooks/${path.basename(file, '.ts')}`]: `src/hooks/${file}` },
   deps: { onlyBundle: [], onlyImport: [] },
