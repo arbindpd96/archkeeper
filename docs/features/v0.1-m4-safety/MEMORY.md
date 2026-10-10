@@ -35,10 +35,10 @@ v0.1 milestone M4 (issues #30, #31, #32, #33): the safety layer the kit installs
 
 - [x] Feature memory (4fb94ec).
 - [x] #30 runtime: stdin, answers, launch with the failure-policy table and `--self-test`, project reads, confined state, shell-free tools, options (148fc69); per-hook bundle budget with the ADR-0017 note (aeb8fc8); global setup and bundle smoke tests from a folder with no node_modules under a path with a space and `é`, exit codes, stubbed network (b3c2e8b); offline lint (66900ff); latency budget, script, npm and CI steps (ba027eb); no `updatedInput` (ad689ad); self-test samples outside the project's options (5f427d3); config with a byte-order mark (e87deb9).
-- [x] #31 guard-bash: tokenizer (065b590); rules, options, entry and the ported and new tables, 500-plus cases (0bcc3c0); escaped reasons (0311def).
+- [x] #31 guard-bash: tokenizer (065b590); rules, options, entry and the ported and new tables, 500-plus cases (0bcc3c0); escaped reasons (0311def); two comments folded into JSDoc (cea3d65).
 - [x] #32 guard-secrets: shared core patterns, target, replay, entry and the ported suites plus the false-positive suite (7927416); escaped file names (0311def).
-- [x] #33 safety module: manifest, AGENTS block, golden trees, module snapshot, static settings rules, init tests with a user's settings and a linked `.claude`, end-to-end run of the installed guards under a path with a space (3246b98); `optOut` in core and init (73831c4).
-- [x] Demo and docs: README Safety section (no image yet), `docs/guards.md`, `docs/media/tapes/guard.tape` marked `# live` (514fe97); changeset (c177411); architecture map with each commit; decisions, mistakes, ROADMAP and this file (the docs commit).
+- [x] #33 safety module: manifest, AGENTS block, golden trees, module snapshot, static settings rules, init tests with a user's settings and a linked `.claude`, end-to-end run of the installed guards under a path with a space (3246b98); `optOut` in core and init (73831c4); a timeout on every generated hook in the static settings rules (116e76a).
+- [x] Demo and docs: README Safety section (no image yet), `docs/guards.md`, `docs/media/tapes/guard.tape` marked `# live` (514fe97), the generic editor and pager variables among the known limits (ab99750); changeset (c177411); architecture map with each commit; decisions, mistakes, ROADMAP and this file (the docs commit).
 - [x] `npm run check` green before every commit. Measured: guard-bash 109.7 kB (budget 120 kB), guard-secrets 19.6 kB (30 kB); p95 43 ms and 40 ms locally (200 ms); always-on context small 826, medium 1,276, full 1,526 tokens (1,500 / 3,000 / 4,500); warm init 386 ms (2,000 ms); tarball well inside 300 kB.
 
 ## Next step
