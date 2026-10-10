@@ -4,10 +4,17 @@ import { withoutImportedBlocks } from '../src/core/import-blocks.js';
 import type { RenderTree } from '../src/core/render.js';
 import { blockEntry, TEST_BRAND } from './kit-fixtures.js';
 
-// The two readers of the @ import grammar stay separate on purpose (the M3 memory says why); one table keeps them
-// equal. Each row says what Claude Code 2.1.295 imports, as its lexer (marked 15 without GFM) reads the text.
+// The kit's reader and the context budget's each port Claude Code 2.1.295's extractor on marked 15.0.6 without
+// GFM, the budget's as a script (docs/decisions.md says why it may import marked); one table keeps them equal.
+// Each row says what Claude Code imports, checked by running the extractor and marked copied out of its binary.
+// The rows after the first are the security review's texts that the budget's old reader under-counted.
 const CASES: readonly (readonly [text: string, imports: boolean])[] = [
   ['@AGENTS.md', true],
+  ['- a\n\n    @AGENTS.md', true],
+  ['<a "x">\n@AGENTS.md', true],
+  ['[@AGENTS.md](x "t")', true],
+  ['<a@b.c>@AGENTS.md', true],
+  ['*@AGENTS.md**', true],
   ['Shared rules: @AGENTS.md.', false],
   ['See @AGENTS.md, then code.', false],
   ['Did you read @AGENTS.md?', false],
@@ -67,5 +74,11 @@ describe('the @ import readers of the kit and of the context budget', () => {
   it.each(CASES)('agree on whether %j imports AGENTS.md', (text, imports) => {
     expect(importsOf(text).includes('AGENTS.md')).toBe(imports);
     expect(kitLeavesOutItsImport(text)).toBe(imports);
+  });
+
+  it('read a paragraph of about 100,000 imports without throwing', () => {
+    const text = Array.from({ length: 100_000 }, (_, index) => `@docs/f${String(index)}.md`).join(' ');
+    expect(importsOf(text)).toHaveLength(100_000);
+    expect(() => kitLeavesOutItsImport(text)).not.toThrow();
   });
 });

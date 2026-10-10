@@ -67,7 +67,7 @@ function instructionChars(root) {
     seen.add(file);
     const kept = loadedText(text);
     chars += kept.length;
-    for (const target of importsOf(kept)) visit(path.resolve(path.dirname(file), target), depth + 1);
+    for (const target of importsOf(text)) visit(path.resolve(path.dirname(file), target), depth + 1);
   };
   for (const entry of ['CLAUDE.md', '.claude/CLAUDE.md']) visit(path.join(root, entry), 0);
   return chars;
