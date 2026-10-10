@@ -1,20 +1,12 @@
 # hero
-# Quick start: init asks for the preset, shows the plan, warns about the missing git repository, asks for a yes,
-# and writes CLAUDE.md, AGENTS.md and the ignore rules.
+# Quick start: init detects the stack, shows the plan, warns about the missing git repository and writes
+# CLAUDE.md, AGENTS.md and the ignore rules; then the new CLAUDE.md.
+# The tape answers no prompt: on the CI renderer, output after a keypress answering a prompt stalled twice.
 # fixture: ts-app
-Type "{{brand.binName}} init"
-Enter
-Wait+Screen /Choose a preset/
-Sleep 1s
-Enter
-Wait+Screen /Continue anyway/
-Sleep 2s
-Type "y"
-Wait+Screen /Apply this plan/
-Sleep 1s
+Type "{{brand.binName}} init --yes"
 Enter
 Wait+Screen /Next steps/
-Sleep 2s
+Sleep 3s
 Type "clear && cat CLAUDE.md"
 Enter
 Wait+Screen /Claude Code reads/
