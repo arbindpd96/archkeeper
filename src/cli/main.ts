@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import { Command, CommanderError } from 'commander';
 import { BRAND } from '../core/brand.js';
@@ -58,6 +59,7 @@ function defaultContext(): CliContext {
     loadKit: readKit,
     brand: BRAND,
     cwd: process.cwd(),
+    home: homedir(),
     // A clack prompt on a stdin that is not a terminal never resolves (reference §7.1), so prompts need both ends.
     interactive: process.stdin.isTTY && process.stdout.isTTY && !inCi(process.env),
     prompter: CLACK_PROMPTER,

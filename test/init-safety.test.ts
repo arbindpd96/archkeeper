@@ -86,3 +86,20 @@ describe('init and a config edited while it waits', () => {
     expect(existsSync(path.join(dir, 'CLAUDE.md'))).toBe(false);
   });
 });
+
+describe('init and the folders above every project', () => {
+  it('refuses the home folder, where CLAUDE.md would load in every project, and writes nothing', async () => {
+    const { dir } = fixtureCopy('ts-app');
+    const result = await runInit(dir, ['--yes'], { home: dir });
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('is your home folder');
+    expect(existsSync(path.join(dir, 'CLAUDE.md'))).toBe(false);
+  });
+
+  it('refuses a file system root before reading anything there', async () => {
+    const root = path.parse(fixtureCopy('ts-app').dir).root;
+    const result = await runInit(root, ['--yes']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('is a file system root');
+  });
+});
