@@ -19,7 +19,7 @@ const DOC_NAMES = ['README.md', 'CONTRIBUTING.md', 'ARCHITECTURE.md'];
 function claudeSetup(view: ProjectView, names: readonly string[]): ClaudeSetup {
   const claude = names.includes('.claude') ? view.list('.claude') : [];
   return {
-    claudeMd: names.includes('CLAUDE.md'),
+    claudeMd: names.includes('CLAUDE.md') || claude.includes('CLAUDE.md'),
     agentsMd: names.includes('AGENTS.md'),
     settings: claude.includes('settings.json'),
     hooks: claude.includes('hooks'),

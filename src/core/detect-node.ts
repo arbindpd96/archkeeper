@@ -6,17 +6,19 @@ import { parseJson } from './json.js';
 import {
   type CommandPurpose,
   type DetectedCommand,
+  type Framework,
   type Language,
   PURPOSES,
   type ProjectView,
   recordOf,
   type StackSignals,
+  type Tool,
 } from './stack-profile.js';
 
 const PACKAGE_JSON = 'package.json';
 
 /** A tool's package and the config file names that also give it away. */
-const TOOLS: readonly (readonly [tool: string, pkg: string, config: RegExp])[] = [
+const TOOLS: readonly (readonly [tool: Tool, pkg: string, config: RegExp])[] = [
   ['prettier', 'prettier', /^(?:\.prettierrc(?:\.\w+)?|prettier\.config\.[cm]?[jt]s)$/],
   ['eslint', 'eslint', /^(?:eslint\.config\.[cm]?[jt]s|\.eslintrc(?:\.\w+)?)$/],
   ['biome', '@biomejs/biome', /^biome\.jsonc?$/],
@@ -24,7 +26,9 @@ const TOOLS: readonly (readonly [tool: string, pkg: string, config: RegExp])[] =
   ['vitest', 'vitest', /^vitest\.(?:config|workspace)\.[cm]?[jt]s$/],
   ['jest', 'jest', /^jest\.config\.(?:[cm]?[jt]s|json)$/],
 ];
-const FRAMEWORKS = ['react', 'next'];
+const NODE_FRAMEWORKS: readonly Framework[] = ['react', 'next'];
+// `npm init` writes a test script that only fails; listing it would tell agents to run a command that always fails.
+const NPM_PLACEHOLDER = 'no test specified';
 const WORKSPACE_FILES = ['pnpm-workspace.yaml', 'lerna.json', 'nx.json', 'turbo.json', 'rush.json'];
 const SCRIPT_NAMES: Readonly<Record<CommandPurpose, readonly string[]>> = {
   build: ['build'],
@@ -55,6 +59,17 @@ function stringKeys(value: unknown): string[] {
   return record === undefined ? [] : Object.keys(record).filter((key) => typeof record[key] === 'string');
 }
 
+// The script's text only rules a script out; it never reaches a template.
+function scriptNames(value: unknown): Set<string> {
+  const scripts = recordOf(value) ?? {};
+  return new Set(
+    stringKeys(scripts).filter((name) => {
+      const text = scripts[name];
+      return typeof text === 'string' && !text.includes(NPM_PLACEHOLDER);
+    }),
+  );
+}
+
 // The packageManager field reads `pnpm@9.1.0+sha512...`; devEngines names the manager on its own.
 function declaredManager(manifest: Readonly<Record<string, unknown>>): string | undefined {
   const field = manifest.packageManager;
@@ -75,7 +90,7 @@ function packageFacts(text: string, warnings: ProblemReport[]): PackageFacts {
   }
   return {
     packages: new Set(DEPENDENCY_FIELDS.flatMap((field) => stringKeys(manifest[field]))),
-    scripts: new Set(stringKeys(manifest.scripts)),
+    scripts: scriptNames(manifest.scripts),
     manager: declaredManager(manifest),
     workspaces: manifest.workspaces !== undefined,
   };
@@ -125,7 +140,7 @@ export function nodeSignals(
     languages: [language(names, facts.packages)],
     packageManager: manager,
     tools: tools.map(([tool]) => tool),
-    frameworks: FRAMEWORKS.filter((framework) => facts.packages.has(framework)),
+    frameworks: NODE_FRAMEWORKS.filter((framework) => facts.packages.has(framework)),
     monorepo: facts.workspaces || WORKSPACE_FILES.some((file) => names.includes(file)),
     commands: scriptCommands(facts.scripts, manager),
     warnings,

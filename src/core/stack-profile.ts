@@ -1,4 +1,5 @@
 import type { ProblemReport } from './errors.js';
+import { isRecord } from './json.js';
 import type { Stack } from './schema-parts.js';
 
 /** How detection reads a project (#25): the names in a folder and the text of a file, injected so it stays pure. */
@@ -26,8 +27,14 @@ export const TOOL_JOBS = {
 /** The detected tools by job, each list in {@link TOOL_JOBS} order. */
 export type ToolsByJob = { readonly [Job in keyof typeof TOOL_JOBS]: readonly string[] };
 
+/** A tool from {@link TOOL_JOBS}; a language's detection can report no other name, so none is dropped. */
+export type Tool = (typeof TOOL_JOBS)[keyof typeof TOOL_JOBS][number];
+
 /** Frameworks detection reports, in this order; nothing depends on them yet. */
 export const FRAMEWORKS = ['react', 'next', 'django', 'fastapi'] as const;
+
+/** A framework from {@link FRAMEWORKS}. */
+export type Framework = (typeof FRAMEWORKS)[number];
 
 /** What a detected command is for, in table order. */
 export const PURPOSES = ['build', 'test', 'lint', 'format', 'typecheck'] as const;
@@ -76,8 +83,8 @@ export interface StackProfile {
 /** What one language's detection contributes to a profile. */
 export interface StackSignals {
   readonly languages: readonly Language[];
-  readonly tools: readonly string[];
-  readonly frameworks: readonly string[];
+  readonly tools: readonly Tool[];
+  readonly frameworks: readonly Framework[];
   readonly monorepo: boolean;
   readonly commands: readonly DetectedCommand[];
   readonly warnings: readonly ProblemReport[];
@@ -85,8 +92,7 @@ export interface StackSignals {
 
 /** The values of a plain object, or undefined when `value` is not one: detection reads project files tolerantly. */
 export function recordOf(value: unknown): Readonly<Record<string, unknown>> | undefined {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
-  return value as Record<string, unknown>;
+  return isRecord(value) ? value : undefined;
 }
 
 /** The string items of a list, skipping anything else, or none when `value` is not a list. */
