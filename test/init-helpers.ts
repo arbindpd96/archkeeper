@@ -54,6 +54,8 @@ export interface InitSetup {
   readonly whileAsking?: (question: string) => void;
   /** The kit version to run as, such as a newer one after an upgrade. */
   readonly version?: string;
+  /** The home folder to run with, so a test never involves the real one. */
+  readonly home?: string;
 }
 
 function scriptedPrompter(setup: InitSetup, log: (question: string) => void): Prompter {
@@ -97,6 +99,7 @@ export async function runInit(
     loadKit: () => setup.catalog ?? KIT,
     brand: TEST_BRAND,
     cwd: dir,
+    home: setup.home ?? REPO_ROOT,
     interactive: setup.interactive ?? false,
     prompter: scriptedPrompter(setup, (question) => {
       asked.push(question);

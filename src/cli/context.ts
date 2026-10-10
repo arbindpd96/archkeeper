@@ -19,6 +19,8 @@ export interface CliContext {
   readonly brand: Brand;
   /** The folder the CLI started in, which `--cwd` is relative to. */
   readonly cwd: string;
+  /** The user's home folder, which init refuses as a project. */
+  readonly home: string;
   /** Whether prompts can run: stdin and stdout are terminals and no CI is detected (#27). */
   readonly interactive: boolean;
   readonly prompter: Prompter;

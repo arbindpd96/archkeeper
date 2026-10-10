@@ -11,7 +11,7 @@ import { render } from '../core/render.js';
 import { resolveModules } from '../core/resolve.js';
 import type { StackProfile } from '../core/stack-profile.js';
 import { escapeUnprintable, quoted } from '../core/text.js';
-import type { CommandSetup, Session } from './context.js';
+import type { CliContext, CommandSetup, Session } from './context.js';
 import {
   checkInitFlags,
   choosePreset,
@@ -29,23 +29,44 @@ import { planProject } from './install.js';
 import { lstatOrUndefined } from './project-files.js';
 import { projectView } from './project-view.js';
 
+// Only a missing path, or one through a file, is not a folder; any other failure, such as EACCES, is thrown.
 function isFolder(absolute: string): boolean {
   try {
     return statSync(absolute).isDirectory();
-  } catch {
-    return false;
+  } catch (error) {
+    const { code } = error as NodeJS.ErrnoException;
+    if (code === 'ENOENT' || code === 'ENOTDIR') return false;
+    throw error;
   }
+}
+
+// CLAUDE.md in the home folder or a file system root loads in every project below it, and the settings later
+// modules write would merge into the user's own ~/.claude/settings.json.
+function sharedRootProblem(rootReal: string, home: string): string | undefined {
+  if (rootReal === path.parse(rootReal).root) return 'is a file system root, above every project';
+  const homeReal = isFolder(home) ? realpathSync.native(home) : undefined;
+  return rootReal === homeReal ? 'is your home folder, above every project of yours' : undefined;
+}
+
+function refuseRoot(root: string, problem: string): never {
+  const hint = 'pass --cwd an existing project folder, or run init inside one';
+  throw new UsageError({ file: quoted(root), location: '', problem, hint });
+}
+
+function projectRoot(context: CliContext, cwd: string | undefined): [root: string, rootReal: string] {
+  const root = path.resolve(context.cwd, cwd ?? '.');
+  if (!isFolder(root)) refuseRoot(root, 'is not a folder');
+  const rootReal = realpathSync.native(root);
+  const problem = sharedRootProblem(rootReal, context.home);
+  if (problem !== undefined) refuseRoot(root, problem);
+  return [root, rootReal];
 }
 
 function startRun(session: Session, flags: InitFlags): InitRun {
   const { context, info, catalog } = session;
   const globals = session.flags();
   checkInitFlags(flags, catalog);
-  const root = path.resolve(context.cwd, globals.cwd ?? '.');
-  if (!isFolder(root)) {
-    const hint = 'pass --cwd an existing project folder, or run init inside one';
-    throw new UsageError({ file: quoted(root), location: '', problem: 'is not a folder', hint });
-  }
+  const [root, rootReal] = projectRoot(context, globals.cwd);
   const [json, yes] = [globals.json === true, globals.yes === true];
   const report = reporterFor(context.output, json);
   const interactive = context.interactive && !yes && !json;
@@ -53,7 +74,7 @@ function startRun(session: Session, flags: InitFlags): InitRun {
     session,
     flags,
     root,
-    rootReal: realpathSync.native(root),
+    rootReal,
     brand: context.brand,
     kit: { name: context.brand.npmName, version: info.version },
     asking: { interactive, yes, prompter: context.prompter, report },
