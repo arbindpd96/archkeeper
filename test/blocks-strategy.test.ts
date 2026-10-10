@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { type BlocksJob, planBlocks } from '../src/core/blocks-plan.js';
-import { BYTE_ORDER_MARK } from '../src/core/blocks-file.js';
 import { MergeError } from '../src/core/errors.js';
 import { contentHash } from '../src/core/hash.js';
 import type { BlockEntry } from '../src/core/lock.js';
 import type { PathState } from '../src/core/plan-types.js';
 import type { RenderedEntry } from '../src/core/render-tree.js';
+import { BYTE_ORDER_MARK } from '../src/core/text.js';
 import { blockEntry, TEST_BRAND } from './kit-fixtures.js';
 
 const begin = (id: string): string => `<!-- acmekit:begin ${id} -->`;

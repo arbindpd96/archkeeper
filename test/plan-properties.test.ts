@@ -1,10 +1,11 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
-import { BYTE_ORDER_MARK, parseBlocks } from '../src/core/blocks-file.js';
+import { parseBlocks } from '../src/core/blocks-file.js';
 import { readLock } from '../src/core/lock.js';
 import { planInstall } from '../src/core/plan.js';
 import type { PathState } from '../src/core/plan-types.js';
 import type { RenderTree } from '../src/core/render-tree.js';
+import { BYTE_ORDER_MARK } from '../src/core/text.js';
 import {
   applied,
   blockEntry,

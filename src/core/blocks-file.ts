@@ -9,6 +9,7 @@ import {
   type MarkerStyle,
   parseMarker,
 } from './markers.js';
+import { BYTE_ORDER_MARK } from './text.js';
 
 /** User text between managed blocks, kept byte for byte. */
 export interface TextPart {
@@ -32,9 +33,6 @@ export interface BlocksFile {
   readonly style: MarkerStyle;
   readonly parts: readonly (TextPart | BlockPart)[];
 }
-
-/** The text that starts a file with a byte-order mark. */
-export const BYTE_ORDER_MARK = String.fromCodePoint(0xfeff);
 
 interface OpenBlock {
   readonly id: string;

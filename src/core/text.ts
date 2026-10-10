@@ -10,6 +10,9 @@ export function compareText(left: string, right: string): number {
  */
 export const UNPRINTABLE = String.raw`\p{Cc}\u2028\u2029\u200E\u200F\u202A-\u202E\u2066-\u2069`;
 
+/** The text that starts a file with a byte-order mark. */
+export const BYTE_ORDER_MARK = String.fromCodePoint(0xfeff);
+
 /** Converts CRLF and CR line endings to LF and changes nothing else. */
 export function toLf(text: string): string {
   return text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');

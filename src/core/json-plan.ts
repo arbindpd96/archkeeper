@@ -1,6 +1,5 @@
 import { parseTree } from 'jsonc-parser';
 import type { Brand } from './brand.js';
-import { BYTE_ORDER_MARK } from './blocks-file.js';
 import { MergeError } from './errors.js';
 import { contentHash } from './hash.js';
 import {
@@ -18,6 +17,7 @@ import { SETTINGS_FILE } from './manifest-schema.js';
 import type { OpKind, Ownable, PathOutcome, PathState, PlanOp, ScriptState } from './plan-types.js';
 import type { RenderedEntry } from './render-tree.js';
 import { sidecarAction, sidecarPath } from './sidecar.js';
+import { BYTE_ORDER_MARK } from './text.js';
 
 /** The `$schema` the json strategy sets in a settings file that has none (reference §1.8). */
 export const SETTINGS_SCHEMA = 'https://json.schemastore.org/claude-code-settings.json';

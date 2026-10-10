@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { BYTE_ORDER_MARK } from '../src/core/blocks-file.js';
 import { MergeError } from '../src/core/errors.js';
 import { contentHash } from '../src/core/hash.js';
 import { type JsonJob, planJson, SETTINGS_SCHEMA } from '../src/core/json-plan.js';
 import type { PathState } from '../src/core/plan-types.js';
 import type { RenderedEntry } from '../src/core/render-tree.js';
-import { compareText } from '../src/core/text.js';
+import { BYTE_ORDER_MARK, compareText } from '../src/core/text.js';
 import { TEST_BRAND } from './kit-fixtures.js';
 
 const SETTINGS = '.claude/settings.json';
