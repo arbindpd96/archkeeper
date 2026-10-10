@@ -10,13 +10,13 @@ interface Project {
   tapes?: Record<string, string>;
   modules?: Record<string, unknown>;
   readme?: string;
-  /** The command registry as JS source; the repository's own registry when left out. */
+  /** The command registry as JS source; an empty one when left out, so no test depends on the repository's own. */
   commands?: string;
 }
 
 function checkDemos(gifs: Record<string, Buffer>, project: Project = {}): RunResult {
   const root = tempDir();
-  const { tapes = {}, modules = {}, readme = '# Project\n', commands } = project;
+  const { tapes = {}, modules = {}, readme = '# Project\n', commands = registry() } = project;
   writeFiles(root, Object.fromEntries(Object.entries(tapes).map(([name, text]) => [`tapes/${name}`, text])));
   writeFiles(root, { 'README.md': readme });
   for (const [id, manifest] of Object.entries(modules)) {
@@ -24,11 +24,9 @@ function checkDemos(gifs: Record<string, Buffer>, project: Project = {}): RunRes
   }
   mkdirSync(path.join(root, 'media'), { recursive: true });
   for (const [name, bytes] of Object.entries(gifs)) writeFileSync(path.join(root, 'media', name), bytes);
+  writeFiles(root, { 'commands.mjs': commands });
   const args = ['--tapes', path.join(root, 'tapes'), '--modules', path.join(root, 'modules')];
-  if (commands !== undefined) {
-    writeFiles(root, { 'commands.mjs': commands });
-    args.push('--commands', path.join(root, 'commands.mjs'));
-  }
+  args.push('--commands', path.join(root, 'commands.mjs'));
   return runScript('scripts/check-demos.mjs', {
     args: [path.join(root, 'media'), ...args, '--readme', path.join(root, 'README.md')],
     cwd: REPO_ROOT,
@@ -94,7 +92,9 @@ describe('check-demos', () => {
 
   it('passes when there are no GIFs yet', () => {
     const root = tempDir();
+    writeFiles(root, { 'commands.mjs': registry() });
     const args = [path.join(root, 'missing'), '--modules', path.join(root, 'modules')];
+    args.push('--commands', path.join(root, 'commands.mjs'));
     const result = runScript('scripts/check-demos.mjs', { args });
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('no GIFs');
