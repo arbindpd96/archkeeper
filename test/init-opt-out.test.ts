@@ -68,6 +68,27 @@ describe('init with the safety optOut option (#33, ADR-0014)', () => {
     writeFileSync(path.join(dir, CONFIG), configWith(['Bash(rm -rf:*)']));
     expect((await runInit(dir, ['--yes'])).code).toBe(0);
     expect(settingsOf(dir).permissions?.deny).toContain('Bash(rm -rf /:*)');
+    const before = projectText(dir);
+    const again = await runInit(dir, ['--yes']);
+    expect(again.stderr).toBe('');
+    expect(again.stdout).toContain('Nothing to change');
+    expect(projectText(dir)).toBe(before);
+  });
+
+  it('keeps a guard registration the user changed, then neither warns nor asks again', async () => {
+    const { dir } = fixtureCopy('ts-app');
+    await runInit(dir, ['--yes', '--preset', 'small']);
+    const file = path.join(dir, SETTINGS);
+    writeFileSync(file, readFileSync(file, 'utf8').replace(/(guard-bash\.mjs"[^}]*"timeout": )10/, '$130'));
+    expect(readFileSync(file, 'utf8')).toContain('"timeout": 30');
+    writeFileSync(path.join(dir, CONFIG), configWith(['guard-bash']));
+    expect((await runInit(dir, ['--yes'])).stderr).toContain('leaves out safety: guard-bash');
+    expect(readFileSync(file, 'utf8')).toContain('"timeout": 30');
+    const before = projectText(dir);
+    const again = await runInit(dir, [], { interactive: true, answers: [true] });
+    expect(again.asked).not.toContain('Continue without safety: guard-bash?');
+    expect(again.stderr).toBe('');
+    expect(projectText(dir)).toBe(before);
   });
 
   it('asks on a terminal the first time, writing nothing on a no', async () => {

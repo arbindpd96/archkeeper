@@ -172,7 +172,7 @@ function planInit(
   const ownable = optOutOwnable(optOuts);
   const installPlan = planProject(run.rootReal, tree, { kit: run.kit, modules, brand: run.brand, ownable });
   const lock = previousLock(run.rootReal, run.kit, run.brand);
-  const optedOut = unrecordedOptOuts(optOuts, lock);
+  const optedOut = unrecordedOptOuts(optOuts, lock, installPlan.ops);
   const plan = withConfig(installPlan, next, existing, run.brand);
   const written = plannedWrites(run.rootReal, plan, run.brand);
   const hooksKept = ownsHooks(lock, run.brand);
