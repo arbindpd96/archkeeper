@@ -37,7 +37,7 @@ import {
 } from './init-config.js';
 import { detectedLines, diffLines, nextStepLines, planLines, reporterFor } from './init-report.js';
 import { install, planProject } from './install.js';
-import { readConfined } from './project-files.js';
+import { lstatOrUndefined, readConfined } from './project-files.js';
 import { projectView } from './project-view.js';
 
 /** The flags of `init` itself (#27); the global ones come from the session. */
@@ -106,6 +106,14 @@ function textAt(rootReal: string, file: string): string | undefined {
   return state?.kind === 'file' ? state.content : undefined;
 }
 
+// A memory file such as .claude/CLAUDE.md is read only in a real folder: one linked elsewhere, as in a dotfiles
+// setup, is never read through, and the kit then keeps its own import block.
+function memoryText(rootReal: string, file: string): string | undefined {
+  const folder = path.dirname(path.join(rootReal, ...file.split('/')));
+  if (folder !== rootReal && lstatOrUndefined(folder)?.isDirectory() !== true) return undefined;
+  return textAt(rootReal, file);
+}
+
 function warnAll(run: InitRun, reports: readonly ProblemReport[]): void {
   for (const { file, location, problem, hint } of reports) {
     run.asking.report.warn(`${file}: ${location === '' ? '' : `${location}: `}${problem} (${hint})`);
@@ -132,7 +140,7 @@ function planInit(
     run.brand,
   );
   const rendered = render(kits, { stack, options, values: projectValues(profile, stack) }, run.brand);
-  const tree = withoutImportedBlocks(rendered, (file) => textAt(run.rootReal, file), run.brand);
+  const tree = withoutImportedBlocks(rendered, (file) => memoryText(run.rootReal, file), run.brand);
   const modules = kits.map((kit) => kit.manifest.id);
   const plan = planProject(run.rootReal, tree, { kit: run.kit, modules, brand: run.brand });
   return { profile, existing, next, stack, modules, tree, plan };

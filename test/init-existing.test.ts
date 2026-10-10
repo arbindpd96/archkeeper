@@ -1,8 +1,8 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, symlinkSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { loadCatalog } from '../src/core/loader.js';
-import { fixtureCopy } from './helpers.js';
+import { canSymlink, fixtureCopy, tempDir, writeFiles } from './helpers.js';
 import { projectText } from './install-helpers.js';
 import { existingClaudeSetup as existingSetup, runInit, USER_SETUP } from './init-helpers.js';
 import { kitFiles, memoryReader, plainManifest, TEST_BRAND } from './kit-fixtures.js';
@@ -64,6 +64,18 @@ describe('init with a kit skill a user already has', () => {
     expect(result.stdout).toContain(`${TEST_BRAND.stateDir}/lock.json`);
     expect(read(dir, '.claude/skills/why/SKILL.md')).toBe(USER_SKILL);
     expect(read(dir, `.claude/skills/why/SKILL.md${TEST_BRAND.sidecarSuffix}`)).toBe(kitSkill);
+  });
+});
+
+describe('init beside a .claude folder linked elsewhere, as in a dotfiles setup', () => {
+  it.skipIf(!canSymlink())('sets up the project without reading through the link', async () => {
+    const { dir } = fixtureCopy('ts-app');
+    const dotfiles = tempDir();
+    writeFiles(dotfiles, { 'CLAUDE.md': 'Rules: @../AGENTS.md\n', 'settings.json': '{}\n' });
+    symlinkSync(dotfiles, path.join(dir, '.claude'), 'dir');
+    const result = await runInit(dir, ['--yes']);
+    expect(result.code).toBe(0);
+    expect(read(dir, 'CLAUDE.md')).toContain('@AGENTS.md');
   });
 });
 
