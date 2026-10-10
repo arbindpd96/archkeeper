@@ -138,7 +138,7 @@ Add a row whenever something is created. Keep one line per item.
 
 ### Modules
 
-Every module is marked `internal` until its milestone ships its README section and GIF; the others are still manifests only. `modules/presets.json` holds the small ⊂ medium ⊂ full chain with SessionStart caps of 1,200, 3,000 and 4,000 characters. Each module has a file snapshot in `test/__snapshots__/modules/`.
+`base` shows the README's Quick start demo (`init.gif`); every other module is marked `internal` until its milestone ships its README section and GIF, and is still a manifest only. `modules/presets.json` holds the small ⊂ medium ⊂ full chain with SessionStart caps of 1,200, 3,000 and 4,000 characters. Each module has a file snapshot in `test/__snapshots__/modules/`.
 
 | Module             | Purpose                                                                                             | Presets             | Writes                                                                                                     | Hooks |
 | ------------------ | --------------------------------------------------------------------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------- | ----- |
