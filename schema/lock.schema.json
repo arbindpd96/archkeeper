@@ -11,7 +11,7 @@
       "properties": {
         "name": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^[^\\s\\p{Cc}\\u2028\\u2029\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069][^\\p{Cc}\\u2028\\u2029\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069]*$"
         },
         "version": {
           "type": "string",
@@ -127,7 +127,7 @@
         "type": "object",
         "propertyNames": {
           "type": "string",
-          "pattern": "^(?:\\$schema|(?:permissions\\.(?:allow|ask|deny)|hooks\\.(?:SessionStart|PreToolUse|PostToolUse|PreCompact|Stop)|mcpServers) \\S.*)$"
+          "pattern": "^(?:\\$schema|(?:permissions\\.(?:allow|ask|deny)|hooks\\.(?:SessionStart|PreToolUse|PostToolUse|PreCompact|Stop)|mcpServers) [^\\s\\p{Cc}\\u2028\\u2029\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069][^\\p{Cc}\\u2028\\u2029\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069]*)$"
         },
         "additionalProperties": {
           "type": "string",
@@ -177,7 +177,7 @@
               },
               "key": {
                 "type": "string",
-                "pattern": "^(?:\\$schema|(?:permissions\\.(?:allow|ask|deny)|hooks\\.(?:SessionStart|PreToolUse|PostToolUse|PreCompact|Stop)|mcpServers) \\S.*)$"
+                "pattern": "^(?:\\$schema|(?:permissions\\.(?:allow|ask|deny)|hooks\\.(?:SessionStart|PreToolUse|PostToolUse|PreCompact|Stop)|mcpServers) [^\\s\\p{Cc}\\u2028\\u2029\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069][^\\p{Cc}\\u2028\\u2029\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069]*)$"
               }
             },
             "required": [

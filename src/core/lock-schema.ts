@@ -3,6 +3,7 @@ import { HASH } from './hash.js';
 import { JSON_KEY } from './json-keys.js';
 import { pathSafetyProblem } from './path-safety.js';
 import { described, kebabId, refusing } from './schema-parts.js';
+import { UNPRINTABLE } from './text.js';
 import { SEMVER } from './version.js';
 
 /** The lock format this kit writes and reads (ADR-0014). */
@@ -48,7 +49,11 @@ export const lockSchema = z
       error: `set lockfileVersion to ${String(LOCKFILE_VERSION)}`,
     }),
     kit: z.strictObject({
-      name: z.string().check(z.minLength(1)),
+      name: z.string().check(
+        z.regex(new RegExp(`^[^\\s${UNPRINTABLE}][^${UNPRINTABLE}]*$`, 'u'), {
+          error: 'write the package name of the kit, with no control character',
+        }),
+      ),
       version: z.string().check(z.regex(SEMVER, { error: 'write a semantic version such as 0.1.0' })),
     }),
     modules: described(z.array(kebabId), 'Module ids in install order.'),

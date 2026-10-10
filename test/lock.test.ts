@@ -84,6 +84,11 @@ describe('JSON_KEY', () => {
     'mcpServers',
     'mcpServers a\nb',
     '$schema x',
+    'permissions.deny Read(x) \u001b[1A\u001b[2K',
+    'permissions.allow Bash(x)\u009b2K',
+    'mcpServers \u0007docs',
+    'mcpServers a\u2028b',
+    'permissions.deny Bash(\u202Efr- mr)',
   ])('refuses %j', (key) => {
     expect(JSON_KEY.test(key)).toBe(false);
   });
@@ -161,6 +166,19 @@ describe('an untrusted lock', () => {
       (json: Record<string, unknown>) => (json.json = { '.mcp.json': { 'env TOKEN': A } }),
       'json',
       'name $schema',
+    ],
+    [
+      'a JSON key with a terminal escape that could hide a plan line',
+      (json: Record<string, unknown>) =>
+        (json.json = { '.claude/settings.json': { 'permissions.deny x \u001b[1A\u001b[2K': A } }),
+      'json',
+      'name $schema',
+    ],
+    [
+      'a kit name with a control character',
+      (json: Record<string, unknown>) => (json.kit = { name: 'acmekit\u001b]8;;', version: '1.2.0' }),
+      'kit.name',
+      'no control character',
     ],
     ['an unknown key', (json: Record<string, unknown>) => (json.extra = true), '', 'extra'],
     [
