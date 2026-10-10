@@ -22,6 +22,7 @@ const REDIRECTS: ReadonlySet<string> = new Set([
   '<',
   '>',
 ]);
+const OUTPUT_REDIRECTS: ReadonlySet<string> = new Set(['&>>', '&>', '<>', '>>', '>|', '>&', '>']);
 const RESERVED_WORDS: ReadonlySet<string> = new Set([
   ...['!', '{', '}', 'if', 'then', 'elif', 'else', 'fi', 'do', 'done', 'while', 'until'],
   ...['case', 'esac', 'for', 'select', 'function', 'coproc'],
@@ -195,6 +196,7 @@ class Parser extends WordReader {
       this.pendingHeredocs.push({ ...heredoc, cmd: seq.cmd, pipe: { ...seq.pipe } });
     } else {
       (operator === '<<<' ? seq.cmd.heredocs : seq.cmd.redirects).push(text);
+      if (OUTPUT_REDIRECTS.has(operator)) seq.cmd.outputs.push(text);
     }
   }
 

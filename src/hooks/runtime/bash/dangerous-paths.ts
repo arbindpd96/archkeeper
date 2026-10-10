@@ -95,16 +95,18 @@ function isRootLevel(lower: readonly string[]): boolean {
   return lower.length === 0 || topLevel || homeLevel;
 }
 
-// A path on a drive (`/c/Users/me`) is also judged as if the drive were the root.
-function isProtectedAbsolute(segments: readonly string[], context: PathContext): boolean {
-  const lower = segments.map((segment) => segment.toLowerCase());
-  const onDrive = /^[a-z]$/.test(lower[0] ?? '') ? [lower.slice(1)] : [];
-  const holdsProtected = context.protectedDirs.some(
+const holdsProtected = (lower: readonly string[], context: PathContext): boolean =>
+  context.protectedDirs.some(
     (dir) =>
       lower.length <= dir.length &&
       lower.every((segment, index) => segmentMatches(segment, dir[index] ?? '')),
   );
-  return holdsProtected || [lower, ...onDrive].some(isRootLevel);
+
+// A path on a drive (`/c/Users/me`) is also judged as if the drive were the root.
+function isProtectedAbsolute(segments: readonly string[], context: PathContext): boolean {
+  const lower = segments.map((segment) => segment.toLowerCase());
+  const onDrive = /^[a-z]$/.test(lower[0] ?? '') ? [lower.slice(1)] : [];
+  return holdsProtected(lower, context) || [lower, ...onDrive].some(isRootLevel);
 }
 
 /** Tells whether a path is decided at run time by a variable or command, beyond a known home or project prefix. */
@@ -153,4 +155,9 @@ export function isDangerousPath(word: string, context: PathContext): boolean {
   // `.` or `..` alone always counts, and any other relative path is judged from each folder it may start from.
   const upward = isUpward(segments) || (isHomeAnchor(first) && isUpward(rest));
   return upward || absoluteTargets(word, context).some((target) => isProtectedAbsolute(target, context));
+}
+
+/** Tells whether a literal path names the home or project folder, under any known spelling, or a folder above one. */
+export function holdsProtectedDir(word: string, context: PathContext): boolean {
+  return absoluteTargets(word, context).some((target) => holdsProtected(target, context));
 }

@@ -29,6 +29,11 @@ describe('guard-bash on commands that change the guards themselves', () => {
     `cd .claude/hooks/${SLUG} && rm guard-bash.mjs`,
     `rm ${PROJECT}/${HOOKS}/guard-bash.mjs`,
     `chmod 000 ${HOOKS}/guard-bash.mjs`,
+    `cp -t ${HOOKS} evil.mjs`,
+    `cat a > /dev/null <> .claude/settings.json`,
+    `find ${HOOKS} -delete`,
+    `find .claude -name '*.mjs' -exec rm {} +`,
+    `find .claude -execdir mv {} /tmp \\;`,
   ])('asks before %s', (command) => {
     const { decision, reason } = bashVerdict(command);
     expect(decision).toBe('ask');
@@ -45,9 +50,42 @@ describe('guard-bash on commands that change the guards themselves', () => {
     `cp notes.md .`,
     `mv a.ts src/`,
     `rm -f dist/settings.json`,
+    `jq . < .claude/settings.json`,
+    `cp .claude/settings.json /tmp/settings.bak`,
+    `rsync -a ${HOOKS}/ /tmp/hooks-copy/`,
+    `find .claude -name '*.md' -print`,
+    `find .claude/worktrees -delete`,
+    `mv a.ts b.ts`,
+    `rsync -a src/ dist/`,
   ])('allows %s', (command) => {
     expect(bashVerdict(command).decision).toBe('allow');
   });
+
+  it.each([
+    'cd .. && mv project-x project-x.bak',
+    `mv ${PROJECT} /tmp/x`,
+    'mv ~/work ~/work2',
+    'mv . ../elsewhere',
+    'rsync -a --delete empty/ ./',
+    'rsync -a ../template/ .',
+    'mv -t /tmp $CLAUDE_PROJECT_DIR',
+  ])('asks before %s, which moves or overwrites the folder that holds the guards', (command) => {
+    const { decision, reason } = bashVerdict(command);
+    expect(decision).toBe('ask');
+    expect(reason).toMatch(/project folder or a folder above it/);
+  });
+
+  it('asks before moving a folder above a project that lives under it', () => {
+    const context = bashContext({}, { project: '/home/u/Documents/proj' });
+    expect(bashVerdict('mv ~/Documents ~/Docs2', context).decision).toBe('ask');
+  });
+
+  it.each(['cp x .', 'mv notes.md .', 'cp -r ../lib .', 'mv ~/Downloads/a.ts src/'])(
+    'allows %s',
+    (command) => {
+      expect(bashVerdict(command).decision).toBe('allow');
+    },
+  );
 
   it('asks from a session folder inside .claude', () => {
     const context = bashContext({}, { cwd: `${PROJECT}/.claude` });
