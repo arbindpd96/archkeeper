@@ -9,7 +9,7 @@ import {
   type Stats,
 } from 'node:fs';
 import path from 'node:path';
-import { PathSafetyError } from '../core/errors.js';
+import { ApplyError, PathSafetyError } from '../core/errors.js';
 import { assertSafePath, pathSafetyProblem } from '../core/path-safety.js';
 import type { PathState, Snapshot } from '../core/plan-types.js';
 
@@ -31,6 +31,9 @@ export function lstatOrUndefined(absolute: string): Stats | undefined {
   }
 }
 
+const UNLINK_HINT = 'replace the symlink with a real folder inside the project, or remove it, and run again';
+const BROKEN_LINK = new Set(['ENOENT', 'ENOTDIR', 'ELOOP']);
+
 function deepestExisting(absolute: string): string {
   let current = absolute;
   while (lstatOrUndefined(current) === undefined) {
@@ -41,13 +44,40 @@ function deepestExisting(absolute: string): string {
   return current;
 }
 
-function refused(relative: string, source: string, problem: string): PathSafetyError {
+function refused(relative: string, source: string, problem: string, hint = UNLINK_HINT): PathSafetyError {
   return new PathSafetyError({
     file: JSON.stringify(relative),
     location: source,
     problem: `is refused as a write or delete target: it ${problem}`,
-    hint: 'replace the symlink with a real folder inside the project, or remove it, and run again',
+    hint,
   });
+}
+
+function codeOf(error: unknown): string {
+  return (error as NodeJS.ErrnoException).code ?? String(error);
+}
+
+// realpath fails on a symlink to a missing target or a loop, as in a dotfiles setup whose target is gone.
+function resolvedFolder(
+  rootReal: string,
+  folder: string,
+  relative: string,
+  source: string,
+): { existing: string; real: string } {
+  let existing = folder;
+  try {
+    existing = deepestExisting(folder);
+    return { existing, real: realpathSync.native(existing) };
+  } catch (error) {
+    const code = codeOf(error);
+    if (!BROKEN_LINK.has(code)) {
+      const hint = 'make the folders on its path readable to you, and run again';
+      throw refused(relative, source, `cannot be resolved (${code})`, hint);
+    }
+    const link = path.relative(rootReal, existing).split(path.sep).join('/');
+    const hint = `remove or repoint the broken symlink ${link}, and run again`;
+    throw refused(relative, source, `resolves through ${link}, a symlink to nothing (${code})`, hint);
+  }
 }
 
 /**
@@ -57,8 +87,9 @@ function refused(relative: string, source: string, problem: string): PathSafetyE
 export function confinedPath(rootReal: string, relative: string, source: string): string {
   assertSafePath(relative, source);
   const target = path.join(rootReal, ...relative.split('/'));
-  const existing = deepestExisting(path.dirname(target));
-  const real = path.relative(rootReal, realpathSync.native(existing));
+  const folder = resolvedFolder(rootReal, path.dirname(target), relative, source);
+  const { existing } = folder;
+  const real = path.relative(rootReal, folder.real);
   if (real === '..' || real.startsWith(`..${path.sep}`) || path.isAbsolute(real)) {
     throw refused(relative, source, 'resolves through a symlink to a place outside the project');
   }
@@ -85,22 +116,37 @@ function readText(absolute: string): PathState {
   }
 }
 
-/**
- * Reads what is at a path without following a symlink: a UTF-8 text file with its content, a symlink, anything
- * else (a folder, a FIFO or a file that is not UTF-8 text), or undefined when nothing is there.
- */
-export function readState(absolute: string): PathState | undefined {
+function readState(absolute: string): PathState | undefined {
   const stats = lstatOrUndefined(absolute);
   if (stats === undefined) return undefined;
   if (stats.isSymbolicLink()) return { kind: 'symlink' };
   return stats.isFile() ? readText(absolute) : { kind: 'other' };
 }
 
+/**
+ * Reads what is at a project path, after confining it (#23), without following a symlink: a UTF-8 text file with
+ * its content, a symlink, anything else (a folder, a FIFO or a file that is not UTF-8 text), or undefined when
+ * nothing is there. A path the kit cannot read, such as one without read permission, throws ApplyError.
+ */
+export function readConfined(rootReal: string, relative: string, source: string): PathState | undefined {
+  const absolute = confinedPath(rootReal, relative, source);
+  try {
+    return readState(absolute);
+  } catch (error) {
+    throw new ApplyError({
+      file: relative,
+      location: source,
+      problem: `could not be read (${codeOf(error)}), so the kit wrote nothing`,
+      hint: 'make it readable to you, or move it out of the way, and run again',
+    });
+  }
+}
+
 /** Reads each project path the plan needs, after confining it to the project (#23). */
 export function readSnapshot(rootReal: string, paths: readonly string[]): Snapshot {
   const snapshot = new Map<string, PathState>();
   for (const relative of paths) {
-    const state = readState(confinedPath(rootReal, relative, 'read for the plan'));
+    const state = readConfined(rootReal, relative, 'read for the plan');
     if (state !== undefined) snapshot.set(relative, state);
   }
   return snapshot;

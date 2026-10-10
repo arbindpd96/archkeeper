@@ -9,7 +9,7 @@ import type { Ownable } from '../core/plan-types.js';
 import type { RenderTree } from '../core/render-tree.js';
 import { type ApplyResult, applyPlan } from './apply.js';
 import { baseFolder } from './blob-store.js';
-import { confinedPath, lstatOrUndefined, readSnapshot, readState } from './project-files.js';
+import { confinedPath, lstatOrUndefined, readConfined, readSnapshot } from './project-files.js';
 
 /** What an install depends on besides the project and the rendered tree. */
 export interface InstallOptions {
@@ -27,7 +27,7 @@ export interface InstallResult {
 
 function readProjectLock(rootReal: string, kit: KitId, brand: Brand): LockRead | undefined {
   const relative = lockFilePath(brand);
-  const state = readState(confinedPath(rootReal, relative, 'the kit lock'));
+  const state = readConfined(rootReal, relative, 'the kit lock');
   if (state === undefined) return undefined;
   if (state.kind !== 'file') {
     throw new LockError({
