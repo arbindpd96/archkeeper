@@ -88,6 +88,28 @@ describe('detectStack', () => {
     expect(commands.map((command) => command.command)).toEqual(['npm run test', 'npm run typecheck']);
   });
 
+  function detectIn(files: Record<string, string>): StackProfile {
+    const dir = tempDir();
+    writeFiles(dir, files);
+    return detectStack(projectView(realpathSync.native(dir)));
+  }
+
+  it("leaves out npm init's placeholder test script, which only fails", () => {
+    const scripts = { test: 'echo "Error: no test specified" && exit 1', build: 'tsc' };
+    const commands = detectIn({ 'package.json': JSON.stringify({ scripts }) }).commands;
+    expect(commands.map((command) => command.command)).toEqual(['npm run build']);
+  });
+
+  it('formats with black when a project has both black and ruff, which it then uses to lint', () => {
+    const pyproject = '[tool.black]\nline-length = 100\n\n[tool.ruff]\nselect = ["E"]\n';
+    const commands = detectIn({ 'pyproject.toml': pyproject }).commands.map((command) => command.command);
+    expect(commands).toEqual(['ruff check .', 'black .']);
+  });
+
+  it('reports a CLAUDE.md kept in .claude/ as an existing CLAUDE.md', () => {
+    expect(detectIn({ '.claude/CLAUDE.md': '# Notes\n' }).claude.claudeMd).toBe(true);
+  });
+
   it('reads a monorepo root only, reporting the workspace flag', () => {
     const profile = expectedOf('monorepo');
     expect(profile.monorepo).toBe(true);

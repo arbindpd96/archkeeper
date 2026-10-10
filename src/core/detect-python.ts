@@ -3,11 +3,13 @@ import type { ProblemReport } from './errors.js';
 import {
   type CommandPurpose,
   type DetectedCommand,
+  type Framework,
   type ProjectView,
   type PythonManager,
   recordOf,
   type StackSignals,
   stringsOf,
+  type Tool,
 } from './stack-profile.js';
 
 type Table = Readonly<Record<string, unknown>>;
@@ -17,20 +19,23 @@ const REQUIREMENTS = /^requirements[\w.-]*\.txt$/i;
 const PYLOCK = /^pylock(?:\.[\w-]+)?\.toml$/;
 const PROJECT_FILES = [PYPROJECT, 'setup.py', 'setup.cfg', 'Pipfile', 'uv.lock', 'poetry.lock'];
 /** A tool and the config file names that give it away besides its `[tool.<name>]` table. */
-const TOOLS: readonly (readonly [tool: string, configs: readonly string[]])[] = [
+const TOOLS: readonly (readonly [tool: Tool, configs: readonly string[]])[] = [
   ['ruff', ['ruff.toml', '.ruff.toml']],
   ['black', []],
   ['mypy', ['mypy.ini', '.mypy.ini']],
   ['pyright', ['pyrightconfig.json']],
   ['pytest', ['pytest.ini', 'conftest.py']],
 ];
-const FRAMEWORKS = ['django', 'fastapi'];
-/** Each command a Python tool gives, by purpose, in the order the first present tool wins. */
-const TOOL_COMMANDS: readonly (readonly [CommandPurpose, tool: string, command: string])[] = [
+const PYTHON_FRAMEWORKS: readonly Framework[] = ['django', 'fastapi'];
+/**
+ * Each command a Python tool gives, by purpose, in the order the first present tool wins. black formats before
+ * ruff: a project with both keeps black as its formatter and ruff for linting.
+ */
+const TOOL_COMMANDS: readonly (readonly [CommandPurpose, tool: Tool, command: string])[] = [
   ['test', 'pytest', 'pytest'],
   ['lint', 'ruff', 'ruff check .'],
-  ['format', 'ruff', 'ruff format .'],
   ['format', 'black', 'black .'],
+  ['format', 'ruff', 'ruff format .'],
   ['typecheck', 'mypy', 'mypy .'],
   ['typecheck', 'pyright', 'pyright'],
 ];
@@ -168,7 +173,7 @@ export function pythonSignals(
     languages: ['python'],
     pythonManager: python,
     tools,
-    frameworks: FRAMEWORKS.filter((framework) => packages.has(framework)),
+    frameworks: PYTHON_FRAMEWORKS.filter((framework) => packages.has(framework)),
     monorepo: recordOf(toolTables.uv)?.workspace !== undefined,
     commands: toolCommands(tools, python),
     warnings,
