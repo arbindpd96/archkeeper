@@ -8,7 +8,7 @@ import {
 } from './config-schema.js';
 import { ConfigError, type ProblemReport } from './errors.js';
 import { checkSchema, jsonPath } from './issues.js';
-import { parseJson } from './json.js';
+import { isRecord, parseJson } from './json.js';
 
 const CONFIG_SCHEMA = 'schema/config.schema.json';
 
@@ -21,10 +21,6 @@ export interface ParsedConfig {
 /** The project-relative path of the config file. */
 export function configPath(brand: Brand = BRAND): string {
   return `${brand.stateDir}/config.json`;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function unknownKeys(value: unknown, known: readonly string[], path: readonly string[]): string[] {
