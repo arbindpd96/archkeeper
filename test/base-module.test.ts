@@ -193,6 +193,22 @@ describe('withoutImportedBlocks', () => {
     expect(kept.get('CLAUDE.md')?.map((entry) => entry.blockId)).toEqual(['agents-import', 'claude-code']);
   });
 
+  it.each([
+    ['.claude/settings.json', '{ "claudeMdExcludes": ["**/.claude/CLAUDE.md"] }'],
+    [
+      '.claude/settings.local.json',
+      '\uFEFF{\n  // personal\n  "claudeMd\\u0045xcludes": ["**/.claude/CLAUDE.md"],\n}',
+    ],
+  ])(
+    'keeps the import block when %s sets claudeMdExcludes, so .claude/CLAUDE.md may not load',
+    (file, text) => {
+      expect(keptBlocks({ '.claude/CLAUDE.md': '@../AGENTS.md\n', [file]: text })).toEqual([
+        'agents-import',
+        'claude-code',
+      ]);
+    },
+  );
+
   it('reads a CLAUDE.md with a long run after an @ in linear time', () => {
     const started = performance.now();
     withoutImportedBlocks(tree, (file) => (file === 'CLAUDE.md' ? `@${'.'.repeat(200_000)}x\n` : undefined));
