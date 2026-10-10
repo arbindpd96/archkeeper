@@ -17,6 +17,7 @@ import {
   unknownProgramRule,
 } from './program-rules.js';
 import { strictest, type Verdict } from './verdicts.js';
+import { workingFolders } from './working-folders.js';
 
 const MAX_SCRIPT_DEPTH = 3;
 
@@ -63,11 +64,15 @@ function judgeScriptAt(depth: number, context: JudgeContext): (script: string) =
 }
 
 function judgeAt(commands: readonly Command[], depth: number, context: JudgeContext): Verdict | null {
-  const verdicts = commands.flatMap((command) => rulesFor(command).map((rule) => rule(command, context)));
+  const folders = workingFolders(commands, context.paths);
+  const verdicts = commands.flatMap((command) => {
+    const own = { ...context, paths: folders.at(command) };
+    return rulesFor(command).map((rule) => rule(command, own));
+  });
   verdicts.push(
     interpreterVerdict(commands),
-    pipedScriptVerdict(commands, judgeScriptAt(depth, context)),
-    findPipedToRm(commands, context),
+    pipedScriptVerdict(commands, judgeScriptAt(depth, { ...context, paths: folders.last })),
+    findPipedToRm(commands, folders.at),
   );
   return strictest(verdicts);
 }

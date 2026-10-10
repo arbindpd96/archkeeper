@@ -16,6 +16,8 @@ guard-bash runs before every Bash call. It parses the command line the way a she
 |                                                                          | Text a program such as `base64 -d`, `xxd -r`, `tr` or `rev` feeds a shell   |
 |                                                                          | Anything it cannot read, and any command over 8,000 characters              |
 
+A relative delete target is judged from the session's folder and from every folder a `cd`, `chdir` or `pushd` earlier in the same command line may move to, so `rm -r ../my-project` and `cd .. && rm -r my-project` are denied. Home and the project are protected under their real paths too, such as `/private/tmp/…` for `/tmp/…` on macOS. After a `cd` to a folder a variable decides, a relative recursive delete asks.
+
 `git push --force-with-lease` to a feature branch, `rm -rf dist` and `cat .env.example` pass guard-bash. A pager or editor that runs nothing else, such as `GIT_PAGER=cat` or `GIT_EDITOR=true`, passes too.
 
 ## guard-secrets
@@ -63,5 +65,6 @@ The guards are a safety net, not a sandbox.
 - A value from a variable is checked only where it decides something security-relevant, so `git commit $X` with `X=-n` passes.
 - Interpreters outside its list (`deno run -`, `bun`, `Rscript -`, `lua`, `pwsh`, `julia`) are not read, `awk '{print | "sh"}'` fed by a download only asks, and a downloaded file run directly (`curl -o i.sh … && chmod +x i.sh && ./i.sh`) or through a descriptor (`exec 3< <(curl …); sh <&3`) passes.
 - A `find` filter that the starting folder already satisfies, such as `find ~ -path '*Users*' -delete`, counts as narrowing.
+- It follows `cd` and `pushd` for the commands after them, but not the folder `env -C`, `sudo -D` or `CDPATH` picks, and a `cd` inside a loop is followed once.
 - guard-secrets cannot tell a hardlink's other names, so a hardlink to a `.env` file passes the name check; making one through the shell asks in guard-bash. Shell writes such as `printf … >> a.ts` never reach guard-secrets.
 - Both guards need `node` on PATH. Without it they do not run, and only the deny rules apply.
