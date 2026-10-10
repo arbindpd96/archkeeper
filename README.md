@@ -41,7 +41,7 @@ Run `npx archkeeper init` in any repository and your agent stops rewriting code 
 
 ## Quick start
 
-<p align="center"><img src="docs/media/init.gif" alt="archkeeper init previews its plan as a diff, warns that the folder is not a git repository, asks for a preset and a yes, then writes CLAUDE.md, AGENTS.md and the ignore rules" width="100%"></p>
+<p align="center"><img src="docs/media/init.gif" alt="archkeeper init --dry-run asks for a preset and previews the plan as a diff; then archkeeper init asks for the preset, shows the plan, warns that the folder is not a git repository, asks for a yes, and writes CLAUDE.md, AGENTS.md and the ignore rules" width="100%"></p>
 
 ```bash
 npx archkeeper init             # detect the stack, show the plan, ask, then write it

@@ -1,6 +1,7 @@
 # hero
-# Quick start: init previews its plan as a diff, then asks for a preset, shows the plan, warns about the
-# missing git repository, asks for a yes, and writes CLAUDE.md, AGENTS.md and the ignore rules.
+# Quick start: a dry run asks for a preset and previews the plan as a diff; then init asks for the preset,
+# shows the plan, warns about the missing git repository, asks for a yes, and writes CLAUDE.md, AGENTS.md and
+# the ignore rules.
 # fixture: ts-app
 Type "{{brand.binName}} init --dry-run"
 Enter
