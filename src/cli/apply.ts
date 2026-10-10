@@ -152,6 +152,15 @@ function folderEntries(absolute: string): string[] {
   return lstatOrUndefined(absolute)?.isDirectory() === true ? readdirSync(absolute) : [];
 }
 
+// Pruning runs after the lock is written, so the apply has succeeded; a failure here is a warning, never thrown.
+function cleanup(folder: string, prune: () => string[]): string[] {
+  try {
+    return prune();
+  } catch (error) {
+    return [`${folder} could not be cleaned up after the lock was written: ${reasonOf(error)}`];
+  }
+}
+
 // A blob is removed when no lock entry references it; anything not named like a blob is left alone.
 function pruneBlobs(rootReal: string, lock: Lock, brand: Brand): string[] {
   const folder = confinedPath(rootReal, baseFolder(brand), 'the kit base folder');
@@ -215,9 +224,10 @@ export function applyPlan(root: string, plan: Plan, brand: Brand = BRAND): Apply
     const unrestored = rollBack(backup.paths.slice(0, reached), created);
     throw failure(error, planned[reached - 1], backup, unrestored);
   }
+  const run = path.posix.basename(backup.folder);
   const warnings = [
-    ...pruneBlobs(rootReal, plan.lock, brand),
-    ...pruneBackups(rootReal, brand, path.posix.basename(backup.folder)),
+    ...cleanup(baseFolder(brand), () => pruneBlobs(rootReal, plan.lock, brand)),
+    ...cleanup(backupsFolder(brand), () => pruneBackups(rootReal, brand, run)),
   ];
   return { changed: true, backup: backup.folder, warnings };
 }
