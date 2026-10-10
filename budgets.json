@@ -7,6 +7,10 @@
     "maxBytes": 30000,
     "overrides": { "guard-bash": 120000 }
   },
+  "hookLatency": {
+    "$comment": "p95 wall time of one run of each built hook answering its sample payloads on stdin, as scripts/hook-latency.mjs measures it; gated on ubuntu CI, reported on Windows and macOS (ADR-0015).",
+    "p95Ms": 200
+  },
   "warmInit": {
     "$comment": "The slowest warm run of the built CLI's init --yes, as scripts/context-budget.mjs times it on each preset and fixture after the first run (ADR-0017).",
     "maxMs": 2000
