@@ -24,14 +24,14 @@ const STACK_HINT = 'pass --stack ts, python, ts,python or none';
 /** Reads `--stack ts|python|ts,python|none` (#27), or undefined when the flag is absent. */
 export function stackFlag(value: string | undefined): Stack[] | undefined {
   if (value === undefined) return undefined;
-  if (value.trim() === 'none') return [];
   const names = value.split(',').map((name) => name.trim());
+  if (names.length === 1 && names[0] === 'none') return [];
   const unknown = names.find((name) => !(STACKS as readonly string[]).includes(name));
   if (unknown !== undefined) {
     throw new UsageError({
       file: '--stack',
       location: '',
-      problem: `${quoted(unknown)} is not a stack`,
+      problem: unknown === 'none' ? '"none" cannot go with a stack' : `${quoted(unknown)} is not a stack`,
       hint: STACK_HINT,
     });
   }
