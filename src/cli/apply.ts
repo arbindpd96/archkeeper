@@ -89,15 +89,14 @@ function refuseChanged(paths: readonly SavedPath[], expected: ReadonlyMap<string
   });
 }
 
-// Confined again just before the write, so a folder on its way swapped for a symlink during the run is refused; a
-// swap in the moment between this check and the write needs a hostile local process, outside the threat model.
+// The caller confines `absolute` again just before this write, so a folder on its way swapped for a symlink during
+// the run is refused; a swap between that check and the write needs a hostile local process, outside the threat model.
 function applyChange(
-  rootReal: string,
+  absolute: string,
   change: Change,
   saved: SavedPath | undefined,
   created: string[],
 ): void {
-  const absolute = confinedPath(rootReal, change.relative, 'written by the plan');
   if (change.data === null) {
     removeFile(absolute);
     return;
@@ -107,11 +106,12 @@ function applyChange(
 }
 
 // Only the paths the run reached, the failing one included: a file someone saves meanwhile elsewhere is theirs.
-function rollBack(reached: readonly SavedPath[], created: readonly string[]): string[] {
+// Each path is confined again, so a folder swapped for a symlink mid-run is never written or unlinked through.
+function rollBack(rootReal: string, reached: readonly SavedPath[], created: readonly string[]): string[] {
   const failed: string[] = [];
   for (const saved of [...reached].reverse()) {
     try {
-      restore(saved);
+      restore({ ...saved, absolute: confinedPath(rootReal, saved.relative, 'restored by the rollback') });
     } catch (error) {
       failed.push(`${saved.relative} (${reasonOf(error)})`);
     }
@@ -223,14 +223,17 @@ export function applyPlan(root: string, plan: Plan, brand: Brand = BRAND): Apply
   const backup = beforeChanges(brand, () => backUp(rootReal, current, brand));
   const created: string[] = [];
   let reached = 0;
+  let failing = 0;
   try {
     for (const [index, change] of planned.entries()) {
+      failing = index;
+      const absolute = confinedPath(rootReal, change.relative, 'written by the plan');
       reached = index + 1;
-      applyChange(rootReal, change, backup.paths[index], created);
+      applyChange(absolute, change, backup.paths[index], created);
     }
   } catch (error) {
-    const unrestored = rollBack(backup.paths.slice(0, reached), created);
-    throw failure(error, planned[reached - 1], backup, unrestored);
+    const unrestored = rollBack(rootReal, backup.paths.slice(0, reached), created);
+    throw failure(error, planned[failing], backup, unrestored);
   }
   const run = path.posix.basename(backup.folder);
   const warnings = [

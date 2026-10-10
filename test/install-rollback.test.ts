@@ -164,6 +164,25 @@ describe('a failure in the middle of an apply', () => {
     },
   );
 
+  it.runIf(canSymlink())('never restores through a folder swapped for a symlink out of the project', () => {
+    const dir = tempDir();
+    const outside = tempDir();
+    writeFiles(dir, { [`${LOCAL}/.gitignore`]: '*\n' });
+    fs.writeFileSync(path.join(outside, 'guard.mjs'), 'victim\n');
+    let swapped = false;
+    vi.mocked(fs.renameSync).mockImplementation((from, to) => {
+      if (swapped) throw Object.assign(new Error('injected failure'), { code: 'EIO' });
+      realRename(from, to);
+      if (!String(to).endsWith('guard.mjs')) return;
+      const folder = path.dirname(String(to));
+      fs.rmSync(folder, { recursive: true });
+      fs.symlinkSync(outside, folder, 'dir');
+      swapped = true;
+    });
+    expect(applyError(dir).message).toContain('these could not be restored');
+    expect(fs.readFileSync(path.join(outside, 'guard.mjs'), 'utf8')).toBe('victim\n');
+  });
+
   it('leaves no temp file and no change behind when any write fails, such as on a full disk', () => {
     const dir = tempDir();
     writeFiles(dir, { 'CLAUDE.md': '# Mine\n', [`${LOCAL}/.gitignore`]: '*\n' });
