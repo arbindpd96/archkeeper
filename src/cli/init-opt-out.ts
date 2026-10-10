@@ -6,6 +6,7 @@ import type { Lock } from '../core/lock.js';
 import { SETTINGS_FILE } from '../core/manifest-schema.js';
 import { type OptedOut, optedOutEntries, optOutNames, OPT_OUT, unknownOptOuts } from '../core/opt-out.js';
 import { moduleOptions, type ResolvedOptions } from '../core/options.js';
+import type { PlanOp } from '../core/plan-types.js';
 import { quoted } from '../core/text.js';
 
 /** One optOut entry of a selected module, with what it leaves out. */
@@ -43,18 +44,29 @@ export function unknownOptOutReports(
   );
 }
 
-// An apply with the entry in effect leaves the lock listing the module and owning nothing the entry leaves out.
-function isRecorded(entry: ModuleOptOut, lock: Lock | undefined): boolean {
+// Once an apply put the entry in effect, the lock lists the module and the plan removes nothing the entry leaves
+// out: what is left is gone, or kept because the user changed it, which the kit no longer touches.
+function isRecorded(entry: ModuleOptOut, lock: Lock | undefined, ops: readonly PlanOp[]): boolean {
   if (lock?.modules.includes(entry.module) !== true) return false;
-  const owned = lock.json.get(SETTINGS_FILE);
-  const ownsKey = entry.keys.some((key) => owned?.has(key) === true);
-  return !ownsKey && entry.scripts.every((script) => !lock.files.has(script));
+  return !ops.some(
+    (op) =>
+      op.kind === 'delete' &&
+      (op.entry === undefined
+        ? entry.scripts.includes(op.path)
+        : op.path === SETTINGS_FILE && entry.keys.includes(op.entry)),
+  );
 }
 
 /**
  * The optOut entries the lock does not record yet, as `<module>: <entry>`. init warns about these the first time it
  * meets them (#33): warning on every run would undo ADR-0014's "optOut silences the warning".
  */
-export function unrecordedOptOuts(entries: readonly ModuleOptOut[], lock: Lock | undefined): string[] {
-  return entries.filter((entry) => !isRecorded(entry, lock)).map((entry) => `${entry.module}: ${entry.name}`);
+export function unrecordedOptOuts(
+  entries: readonly ModuleOptOut[],
+  lock: Lock | undefined,
+  ops: readonly PlanOp[],
+): string[] {
+  return entries
+    .filter((entry) => !isRecorded(entry, lock, ops))
+    .map((entry) => `${entry.module}: ${entry.name}`);
 }
