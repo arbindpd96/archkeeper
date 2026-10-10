@@ -158,9 +158,18 @@ describe('editBlocks', () => {
 
   it('puts a new block of imports after a frontmatter that follows a byte-order mark, with CRLF endings', () => {
     const text = `${BYTE_ORDER_MARK}---\r\nname: rules\r\n---\r\nBody\r\n`;
-    expect(edit('CLAUDE.md', text, { insert: [{ id: 'imports', body: '@AGENTS.md\n' }] })).toBe(
+    const result = edit('CLAUDE.md', text, { insert: [{ id: 'imports', body: '@AGENTS.md\n' }] });
+    expect(result).toBe(
       `${BYTE_ORDER_MARK}---\r\nname: rules\r\n---\r\n${BEGIN('imports')}\r\n@AGENTS.md\r\n${END('imports')}\r\n\r\nBody\r\n`,
     );
+    expect(memoryImports(result)).toEqual(['AGENTS.md']);
+  });
+
+  it('puts a new block of imports first in a file of lone CRs, where Claude Code finds no frontmatter', () => {
+    const text = '---\rname: rules\r---\rBody\r';
+    const result = edit('CLAUDE.md', text, { insert: [{ id: 'imports', body: '@AGENTS.md\n' }] });
+    expect(result).toBe(`${BEGIN('imports')}\n@AGENTS.md\n${END('imports')}\n\n${text}`);
+    expect(memoryImports(result)).toEqual(['AGENTS.md']);
   });
 
   it("puts a new block of imports after a kept block that holds the frontmatter's closing line, never inside it", () => {
