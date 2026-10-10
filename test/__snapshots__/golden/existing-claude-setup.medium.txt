@@ -1,16 +1,21 @@
+343cfbecf0eab8a622de43d172727d19e0989861bf82146f941b310089e32703  state        .acmekit/base/343cfbecf0eab8a622de43d172727d19e0989861bf82146f941b310089e32703
 3e6f1a905b397a0875312ee4a71c1216586f40c2f7b481ce0bb8e18d71405864  state        .acmekit/base/3e6f1a905b397a0875312ee4a71c1216586f40c2f7b481ce0bb8e18d71405864
+5a64277b545b6e7d0354c9fd40b649160bafeea657c58a761bb57d8d0fc48e71  state        .acmekit/base/5a64277b545b6e7d0354c9fd40b649160bafeea657c58a761bb57d8d0fc48e71
 78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7  state        .acmekit/base/78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7
 863aa344b1d719be44b9cd1b056ad390825da91cb77f8de1f652bfacd66fc7f3  state        .acmekit/base/863aa344b1d719be44b9cd1b056ad390825da91cb77f8de1f652bfacd66fc7f3
+96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1  state        .acmekit/base/96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1
 beab0e8a02e38248bf3c8a2eea8dbbd29b4a2575038107b24811cd42fde5a4af  state        .acmekit/base/beab0e8a02e38248bf3c8a2eea8dbbd29b4a2575038107b24811cd42fde5a4af
 6d80fbac1f9cfb3d9063a6ee397772df29bf5900f29b6fce94791c4cfe564c19  state        .acmekit/config.json
 cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b  state        .acmekit/local/.gitignore
-a7fd7012b9498eca40b9f19861629e03d5b32e9b9bab142b41cdaf00cbb6ded7  state        .acmekit/lock.json
-b2c89616e7092ddc5d9e6c390d224a87a8a7523698d525605d62f808c9fbe4cb  user         .claude/settings.json
+8eb6fbdba96a94093866c02ab0c32299e964428bf2d1b4da9827fa14f9c69a4d  state        .acmekit/lock.json
+96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1  owned        .claude/hooks/acmekit/guard-bash.mjs
+343cfbecf0eab8a622de43d172727d19e0989861bf82146f941b310089e32703  owned        .claude/hooks/acmekit/guard-secrets.mjs
+b00ccf39aaa93704e3044e6a73c3e38c6e41a17db627cbafccc2d1740495bf2a  json         .claude/settings.json
 8244dc2a6667ee91324c707423aa3992578ac192d36e9b1535424931e56db87f  user         .claude/skills/why/SKILL.md
 cd7366ce9cbf42d295cad1b0bfc1900a96028d33afe15008be380ab9bba0265c  blocks       .gitattributes
 491e2e47d3979f026ba67314885071414ac11c06d84e74857f6ba84cc6c98f0b  blocks       .gitignore
 37055c98043228133ffcc5cad7bba5ef6c8f24698a551cae547b90f51d22e519  user         .prettierrc.json
-8570f519150115e2240b314b16c602c5d843a0ab90808b014e68fa15f6db4aa6  blocks       AGENTS.md
+44f3d5a3cb9c9e0900a5f3b07cc37d462e8ea199c547aca365cab1dd4cc2ab85  blocks       AGENTS.md
 4f0c3f78bdba99783b07985121cd5c9c0e5d60756ac8773542eb6c2f155af025  blocks       CLAUDE.md
 50e8b8c2c27258f88f2d265a52dadce1eae4d3f5ffe4365afe9be499a2f8a9a1  user         eslint.config.js
 2f61b4062d90572fa93d4bae12cd14babe06793936a0d2410ed7102cad4b7571  user         package.json
@@ -62,9 +67,60 @@ Rules for AI coding agents, such as Claude Code, Codex, Cursor, Gemini CLI and C
 | `npm run lint` | Lint |
 | `npm run format` | Format |
 <!-- acmekit:end agent-rules -->
+
+<!-- acmekit:begin safety -->
+## Safety guards
+
+Two hooks guard this repository. guard-bash denies destructive shell commands and asks before irreversible ones. guard-secrets denies likely secrets in written files and asks before edits to `.env` files. When a guard blocks a call, change the approach; never work around it.
+
+- Native deny rules back the guards and still apply when a hook cannot run, such as when Node.js is missing.
+- Deny rules match on the command prefix only, so the guards are the fine-grained layer. `Bash(rm -rf:*)` denies every command that starts with `rm -rf`, safe ones such as `rm -rf dist` included: ask the user to run those.
+- `Read(**/.env.*)` also blocks reading templates such as `.env.example` with the Read tool.
+- Keep secrets in environment variables. A test fixture that needs a token-like value takes `acmekit:allow-secret` on its line, and the user confirms each new one.
+<!-- acmekit:end safety -->
 === .claude/settings.json
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   // Reviewed in PRs.
   "model": "opus",
-  "permissions": { "deny": ["Read(**/.env)"] },
+  "permissions": {
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/.envrc)",
+      "Bash(rm -rf:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/guard-bash.mjs"
+            ],
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/guard-secrets.mjs"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
 }

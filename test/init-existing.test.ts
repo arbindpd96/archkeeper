@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, symlinkSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { parse } from 'jsonc-parser';
 import { loadCatalog } from '../src/core/loader.js';
 import { memoryImports } from '../src/core/memory-imports.js';
 import { BYTE_ORDER_MARK } from '../src/core/text.js';
@@ -30,8 +31,25 @@ describe('init on a project with its own Claude Code setup', () => {
     expect(read(dir, 'AGENTS.md').startsWith(`${USER_AGENTS}\n<!-- ${TEST_BRAND.markerPrefix}:begin`)).toBe(
       true,
     );
-    expect(read(dir, '.claude/settings.json')).toBe(USER_SETTINGS);
     expect(read(dir, '.claude/skills/why/SKILL.md')).toBe(USER_SKILL);
+  });
+
+  it("adds the safety entries to the user's settings without a second copy of the user's own rule", async () => {
+    const dir = existingSetup();
+    await runInit(dir, ['--yes']);
+    const text = read(dir, '.claude/settings.json');
+    expect(text).toContain('  // Reviewed in PRs.\n  "model": "opus",\n');
+    const settings = parse(text) as { $schema?: string; permissions: { deny: string[] } };
+    expect(settings.$schema).toBe('https://json.schemastore.org/claude-code-settings.json');
+    expect(settings.permissions.deny).toEqual([
+      'Read(**/.env)',
+      'Read(**/.env.*)',
+      'Read(**/.envrc)',
+      'Bash(rm -rf:*)',
+      'Bash(git push --force:*)',
+      'Bash(git push -f:*)',
+    ]);
+    expect(USER_SETTINGS).toContain('"deny": ["Read(**/.env)"]');
   });
 
   it('changes nothing on a second run', async () => {
@@ -101,17 +119,34 @@ describe('init with a kit skill a user already has', () => {
   });
 });
 
-describe('init beside a .claude folder linked elsewhere, as in a dotfiles setup', () => {
-  it.skipIf(!canSymlink())('sets up the project without reading through the link', async () => {
-    const { dir } = fixtureCopy('ts-app');
-    const dotfiles = tempDir();
-    writeFiles(dotfiles, { 'CLAUDE.md': 'Rules: @../AGENTS.md\n', 'settings.json': '{}\n' });
-    symlinkSync(dotfiles, path.join(dir, '.claude'), 'dir');
-    const result = await runInit(dir, ['--yes']);
-    expect(result.code).toBe(0);
-    expect(read(dir, 'CLAUDE.md')).toContain('@AGENTS.md');
-  });
-});
+describe.skipIf(!canSymlink())(
+  'init beside a .claude folder linked elsewhere, as in a dotfiles setup',
+  () => {
+    function linkedClaudeFolder(): { dir: string; dotfiles: string } {
+      const { dir } = fixtureCopy('ts-app');
+      const dotfiles = tempDir();
+      writeFiles(dotfiles, { 'CLAUDE.md': 'Rules: @../AGENTS.md\n', 'settings.json': '{}\n' });
+      symlinkSync(dotfiles, path.join(dir, '.claude'), 'dir');
+      return { dir, dotfiles };
+    }
+
+    it('refuses to write the guards through the link, before it writes anything', async () => {
+      const { dir, dotfiles } = linkedClaudeFolder();
+      const result = await runInit(dir, ['--yes']);
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain('resolves through a symlink to a place outside the project');
+      expect(existsSync(path.join(dir, 'CLAUDE.md'))).toBe(false);
+      expect(read(dotfiles, 'settings.json')).toBe('{}\n');
+    });
+
+    it('sets up the rest of the project without reading through the link when safety is left out', async () => {
+      const { dir } = linkedClaudeFolder();
+      const result = await runInit(dir, ['--yes', '--modules', '-safety']);
+      expect(result.code).toBe(0);
+      expect(read(dir, 'CLAUDE.md')).toContain('@AGENTS.md');
+    });
+  },
+);
 
 describe('init beside an AGENTS.md linked elsewhere', () => {
   it.skipIf(!canSymlink())(

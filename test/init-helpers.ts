@@ -1,9 +1,11 @@
+import { readdirSync } from 'node:fs';
+import path from 'node:path';
 import type { CliContext, PackageInfo } from '../src/cli/context.js';
 import type { GitState } from '../src/cli/git-state.js';
-import { readKit } from '../src/cli/kit.js';
+import { kitReader } from '../src/cli/kit.js';
 import { main } from '../src/cli/main.js';
 import type { Prompter } from '../src/cli/prompts.js';
-import type { Catalog } from '../src/core/loader.js';
+import { type Catalog, loadCatalog, type ReadKitFile } from '../src/core/loader.js';
 import { fixtureCopy, REPO_ROOT, writeFiles } from './helpers.js';
 import { TEST_BRAND } from './kit-fixtures.js';
 
@@ -27,8 +29,26 @@ export function existingClaudeSetup(): string {
   return dir;
 }
 
-/** The kit as this repository ships it, loaded once. */
-export const KIT = readKit(REPO_ROOT);
+const BUNDLE = /^dist\/hooks\/([a-z0-9-]+)\.mjs$/;
+
+/**
+ * Reads the kit under `root` with each hook bundle replaced by a one-line stand-in, so golden trees and module
+ * snapshots change when a module does, not with every hook build; test/hook-bundles.test.ts covers the real bundles.
+ */
+export function standInReader(root: string): ReadKitFile {
+  const read = kitReader(root);
+  return (file) => {
+    const hook = BUNDLE.exec(file)?.[1];
+    return hook === undefined ? read(file) : `// Stand-in for the ${hook} bundle that npm run build makes.\n`;
+  };
+}
+
+const MODULE_IDS = readdirSync(path.join(REPO_ROOT, 'modules'), { withFileTypes: true })
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => entry.name);
+
+/** The kit as this repository ships it, loaded once, with stand-ins for its hook bundles. */
+export const KIT = loadCatalog(MODULE_IDS, standInReader(REPO_ROOT));
 
 /** The package info init tests run with, so a release changes no snapshot. */
 export const INFO: PackageInfo = { version: '1.0.0', description: 'Test kit.' };

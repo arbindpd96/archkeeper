@@ -5,11 +5,50 @@
   "description": "Guard hooks for dangerous commands and secrets, backed by native deny rules.",
   "presets": ["small", "medium", "full"],
   "requires": ["base"],
+  "files": [
+    { "to": ".claude/settings.json", "strategy": "json", "target": "project" },
+    { "to": "AGENTS.md", "strategy": "blocks", "target": "project" }
+  ],
+  "blocks": [{ "file": "AGENTS.md", "id": "safety", "template": "agents-safety.md" }],
+  "hooks": [
+    { "event": "PreToolUse", "matcher": "Bash", "script": "dist/hooks/guard-bash.mjs", "timeout": 10 },
+    {
+      "event": "PreToolUse",
+      "matcher": "Write|Edit|MultiEdit|NotebookEdit",
+      "script": "dist/hooks/guard-secrets.mjs",
+      "timeout": 10
+    }
+  ],
+  "permissions": {
+    "deny": [
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/.envrc)",
+      "Bash(rm -rf:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)"
+    ]
+  },
   "options": {
     "optOut": {
       "type": "string-list",
       "default": [],
-      "description": "Deny rules and guard hooks removed on purpose, so doctor and update stop warning about them."
+      "description": "Deny rules (such as Bash(rm -rf:*)) and guards (guard-bash, guard-secrets) removed on purpose: the kit does not write them, and doctor and update stop warning about them."
+    },
+    "blockAiAttribution": {
+      "type": "boolean",
+      "default": false,
+      "description": "guard-bash denies AI co-author trailers and Generated with lines in commit and PR commands."
+    },
+    "blockNoVerify": {
+      "type": "boolean",
+      "default": false,
+      "description": "guard-bash denies skipping git hooks: --no-verify, HUSKY=0 and pointing core.hooksPath elsewhere."
+    },
+    "denyCommands": {
+      "type": "string-list",
+      "default": [],
+      "description": "Commands guard-bash denies, each as its program and words, such as terraform destroy, wherever they appear in a command line."
     }
   },
   "internal": true
