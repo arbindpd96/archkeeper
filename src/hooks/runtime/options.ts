@@ -1,8 +1,11 @@
 import { BRAND, type Brand } from '../../core/brand.js';
-import { isRecord } from './io.js';
+import { BYTE_ORDER_MARK, isRecord } from '../../core/text.js';
 import { readProjectFile } from './project.js';
 
 const MAX_CONFIG_BYTES = 256_000;
+
+const withoutByteOrderMark = (text: string): string =>
+  text.startsWith(BYTE_ORDER_MARK) ? text.slice(1) : text;
 
 /** A module's options as the project config gives them, or why they could not be read. */
 export type ModuleOptions =
@@ -24,7 +27,7 @@ export function readModuleOptions(projectDir: string, moduleId: string, brand: B
   if ('problem' in read) return { problem: read.problem };
   let config: unknown;
   try {
-    config = JSON.parse(read.text.replace(/^\uFEFF/, ''));
+    config = JSON.parse(withoutByteOrderMark(read.text));
   } catch {
     return { problem: 'it is not valid JSON' };
   }

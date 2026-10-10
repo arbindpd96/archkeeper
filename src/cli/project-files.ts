@@ -1,25 +1,11 @@
-import {
-  closeSync,
-  constants,
-  fstatSync,
-  lstatSync,
-  openSync,
-  readFileSync,
-  realpathSync,
-  type Stats,
-} from 'node:fs';
+import { closeSync, fstatSync, lstatSync, openSync, readFileSync, realpathSync, type Stats } from 'node:fs';
 import path from 'node:path';
 import { ApplyError, PathSafetyError } from '../core/errors.js';
 import { assertSafePath, pathSafetyProblem } from '../core/path-safety.js';
 import type { PathState, Snapshot } from '../core/plan-types.js';
 import { quoted } from '../core/text.js';
+import { SAFE_READ } from '../hooks/runtime/project.js';
 
-// Windows has neither flag; there the lstat check before opening is what keeps a symlink from being followed.
-const optional: Partial<typeof constants> = constants;
-/** Opens a path without following a symlink where the platform supports it. */
-export const NO_FOLLOW = optional.O_NOFOLLOW ?? 0;
-const NON_BLOCKING = optional.O_NONBLOCK ?? 0;
-const SAFE_READ = constants.O_RDONLY | NO_FOLLOW | NON_BLOCKING;
 const STRICT_UTF8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
 /** The status of a path without following a symlink, or undefined when nothing is there. */
