@@ -72,6 +72,45 @@ describe('guard-secrets false positives (#32)', () => {
   });
 });
 
+// Random-looking values built at run time, so the repository holds no literal one.
+const RANDOM = ['Zx9Qw7Lm3Np8', 'Rt2Vb6Yc4Hk1Jd5Fg0Sa'].join('');
+const RANDOM_HEX = ['9f86d081884c7d65', '9a2feaa0c55ad015'].join('');
+
+describe('guard-secrets high-entropy assignments (#32)', () => {
+  it.each([
+    `API_KEY="${RANDOM}"`,
+    `DB_PASSWORD=${RANDOM}`,
+    `export STRIPE_SECRET='${RANDOM}'`,
+    `  github-token: ${RANDOM}`,
+    `{ "SERVICE_TOKEN": "${RANDOM}" }`,
+    `const password = "${RANDOM}";`,
+    `SIGNING_KEY := ${RANDOM_HEX}`,
+  ])('denies %s', (content) => {
+    const { outcome, reason } = verdict(write(content));
+    expect(outcome).toBe('deny');
+    expect(reason).toContain('high-entropy value assigned to a key, secret, token or password');
+    expect(reason).not.toContain(RANDOM);
+  });
+
+  it.each([
+    ['a placeholder', 'API_KEY=your-api-key-here-1234'],
+    ['a placeholder word', `SECRET_KEY=${RANDOM}_example`],
+    ['a test fixture', 'AUTH_TOKEN=test_4eC39HqLyjWDarjtT1zdp7dc'],
+    ['an env reference', 'API_KEY=${API_KEY}'],
+    ['a code reference', 'const API_KEY = process.env.API_KEY;'],
+    ['a word with no digit', 'SESSION_SECRET=correct-horse-battery-staple'],
+    ['a short value', 'API_KEY=a1b2c3d4'],
+    ['a short hex value', 'CACHE_KEY=a1b2c3d4e5f6a7b8c9d0'],
+    ['a repeated character', `API_KEY=${'x'.repeat(30)}1`],
+    ['a name that is not secret', `BUILD_ID=${RANDOM}`],
+    ['a bare key field', `"key": "${RANDOM}"`],
+    ['an integrity hash', `"integrity": "sha512-${RANDOM}${RANDOM}"`],
+    ['a lockfile checksum', `checksum = "${RANDOM_HEX}${RANDOM_HEX}"`],
+  ])('allows %s', (_name, content) => {
+    expect(verdict(write(content)).outcome).toBe('allow');
+  });
+});
+
 describe('guard-secrets env files and robustness', () => {
   it.each([
     '/p/.env',
