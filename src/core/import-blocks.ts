@@ -1,5 +1,5 @@
 import { BRAND, type Brand } from './brand.js';
-import { markdownImports } from './markdown-imports.js';
+import { memoryImports, skipsMemoryFile } from './memory-imports.js';
 import { markerPattern, markerStyle, parseMarker } from './markers.js';
 import type { RenderedEntry, RenderTree } from './render-tree.js';
 import { toLf } from './text.js';
@@ -54,7 +54,8 @@ function userText(text: string, brand: Brand): string {
 }
 
 function importsIn(text: string, folder: string, brand: Brand): string[] {
-  return markdownImports(userText(text, brand)).flatMap((target) => {
+  if (skipsMemoryFile(text)) return [];
+  return memoryImports(userText(text, brand)).flatMap((target) => {
     const path = resolved(folder, target);
     return path === undefined ? [] : [path];
   });
