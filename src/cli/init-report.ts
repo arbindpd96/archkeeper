@@ -111,20 +111,21 @@ export function planLines(summaries: readonly PathSummary[], paint: Reporter['pa
 }
 
 const DIFF_STYLE: readonly [prefix: string, format: StyleFormat][] = [
-  ['+++', 'bold'],
-  ['---', 'bold'],
   ['@@', 'cyan'],
   ['+', 'green'],
   ['-', 'red'],
 ];
 
-/** A unified diff for the terminal: each line escaped and coloured by its kind. */
+/**
+ * A unified diff of one file for the terminal: each line escaped, the two file lines bold, and every other line
+ * coloured by its kind, so a removed `---` rule reads as a removal, not a file line.
+ */
 export function diffLines(diff: string, paint: Reporter['paint']): string[] {
   return diff
     .trimEnd()
     .split('\n')
-    .map((line) => {
-      const format = DIFF_STYLE.find(([prefix]) => line.startsWith(prefix))?.[1];
+    .map((line, index) => {
+      const format = index < 2 ? 'bold' : DIFF_STYLE.find(([prefix]) => line.startsWith(prefix))?.[1];
       const text = escapeUnprintable(line);
       return format === undefined ? text : paint(format, text);
     });
