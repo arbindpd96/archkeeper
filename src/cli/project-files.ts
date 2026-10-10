@@ -19,8 +19,7 @@ const optional: Partial<typeof constants> = constants;
 /** Opens a path without following a symlink where the platform supports it. */
 export const NO_FOLLOW = optional.O_NOFOLLOW ?? 0;
 const NON_BLOCKING = optional.O_NONBLOCK ?? 0;
-/** Opens a path for reading without following a symlink or waiting on a FIFO, where the platform supports it. */
-export const SAFE_READ = constants.O_RDONLY | NO_FOLLOW | NON_BLOCKING;
+const SAFE_READ = constants.O_RDONLY | NO_FOLLOW | NON_BLOCKING;
 const STRICT_UTF8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
 /** The status of a path without following a symlink, or undefined when nothing is there. */
@@ -104,18 +103,29 @@ export function confinedPath(rootReal: string, relative: string, source: string)
   return target;
 }
 
-function readText(absolute: string): PathState {
+/**
+ * Reads the bytes of a regular file without following a symlink or waiting on a FIFO, or returns undefined when
+ * what it opens is not a regular file, such as a FIFO swapped in after an lstat.
+ */
+export function readFileBytes(absolute: string): Buffer | undefined {
   const descriptor = openSync(absolute, SAFE_READ);
   try {
-    if (!fstatSync(descriptor).isFile()) return { kind: 'other' };
-    return { kind: 'file', content: STRICT_UTF8.decode(readFileSync(descriptor)) };
+    return fstatSync(descriptor).isFile() ? readFileSync(descriptor) : undefined;
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+function readText(absolute: string): PathState {
+  const bytes = readFileBytes(absolute);
+  if (bytes === undefined) return { kind: 'other' };
+  try {
+    return { kind: 'file', content: STRICT_UTF8.decode(bytes) };
   } catch (error) {
     // A file that is not UTF-8 text cannot be merged without changing its bytes, so it counts as not a text file.
     const notText = (error as NodeJS.ErrnoException).code === 'ERR_ENCODING_INVALID_ENCODED_DATA';
     if (notText) return { kind: 'other' };
     throw error;
-  } finally {
-    closeSync(descriptor);
   }
 }
 

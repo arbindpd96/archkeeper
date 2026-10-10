@@ -1,14 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import {
-  closeSync,
-  fstatSync,
-  openSync,
-  readFileSync,
-  readlinkSync,
-  symlinkSync,
-  unlinkSync,
-  writeFileSync,
-} from 'node:fs';
+import { readlinkSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Brand } from '../core/brand.js';
 import { ApplyError, PathSafetyError } from '../core/errors.js';
@@ -17,7 +8,7 @@ import type { PathState } from '../core/plan-types.js';
 import { compareText, quoted, toLf } from '../core/text.js';
 import { ensureFolder, writeAtomically } from './atomic-files.js';
 import { baseFolder, compressed } from './blob-store.js';
-import { confinedPath, lstatOrUndefined, readConfined, SAFE_READ } from './project-files.js';
+import { confinedPath, lstatOrUndefined, readConfined, readFileBytes } from './project-files.js';
 
 /** What a path held before an apply touched it: a file with its bytes and mode, a symlink, or nothing. */
 export type Saved =
@@ -112,22 +103,12 @@ function runId(): string {
   return `${stamp}-${randomBytes(4).toString('hex')}`;
 }
 
-// A FIFO swapped in after the lstat must not hang the run, so the open never waits and fstat checks the type.
-function readExactly(absolute: string): Buffer | undefined {
-  const descriptor = openSync(absolute, SAFE_READ);
-  try {
-    return fstatSync(descriptor).isFile() ? readFileSync(descriptor) : undefined;
-  } finally {
-    closeSync(descriptor);
-  }
-}
-
 function held(absolute: string): Saved {
   const stats = lstatOrUndefined(absolute);
   if (stats === undefined) return { type: 'absent' };
   if (stats.isSymbolicLink()) return { type: 'symlink', target: readlinkSync(absolute) };
   if (!stats.isFile()) return { type: 'other' };
-  const bytes = readExactly(absolute);
+  const bytes = readFileBytes(absolute);
   if (bytes === undefined) return { type: 'other' };
   return { type: 'file', blob: exactHash(bytes), mode: stats.mode & 0o777, bytes };
 }
