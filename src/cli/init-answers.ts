@@ -143,7 +143,7 @@ export async function choosePreset(
   const choices: Choice<string>[] = catalog.presets.map((preset) => ({
     value: preset.name,
     label: preset.name,
-    hint: `${preset.description} ${tokens(preset.name)}`,
+    hint: `${preset.description.replace(/\.$/, '')} (${tokens(preset.name)})`,
   }));
   return asking.prompter.select('Choose a preset', choices, catalog.defaultPreset);
 }
