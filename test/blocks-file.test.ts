@@ -163,6 +163,19 @@ describe('editBlocks', () => {
     );
   });
 
+  it("puts a new block of imports after a kept block that holds the frontmatter's closing line, never inside it", () => {
+    const kept = `${BEGIN('claude-code')}\nA\n---\nB\n${END('claude-code')}\n`;
+    const result = edit('CLAUDE.md', `---\nIntro\n${kept}`, {
+      insert: [{ id: 'imports', body: '@AGENTS.md\n' }],
+    });
+    expect(result).toBe(`---\nIntro\n${kept}${BEGIN('imports')}\n@AGENTS.md\n${END('imports')}\n`);
+    expect([...blockParts(parseBlocks('CLAUDE.md', result, TEST_BRAND)).keys()]).toEqual([
+      'claude-code',
+      'imports',
+    ]);
+    expect(memoryImports(result)).toEqual(['AGENTS.md']);
+  });
+
   it('writes new and replaced blocks with the CRLF endings and byte-order mark the file has', () => {
     const text = `${BYTE_ORDER_MARK}user\r\n${BEGIN('a')}\r\nold\r\n${END('a')}\r\n`;
     const result = edit('AGENTS.md', text, {
