@@ -11,6 +11,9 @@ const NO_VERIFY = deny('--no-verify skips the quality gates. Fix the failing che
 export const HUSKY_OFF = deny('HUSKY=0 skips the quality gates. Fix the failing check instead.');
 const FORCE_PUSH = deny('Plain force-push is blocked. Use --force-with-lease on a feature branch.');
 const FORCE_MAIN = deny('Force-pushing main/master is blocked.');
+const LEASE_UNNAMED = ask(
+  'This leased force-push names no branch, so it rewrites the current one, perhaps main. Confirm with the user.',
+);
 const REMOTE_DELETE = deny('Deleting or mirroring remote branches is blocked.');
 const DISCARDS_WORK = ask('This discards work irreversibly. Confirm with the user.');
 const OUTSIDE_REPO = ask('This git command can write files or read outside the repo. Confirm with the user.');
@@ -77,17 +80,24 @@ function globalOptions(args: readonly string[]): GlobalOptions {
   return { configs, execPath, subcommand: args[index] ?? '', rest: args.slice(index + 1) };
 }
 
-function targetsMainBranch(refspec: string): boolean {
-  const destination = refspec.slice(refspec.lastIndexOf(':') + 1).replace(/^\+?(refs\/heads\/)?/, '');
-  return destination === 'main' || destination === 'master';
+function destinationOf(refspec: string): string {
+  return refspec.slice(refspec.lastIndexOf(':') + 1).replace(/^\+?(refs\/heads\/)?/, '');
 }
 
-function forcesMainBranch(options: ParsedOptions, refspecs: readonly string[]): boolean {
+const targetsMainBranch = (refspec: string): boolean => ['main', 'master'].includes(destinationOf(refspec));
+const targetsCurrentBranch = (refspec: string): boolean => ['HEAD', '@', ''].includes(destinationOf(refspec));
+
+// The first operand names the remote; with no refspec after it, or HEAD or @, git pushes the current branch.
+function leasedPushVerdict(options: ParsedOptions, refspecs: readonly string[]): Verdict | null {
   const leased = hasLong(options, '--force-with-lease', 9) || hasLong(options, '--force-if-includes', 9);
+  if (!leased) return null;
   const leasedRefs = options.values
     .filter(([name]) => name.startsWith('--force-with'))
     .map(([, value]) => value.split(':')[0] ?? '');
-  return leased && [...refspecs, ...leasedRefs].some(targetsMainBranch);
+  if ([...refspecs, ...leasedRefs].some(targetsMainBranch)) return FORCE_MAIN;
+  const named = refspecs.slice(1);
+  const everyBranch = hasLong(options, '--all', 3) || hasLong(options, '--branches', 3);
+  return everyBranch || named.length === 0 || named.some(targetsCurrentBranch) ? LEASE_UNNAMED : null;
 }
 
 function deletesRemote(options: ParsedOptions, refspecs: readonly string[]): boolean {
@@ -101,8 +111,13 @@ const judgePush: GitJudge = (options) => {
   const forced = options.short.has('f') || options.long.has('--force');
   if (forced || refspecs.some((refspec) => refspec.startsWith('+'))) return FORCE_PUSH;
   if (deletesRemote(options, refspecs)) return REMOTE_DELETE;
-  if (forcesMainBranch(options, refspecs)) return FORCE_MAIN;
-  return refspecs.some(hasExpansion) ? UNCHECKED : null;
+  return leasedPushVerdict(options, refspecs) ?? (refspecs.some(hasExpansion) ? UNCHECKED : null);
+};
+
+// `git send-pack` is the plumbing under push: `--force` or a `+` refspec force-pushes the same way.
+const judgeSendPack: GitJudge = (options) => {
+  const forced = options.long.has('--force') || options.operands.some((refspec) => refspec.startsWith('+'));
+  return forced ? FORCE_PUSH : null;
 };
 
 const judgeCommit: GitJudge = (options, command, { options: { blockNoVerify } }) => {
@@ -154,6 +169,7 @@ const judgeClone: GitJudge = (options, _command, context) => {
 
 const SUBCOMMANDS: ReadonlyMap<string, { readonly judge: GitJudge; readonly values?: OptionSpec }> = new Map([
   ['push', { judge: judgePush, values: PUSH_VALUES }],
+  ['send-pack', { judge: judgeSendPack, values: { long: ['--receive-pack', '--exec'] } }],
   ['commit', { judge: judgeCommit, values: COMMIT_VALUES }],
   ['reset', { judge: judgeReset }],
   ['clean', { judge: judgeClean, values: { short: 'e' } }],

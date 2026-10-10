@@ -98,6 +98,37 @@ describe('guard-bash on git running programs through config or the environment (
   });
 });
 
+describe('guard-bash on leased and plumbing force-pushes (#31)', () => {
+  it.each([
+    'git push --force-with-lease',
+    'git push --force-with-lease origin',
+    'git push --force-with-lease origin HEAD',
+    'git push --force-with-lease origin @',
+    'git push --force-if-includes --force-with-lease origin HEAD:HEAD',
+    'git push --force-with-lease --all origin',
+  ])('asks before %s, which may rewrite main when it is checked out', (command) => {
+    expect(bashDecision(command)).toBe('ask');
+  });
+
+  it.each([
+    'git push --force-with-lease origin main',
+    'git push --force-with-lease origin HEAD:refs/heads/master',
+    'git send-pack --force origin main',
+    'git send-pack ../remote.git +feature',
+  ])('denies %s', (command) => {
+    expect(bashDecision(command)).toBe('deny');
+  });
+
+  it.each([
+    'git push --force-with-lease origin feature',
+    'git push --force-with-lease origin HEAD:feature',
+    'git push origin',
+    'git send-pack ../remote.git feature',
+  ])('allows %s', (command) => {
+    expect(bashDecision(command)).toBe('allow');
+  });
+});
+
 describe('guard-bash publish rules', () => {
   it.each(['npm stage approve 1a2b', 'npm stage reject 1a2b', 'npm stage publish pkg.tgz'])(
     'asks before %s (#31)',

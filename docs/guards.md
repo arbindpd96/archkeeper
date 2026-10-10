@@ -18,6 +18,8 @@ guard-bash runs before every Bash call. It parses the command line the way a she
 
 A relative delete target is judged from the session's folder and from every folder a `cd`, `chdir` or `pushd` earlier in the same command line may move to, so `rm -r ../my-project` and `cd .. && rm -r my-project` are denied. Home and the project are protected under their real paths too, such as `/private/tmp/…` for `/tmp/…` on macOS. After a `cd` to a folder a variable decides, a relative recursive delete asks.
 
+A force-push to a named main or master is denied, `git send-pack --force` included. A leased force-push that names no branch, or names `HEAD`, `@` or `--all`, asks, since it rewrites whatever branch is checked out.
+
 `git push --force-with-lease` to a feature branch, `rm -rf dist` and `cat .env.example` pass guard-bash. A pager or editor that runs nothing else, such as `GIT_PAGER=cat` or `GIT_EDITOR=true`, passes too.
 
 ## guard-secrets
