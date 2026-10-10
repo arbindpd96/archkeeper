@@ -80,6 +80,23 @@ describe('gitState hardening', () => {
     expect(existsSync(marker)).toBe(false);
   });
 
+  it('keeps git status out of a submodule, whose own config could set a filter program', () => {
+    const marker = path.join(tempDir(), 'ran');
+    const repo = tempRepo({ 'README.md': '# App\n' });
+    const sub = path.join(repo, 'sub');
+    mkdirSync(sub);
+    writeFiles(sub, { '.gitattributes': '* filter=evil\n', 'README.md': '# Sub\n' });
+    git(sub, 'init', '-q', '-b', 'main');
+    git(sub, 'add', '-A');
+    git(sub, 'commit', '-q', '-m', 'sub');
+    git(sub, 'config', 'filter.evil.clean', `touch '${marker}'; cat`);
+    git(repo, 'add', 'sub');
+    git(repo, 'commit', '-q', '-m', 'add the submodule');
+    writeFiles(sub, { 'README.md': '# Sub, edited\n' });
+    expect(gitState(repo)).toBe('clean');
+    expect(existsSync(marker)).toBe(false);
+  });
+
   it('answers for a folder whose name holds shell syntax, since no shell is involved', () => {
     const repo = tempRepo({ 'README.md': '# App\n' });
     const folder = path.join(repo, `it's $HOME & a;b (x)`);
