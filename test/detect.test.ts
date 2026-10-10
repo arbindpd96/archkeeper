@@ -100,6 +100,17 @@ describe('detectStack', () => {
     expect(profile.tools.testRunners).toEqual(['pytest']);
   });
 
+  it.skipIf(!canSymlink())(
+    'lists a .claude folder linked elsewhere, as in a dotfiles setup, as empty',
+    () => {
+      const dir = tempDir();
+      const dotfiles = tempDir();
+      writeFiles(dotfiles, { 'settings.json': '{}\n' });
+      symlinkSync(dotfiles, path.join(dir, '.claude'), 'dir');
+      expect(detectStack(projectView(realpathSync.native(dir))).claude.settings).toBe(false);
+    },
+  );
+
   it.skipIf(!canSymlink())('never reads through a symlink', () => {
     const dir = tempDir();
     const outside = tempDir();
