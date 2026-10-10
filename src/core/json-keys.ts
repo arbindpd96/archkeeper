@@ -1,14 +1,19 @@
 import { HOOK_EVENTS } from './manifest-schema.js';
+import { UNPRINTABLE } from './text.js';
 
 /** The `$schema` entry the json strategy adds to a settings file that has none; the kit owns it like any entry. */
 export const SCHEMA_KEY = '$schema';
 
+const CONTAINER = String.raw`permissions\.(?:allow|ask|deny)|hooks\.(?:${HOOK_EVENTS.join('|')})|mcpServers`;
+
 /**
  * An owned key of a co-owned JSON file (ADR-0014): `$schema`, a permission rule by list and exact string, a hook
- * by event and installed script path, or an MCP server by name, such as `permissions.deny Bash(rm -rf:*)`.
+ * by event and installed script path, or an MCP server by name, such as `permissions.deny Bash(rm -rf:*)`. Lock
+ * keys reach the printed plan, so no key holds a character that could erase or disguise a line there.
  */
 export const JSON_KEY = new RegExp(
-  String.raw`^(?:\$schema|(?:permissions\.(?:allow|ask|deny)|hooks\.(?:${HOOK_EVENTS.join('|')})|mcpServers) \S.*)$`,
+  String.raw`^(?:\$schema|(?:${CONTAINER}) [^\s${UNPRINTABLE}][^${UNPRINTABLE}]*)$`,
+  'u',
 );
 
 /** How an owned key finds its entry: the container's JSON path, and whether it matches by value, hook or name. */
