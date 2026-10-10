@@ -172,6 +172,16 @@ describe('editBlocks', () => {
     expect(memoryImports(result)).toEqual(['AGENTS.md']);
   });
 
+  it('puts a new block of imports after the closing line of a frontmatter whose value holds ---', () => {
+    const imports = { insert: [{ id: 'imports', body: '@AGENTS.md\n' }] };
+    const block = `${BEGIN('imports')}\n@AGENTS.md\n${END('imports')}\n`;
+    const result = edit('CLAUDE.md', '---\ntitle: a---b\nx: 1\n---\n# Project\n', imports);
+    expect(result).toBe(`---\ntitle: a---b\nx: 1\n---\n${block}\n# Project\n`);
+    expect(memoryImports(result)).toEqual(['AGENTS.md']);
+    expect(edit('CLAUDE.md', '---\ntitle: a---b\n', imports)).toBe(`---\ntitle: a---b\n${block}`);
+    expect(edit('CLAUDE.md', '# Project\n\n---\n', imports)).toBe(`${block}\n# Project\n\n---\n`);
+  });
+
   it("puts a new block of imports after a kept block that holds the frontmatter's closing line, never inside it", () => {
     const kept = `${BEGIN('claude-code')}\nA\n---\nB\n${END('claude-code')}\n`;
     const result = edit('CLAUDE.md', `---\nIntro\n${kept}`, {

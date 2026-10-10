@@ -16,6 +16,8 @@ export interface BlockEdits {
   readonly insert: readonly NewBlock[];
 }
 
+const LINE_CLOSE = /\n---[ \t]*(?=\r?\n|\r?$)/;
+
 function withEol(text: string, eol: string): string {
   return eol === '\n' ? text : text.replaceAll('\n', eol);
 }
@@ -51,11 +53,19 @@ function keptParts(file: BlocksFile, edits: BlockEdits): KeptPart[] {
   });
 }
 
+// Claude Code closes frontmatter at the first `---`, even inside a value such as `title: a---b`, while YAML readers
+// close it at a line of its own: the block goes after that line when one follows, so the user's YAML stays whole.
+function lineClose(text: string, close: number): number {
+  if (close === 0 || text[close - 4] === '\n') return close;
+  const line = LINE_CLOSE.exec(text.slice(close));
+  return line === null ? close : close + line.index + line[0].length;
+}
+
 // Claude Code reads YAML frontmatter only at the very top of a Markdown memory file, so the first new block goes
 // on the line after a frontmatter's closing `---`, or after the kept block that line falls in, never inside it.
 function firstBlockAt(file: BlocksFile, parts: readonly KeptPart[]): number {
   const text = parts.map((part) => part.text).join('');
-  const close = file.style === 'html' ? frontmatterEnd(text) : 0;
+  const close = file.style === 'html' ? lineClose(text, frontmatterEnd(text)) : 0;
   if (close === 0) return 0;
   const lineEnd = text.indexOf('\n', close);
   const at = lineEnd === -1 ? text.length : lineEnd + 1;
