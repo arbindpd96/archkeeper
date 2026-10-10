@@ -1,0 +1,50 @@
+{
+  "stack": [
+    "python"
+  ],
+  "languages": [
+    "python"
+  ],
+  "packageManager": null,
+  "pythonManager": "poetry",
+  "tools": {
+    "formatters": [
+      "black"
+    ],
+    "linters": [],
+    "typeCheckers": [
+      "pyright"
+    ],
+    "testRunners": [
+      "pytest"
+    ]
+  },
+  "frameworks": [],
+  "monorepo": false,
+  "commands": [
+    {
+      "stack": "python",
+      "purpose": "test",
+      "command": "poetry run pytest"
+    },
+    {
+      "stack": "python",
+      "purpose": "format",
+      "command": "poetry run black ."
+    },
+    {
+      "stack": "python",
+      "purpose": "typecheck",
+      "command": "poetry run pyright"
+    }
+  ],
+  "docs": [],
+  "claude": {
+    "claudeMd": false,
+    "agentsMd": false,
+    "settings": false,
+    "hooks": false,
+    "skills": false
+  },
+  "warnings": []
+}

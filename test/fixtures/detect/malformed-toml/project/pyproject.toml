@@ -1,0 +1,6 @@
+[project]
+name = "broken"
+dependencies = ["django>=5.2",
+
+[tool.mypy]
+strict = true

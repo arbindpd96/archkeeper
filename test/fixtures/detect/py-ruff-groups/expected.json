@@ -1,0 +1,43 @@
+{
+  "stack": [
+    "python"
+  ],
+  "languages": [
+    "python"
+  ],
+  "packageManager": null,
+  "pythonManager": "pip",
+  "tools": {
+    "formatters": [
+      "ruff"
+    ],
+    "linters": [
+      "ruff"
+    ],
+    "typeCheckers": [],
+    "testRunners": []
+  },
+  "frameworks": [],
+  "monorepo": false,
+  "commands": [
+    {
+      "stack": "python",
+      "purpose": "lint",
+      "command": "ruff check ."
+    },
+    {
+      "stack": "python",
+      "purpose": "format",
+      "command": "ruff format ."
+    }
+  ],
+  "docs": [],
+  "claude": {
+    "claudeMd": false,
+    "agentsMd": false,
+    "settings": false,
+    "hooks": false,
+    "skills": false
+  },
+  "warnings": []
+}

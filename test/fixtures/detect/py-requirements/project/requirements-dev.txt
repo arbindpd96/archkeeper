@@ -1,0 +1,5 @@
+-r requirements.txt
+--index-url https://pypi.org/simple
+pytest>=8.4  # the test runner
+ruff>=0.14
+Mypy[reports]>=1.18 ; python_version >= "3.12"

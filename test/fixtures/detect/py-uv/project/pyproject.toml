@@ -1,0 +1,9 @@
+[project]
+name = "py-uv"
+version = "1.0.0"
+requires-python = ">=3.12"
+dependencies = ["fastapi>=0.120", "pydantic>=2.12"]
+
+[dependency-groups]
+dev = ["pytest>=8.4", "ruff>=0.14", { include-group = "types" }]
+types = ["mypy>=1.18"]

@@ -1,0 +1,6 @@
+{
+  "name": "bad-package-json",
+  "scripts": {
+    "test": "vitest run",
+  }
+}

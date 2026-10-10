@@ -1,0 +1,12 @@
+{
+  "name": "js-yarn",
+  "private": true,
+  "scripts": {
+    "start": "node index.js",
+    "test": "jest",
+    "fmt": "prettier --write ."
+  },
+  "devDependencies": {
+    "jest": "^30.0.0"
+  }
+}

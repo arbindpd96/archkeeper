@@ -1,0 +1,34 @@
+{
+  "stack": [
+    "ts"
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "packageManager": "npm",
+  "pythonManager": null,
+  "tools": {
+    "formatters": [],
+    "linters": [],
+    "typeCheckers": [],
+    "testRunners": []
+  },
+  "frameworks": [],
+  "monorepo": false,
+  "commands": [
+    {
+      "stack": "ts",
+      "purpose": "test",
+      "command": "npm run test"
+    }
+  ],
+  "docs": [],
+  "claude": {
+    "claudeMd": true,
+    "agentsMd": true,
+    "settings": true,
+    "hooks": true,
+    "skills": true
+  },
+  "warnings": []
+}

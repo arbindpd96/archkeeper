@@ -1,0 +1,43 @@
+{
+  "stack": [
+    "python"
+  ],
+  "languages": [
+    "python"
+  ],
+  "packageManager": null,
+  "pythonManager": "pip",
+  "tools": {
+    "formatters": [],
+    "linters": [],
+    "typeCheckers": [],
+    "testRunners": [
+      "pytest"
+    ]
+  },
+  "frameworks": [],
+  "monorepo": false,
+  "commands": [
+    {
+      "stack": "python",
+      "purpose": "test",
+      "command": "pytest"
+    }
+  ],
+  "docs": [],
+  "claude": {
+    "claudeMd": false,
+    "agentsMd": false,
+    "settings": false,
+    "hooks": false,
+    "skills": false
+  },
+  "warnings": [
+    {
+      "file": "pyproject.toml",
+      "location": "line 5, column 2",
+      "problem": "is not valid TOML, so its dependencies and tool settings were skipped",
+      "hint": "fix the TOML at that spot and run again"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "stack": [
+    "ts"
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "packageManager": "npm",
+  "pythonManager": null,
+  "tools": {
+    "formatters": [],
+    "linters": [],
+    "typeCheckers": [
+      "tsc"
+    ],
+    "testRunners": []
+  },
+  "frameworks": [],
+  "monorepo": false,
+  "commands": [],
+  "docs": [],
+  "claude": {
+    "claudeMd": false,
+    "agentsMd": false,
+    "settings": false,
+    "hooks": false,
+    "skills": false
+  },
+  "warnings": [
+    {
+      "file": "package.json",
+      "location": "line 5, column 3",
+      "problem": "is not valid JSON (property name expected), so it was skipped",
+      "hint": "fix the JSON at that spot; JSON allows no comments and no trailing commas"
+    }
+  ]
+}

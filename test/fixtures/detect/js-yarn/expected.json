@@ -1,0 +1,45 @@
+{
+  "stack": [
+    "ts"
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "packageManager": "yarn",
+  "pythonManager": null,
+  "tools": {
+    "formatters": [
+      "prettier"
+    ],
+    "linters": [
+      "eslint"
+    ],
+    "typeCheckers": [],
+    "testRunners": [
+      "jest"
+    ]
+  },
+  "frameworks": [],
+  "monorepo": false,
+  "commands": [
+    {
+      "stack": "ts",
+      "purpose": "test",
+      "command": "yarn run test"
+    },
+    {
+      "stack": "ts",
+      "purpose": "format",
+      "command": "yarn run fmt"
+    }
+  ],
+  "docs": [],
+  "claude": {
+    "claudeMd": false,
+    "agentsMd": false,
+    "settings": false,
+    "hooks": false,
+    "skills": false
+  },
+  "warnings": []
+}

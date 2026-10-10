@@ -1,0 +1,64 @@
+{
+  "stack": [
+    "ts"
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "packageManager": "npm",
+  "pythonManager": null,
+  "tools": {
+    "formatters": [
+      "prettier"
+    ],
+    "linters": [
+      "eslint"
+    ],
+    "typeCheckers": [
+      "tsc"
+    ],
+    "testRunners": [
+      "vitest"
+    ]
+  },
+  "frameworks": [],
+  "monorepo": false,
+  "commands": [
+    {
+      "stack": "ts",
+      "purpose": "build",
+      "command": "npm run build"
+    },
+    {
+      "stack": "ts",
+      "purpose": "test",
+      "command": "npm run test"
+    },
+    {
+      "stack": "ts",
+      "purpose": "lint",
+      "command": "npm run lint"
+    },
+    {
+      "stack": "ts",
+      "purpose": "format",
+      "command": "npm run format"
+    },
+    {
+      "stack": "ts",
+      "purpose": "typecheck",
+      "command": "npm run typecheck"
+    }
+  ],
+  "docs": [
+    "README.md"
+  ],
+  "claude": {
+    "claudeMd": false,
+    "agentsMd": false,
+    "settings": false,
+    "hooks": false,
+    "skills": false
+  },
+  "warnings": []
+}
