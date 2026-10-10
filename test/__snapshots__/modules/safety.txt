@@ -80,8 +80,8 @@ Rules for AI coding agents, such as Claude Code, Codex, Cursor, Gemini CLI and C
 Hooks guard this repository unless its config opts one out. guard-bash denies destructive shell commands and asks before irreversible ones. guard-secrets denies likely secrets in written files and asks before edits to `.env` files. When a guard blocks a call, change the approach; never work around it.
 
 - Native deny rules back the guards and still apply when a hook cannot run, such as when Node.js is missing.
-- Deny rules match on the command prefix only, so the guards are the fine-grained layer. `Bash(rm -rf:*)` denies every command that starts with `rm -rf`, safe ones such as `rm -rf dist` included: ask the user to run those.
-- `Read(**/.env.*)` also blocks reading templates such as `.env.example` with the Read tool.
+- Deny rules match on the command prefix only, so the guards are the fine-grained layer. Unless opted out, `Bash(rm -rf:*)` denies every command that starts with `rm -rf`, safe ones such as `rm -rf dist` included: ask the user to run those.
+- Unless opted out, `Read(**/.env.*)` also blocks reading templates such as `.env.example` with the Read tool.
 - Keep secrets in environment variables. A test fixture that needs a token-like value takes `acmekit:allow-secret` on its line, and the user confirms each new one.
 === CLAUDE.md (blocks, base, block agents-import)
 @AGENTS.md
@@ -173,8 +173,8 @@ Rules for AI coding agents, such as Claude Code, Codex, Cursor, Gemini CLI and C
 Hooks guard this repository unless its config opts one out. guard-bash denies destructive shell commands and asks before irreversible ones. guard-secrets denies likely secrets in written files and asks before edits to `.env` files. When a guard blocks a call, change the approach; never work around it.
 
 - Native deny rules back the guards and still apply when a hook cannot run, such as when Node.js is missing.
-- Deny rules match on the command prefix only, so the guards are the fine-grained layer. `Bash(rm -rf:*)` denies every command that starts with `rm -rf`, safe ones such as `rm -rf dist` included: ask the user to run those.
-- `Read(**/.env.*)` also blocks reading templates such as `.env.example` with the Read tool.
+- Deny rules match on the command prefix only, so the guards are the fine-grained layer. Unless opted out, `Bash(rm -rf:*)` denies every command that starts with `rm -rf`, safe ones such as `rm -rf dist` included: ask the user to run those.
+- Unless opted out, `Read(**/.env.*)` also blocks reading templates such as `.env.example` with the Read tool.
 - Keep secrets in environment variables. A test fixture that needs a token-like value takes `acmekit:allow-secret` on its line, and the user confirms each new one.
 === CLAUDE.md (blocks, base, block agents-import)
 @AGENTS.md
