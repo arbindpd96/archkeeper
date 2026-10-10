@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { BRAND } from '../../core/brand.js';
+import { isRecord } from '../../core/text.js';
 
 /** A hook payload as Claude Code sends it on stdin; every field is read defensively (reference §1.4). */
 export type Payload = Readonly<Record<string, unknown>>;
@@ -28,11 +29,6 @@ export type Answer =
 export interface HookStreams {
   readonly stdout: (text: string) => void;
   readonly stderr: (text: string) => void;
-}
-
-/** Tells whether a value is a plain JSON object, not an array or null. */
-export function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /** Reads a hook payload from text: `{}` with the problem named when it is empty, not JSON or not an object. */
@@ -79,10 +75,20 @@ export function permission(decision: Decision, reason: string): Answer {
   return { kind: 'done', output };
 }
 
+const TRUNCATED = '\n…(truncated)';
+
+// Cuts at most `cap` UTF-16 units, never between the halves of a surrogate pair.
+function cutAt(text: string, cap: number): string {
+  const end = Math.max(0, cap);
+  const last = text.charCodeAt(end - 1);
+  return text.slice(0, last >= 0xd800 && last <= 0xdbff ? end - 1 : end);
+}
+
 /** Context injected into Claude's session, cut to `cap` characters so it stays inside its budget (ADR-0017). */
-export function context(event: string, text: string, cap: number): Answer {
-  const marker = '\n…(truncated)';
-  const cut = text.length <= cap ? text : `${text.slice(0, Math.max(0, cap - marker.length))}${marker}`;
+export function additionalContext(event: string, text: string, cap: number): Answer {
+  const marked =
+    cap >= TRUNCATED.length ? `${cutAt(text, cap - TRUNCATED.length)}${TRUNCATED}` : cutAt(text, cap);
+  const cut = text.length <= cap ? text : marked;
   return { kind: 'done', output: { hookSpecificOutput: { hookEventName: event, additionalContext: cut } } };
 }
 

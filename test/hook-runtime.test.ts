@@ -3,7 +3,7 @@ import { BRAND } from '../src/core/brand.js';
 import {
   type Answer,
   block,
-  context,
+  additionalContext,
   type HookInput,
   noAnswer,
   parseInput,
@@ -103,17 +103,27 @@ describe('hook answers (ADR-0015, reference §1.5)', () => {
     expect(written(noAnswer('a note'))).toEqual({ code: 0, stdout: '', stderr: 'a note\n' });
   });
 
+  const contextOf = (answer: Answer): string =>
+    (JSON.parse(written(answer).stdout) as { hookSpecificOutput: { additionalContext: string } })
+      .hookSpecificOutput.additionalContext;
+
   it('cuts context to its cap, marking the cut', () => {
-    const { stdout } = written(context('SessionStart', 'x'.repeat(100), 40));
-    const { hookSpecificOutput } = JSON.parse(stdout) as {
-      hookSpecificOutput: { additionalContext: string };
-    };
-    expect(hookSpecificOutput.additionalContext).toHaveLength(40);
-    expect(hookSpecificOutput.additionalContext).toMatch(/…\(truncated\)$/);
+    const cut = contextOf(additionalContext('SessionStart', 'x'.repeat(100), 40));
+    expect(cut).toHaveLength(40);
+    expect(cut).toMatch(/…\(truncated\)$/);
   });
 
   it('keeps context within its cap whole', () => {
-    expect(outcomeOf(context('SessionStart', 'Next step: x', 40))).toBe('context');
+    expect(outcomeOf(additionalContext('SessionStart', 'Next step: x', 40))).toBe('context');
+  });
+
+  it('never exceeds a cap smaller than the truncation marker', () => {
+    expect(contextOf(additionalContext('SessionStart', 'x'.repeat(100), 5))).toBe('xxxxx');
+  });
+
+  it('never splits a surrogate pair where it cuts', () => {
+    const cut = contextOf(additionalContext('SessionStart', `${'x'.repeat(26)}😀${'y'.repeat(50)}`, 40));
+    expect(cut).toBe(`${'x'.repeat(26)}\n…(truncated)`);
   });
 
   it.each<[Answer, string]>([
