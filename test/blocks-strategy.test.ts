@@ -230,6 +230,22 @@ describe('the blocks strategy', () => {
     expect(outcome.sidecar).toBeUndefined();
   });
 
+  it('keeps its own blocks sidecar once the user edits the file outside its blocks, and says how to update', () => {
+    const outcome = plan([blockEntry('a', 'Newer.\n')], {
+      state: file(`my new intro\n${block('a', 'Mine.\n')}`),
+      sidecar: file(block('a', 'New.\n')),
+      lock: { a: base('Old.\n', 'New.\n') },
+    });
+    expect(outcome.ops[0]).toMatchObject({
+      kind: 'skip',
+      reason: expect.stringContaining(
+        'AGENTS.md.acmekit-new no longer matches AGENTS.md with the kit blocks swapped in',
+      ) as string,
+    });
+    expect(outcome.ops[0]?.reason).toContain('delete it and run again to get the newest kit version');
+    expect(outcome.sidecar).toBeUndefined();
+  });
+
   it('rewrites a blocks sidecar the kit wrote when the kit content changes again', () => {
     const outcome = plan([blockEntry('a', 'Newer.\n')], {
       state: file(block('a', 'Mine.\n')),
