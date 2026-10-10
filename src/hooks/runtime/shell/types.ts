@@ -16,6 +16,8 @@ export interface RawCommand {
   expands: boolean[];
   /** Redirect targets. */
   redirects: string[];
+  /** The targets of redirects that write: `>`, `>>`, `>|`, `>&`, `&>`, `&>>` and `<>`. */
+  outputs: string[];
   /** Here-document and here-string bodies. */
   heredocs: string[];
   /** Commands that substitutions in its words run. */
@@ -34,6 +36,7 @@ export function newCommand(): RawCommand {
     splits: [],
     expands: [],
     redirects: [],
+    outputs: [],
     heredocs: [],
     subs: [],
     pipes: [],

@@ -30,6 +30,8 @@ export interface Command {
   readonly expands: boolean[];
   readonly definesFunction: boolean;
   readonly redirects: string[];
+  /** The targets of redirects that write a file. */
+  readonly outputs: string[];
   readonly heredocs: string[];
   readonly pipes: PipePosition[];
   /** Commands that substitutions in its words run. */
@@ -112,6 +114,7 @@ function normalize(raw: RawCommand, outer: Outer, charge: Charge): Command {
     expands: expands.slice(argsIndex),
     definesFunction: raw.definesFunction,
     redirects: raw.redirects,
+    outputs: raw.outputs,
     heredocs: raw.heredocs,
     pipes: [...raw.pipes, ...outer.pipes],
     subs: [],
