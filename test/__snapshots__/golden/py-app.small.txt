@@ -1,0 +1,54 @@
+336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49  state        .acmekit/base/336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
+3cde2e415766dbe7a71caf9e88eea76c722199bb830605c195250d48a3e9ef23  state        .acmekit/base/3cde2e415766dbe7a71caf9e88eea76c722199bb830605c195250d48a3e9ef23
+78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7  state        .acmekit/base/78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7
+863aa344b1d719be44b9cd1b056ad390825da91cb77f8de1f652bfacd66fc7f3  state        .acmekit/base/863aa344b1d719be44b9cd1b056ad390825da91cb77f8de1f652bfacd66fc7f3
+b14df213662c8f70aa222047cc5093c9975c21005343db864945fe72a13946b4  state        .acmekit/base/b14df213662c8f70aa222047cc5093c9975c21005343db864945fe72a13946b4
+e2e410aaa403c11a6a46ee154c6c1d8582d22fefa27dd4f9b9d173da37be2f1c  state        .acmekit/config.json
+cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b  state        .acmekit/local/.gitignore
+4ee1539e43c139fd96e9f52ec0b99e4a1901365230a0efefa243d1990f2ca2ae  state        .acmekit/lock.json
+cd7366ce9cbf42d295cad1b0bfc1900a96028d33afe15008be380ab9bba0265c  blocks       .gitattributes
+491e2e47d3979f026ba67314885071414ac11c06d84e74857f6ba84cc6c98f0b  blocks       .gitignore
+5ee4fc48ce1a6d7a61c01569add8ed1f1df0238f76fb9a0b34764a8c9ceb3fef  blocks       AGENTS.md
+5bce2ada44fe2da10d6401b84051be5f0bf86ffba04efe0969dcc3046ecff5ee  blocks       CLAUDE.md
+c58f52088b11f6419abfbde0f2df33e767e73cf88b808e70f7f7f1b50e0581b5  user         pyproject.toml
+7d180e1afb7777ad22495996b5c0d3fa3cf8df9e420f400e2dc7782dcfaec91b  user         src/py_app/__init__.py
+0400be510b1b4b3be091e08e9627fc7827edf81b4bc9a1e91111e8405ef9671a  user         tests/test_greet.py
+
+=== CLAUDE.md
+<!-- acmekit:begin agents-import -->
+@AGENTS.md
+<!-- acmekit:end agents-import -->
+
+<!-- acmekit:begin claude-code -->
+## Claude Code
+
+- AGENTS.md holds the rules every AI tool shares, and this file imports it: change shared rules there.
+- Keep personal notes in CLAUDE.local.md, which git ignores.
+- Claude Code reads .claude/settings.json and its hooks at startup, so restart it after changing them.
+<!-- acmekit:end claude-code -->
+=== AGENTS.md
+<!-- acmekit:begin agent-rules -->
+Rules for AI coding agents, such as Claude Code, Codex, Cursor, Gemini CLI and Copilot, in this repository.
+
+## Principles
+
+1. **Think before coding.** State your assumptions. When a request is ambiguous, offer options or ask.
+2. **Simplicity first.** Write the least code that solves the problem. No speculative features or abstractions.
+3. **Surgical changes.** Touch only what the task needs. Never refactor unrelated working code.
+4. **Goal-driven.** Define what "done" means, such as the tests passing, and verify it yourself before you report.
+
+## Before creating anything new
+
+1. Search the codebase for code that already does the job.
+2. Reuse or extend it. Never duplicate it.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `pytest` | Run the tests |
+| `ruff check .` | Lint |
+| `ruff format .` | Format |
+<!-- acmekit:end agent-rules -->
+=== .claude/settings.json
+(absent)

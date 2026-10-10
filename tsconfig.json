@@ -3,6 +3,6 @@
   "compilerOptions": {
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "test/**/*.ts", "vitest.config.ts", "tsdown.config.mts"],
+  "include": ["src/**/*.ts", "test/**/*.ts", "scripts/*.d.mts", "vitest.config.ts", "tsdown.config.mts"],
   "exclude": ["test/fixtures/**"]
 }

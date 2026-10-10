@@ -1,0 +1,59 @@
+336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49  state        .acmekit/base/336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
+3cde2e415766dbe7a71caf9e88eea76c722199bb830605c195250d48a3e9ef23  state        .acmekit/base/3cde2e415766dbe7a71caf9e88eea76c722199bb830605c195250d48a3e9ef23
+3e6f1a905b397a0875312ee4a71c1216586f40c2f7b481ce0bb8e18d71405864  state        .acmekit/base/3e6f1a905b397a0875312ee4a71c1216586f40c2f7b481ce0bb8e18d71405864
+78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7  state        .acmekit/base/78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7
+863aa344b1d719be44b9cd1b056ad390825da91cb77f8de1f652bfacd66fc7f3  state        .acmekit/base/863aa344b1d719be44b9cd1b056ad390825da91cb77f8de1f652bfacd66fc7f3
+e2e410aaa403c11a6a46ee154c6c1d8582d22fefa27dd4f9b9d173da37be2f1c  state        .acmekit/config.json
+cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b  state        .acmekit/local/.gitignore
+63dc24f8603315e6160ee79e4136d5ab42f7413d8eeda493e0dca5524e123a27  state        .acmekit/lock.json
+cd7366ce9cbf42d295cad1b0bfc1900a96028d33afe15008be380ab9bba0265c  blocks       .gitattributes
+491e2e47d3979f026ba67314885071414ac11c06d84e74857f6ba84cc6c98f0b  blocks       .gitignore
+37055c98043228133ffcc5cad7bba5ef6c8f24698a551cae547b90f51d22e519  user         .prettierrc.json
+f8041d3f6b35bba6aeb93b29bbeb8b103a636812c37e4010839a4b27499022e3  blocks       AGENTS.md
+5bce2ada44fe2da10d6401b84051be5f0bf86ffba04efe0969dcc3046ecff5ee  blocks       CLAUDE.md
+50e8b8c2c27258f88f2d265a52dadce1eae4d3f5ffe4365afe9be499a2f8a9a1  user         eslint.config.js
+2f61b4062d90572fa93d4bae12cd14babe06793936a0d2410ed7102cad4b7571  user         package.json
+ddadb22209a4466c1f4c6075e56c0317cfe9a29fed48c6dacdb3241447368efc  user         src/greet.ts
+1669c3dac230b155344527f97532d5e534eb2c46bbede00e2c7da6797c88cee9  user         test/greet.test.ts
+f721363b1acae80ab945661eac168edfbe200b15255d5d97abeb774c1fd35141  user         tsconfig.json
+530bd3ae03a17ef1b60d63ca7bbceaa4231acf82ae4876151083c0e9c402e519  user         vitest.config.ts
+
+=== CLAUDE.md
+<!-- acmekit:begin agents-import -->
+@AGENTS.md
+<!-- acmekit:end agents-import -->
+
+<!-- acmekit:begin claude-code -->
+## Claude Code
+
+- AGENTS.md holds the rules every AI tool shares, and this file imports it: change shared rules there.
+- Keep personal notes in CLAUDE.local.md, which git ignores.
+- Claude Code reads .claude/settings.json and its hooks at startup, so restart it after changing them.
+<!-- acmekit:end claude-code -->
+=== AGENTS.md
+<!-- acmekit:begin agent-rules -->
+Rules for AI coding agents, such as Claude Code, Codex, Cursor, Gemini CLI and Copilot, in this repository.
+
+## Principles
+
+1. **Think before coding.** State your assumptions. When a request is ambiguous, offer options or ask.
+2. **Simplicity first.** Write the least code that solves the problem. No speculative features or abstractions.
+3. **Surgical changes.** Touch only what the task needs. Never refactor unrelated working code.
+4. **Goal-driven.** Define what "done" means, such as the tests passing, and verify it yourself before you report.
+
+## Before creating anything new
+
+1. Search the codebase for code that already does the job.
+2. Reuse or extend it. Never duplicate it.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `npm run build` | Build |
+| `npm run test` | Run the tests |
+| `npm run lint` | Lint |
+| `npm run format` | Format |
+<!-- acmekit:end agent-rules -->
+=== .claude/settings.json
+(absent)

@@ -1,0 +1,74 @@
+##### base on examples/ts-app
+=== .gitignore (blocks, base, block base)
+CLAUDE.local.md
+.claude/settings.local.json
+.acmekit/local/
+.*.[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f].tmp
+=== AGENTS.md (blocks, base, block agent-rules)
+Rules for AI coding agents, such as Claude Code, Codex, Cursor, Gemini CLI and Copilot, in this repository.
+
+## Principles
+
+1. **Think before coding.** State your assumptions. When a request is ambiguous, offer options or ask.
+2. **Simplicity first.** Write the least code that solves the problem. No speculative features or abstractions.
+3. **Surgical changes.** Touch only what the task needs. Never refactor unrelated working code.
+4. **Goal-driven.** Define what "done" means, such as the tests passing, and verify it yourself before you report.
+
+## Before creating anything new
+
+1. Search the codebase for code that already does the job.
+2. Reuse or extend it. Never duplicate it.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `npm run build` | Build |
+| `npm run test` | Run the tests |
+| `npm run lint` | Lint |
+| `npm run format` | Format |
+=== CLAUDE.md (blocks, base, block agents-import)
+@AGENTS.md
+=== CLAUDE.md (blocks, base, block claude-code)
+## Claude Code
+
+- AGENTS.md holds the rules every AI tool shares, and this file imports it: change shared rules there.
+- Keep personal notes in CLAUDE.local.md, which git ignores.
+- Claude Code reads .claude/settings.json and its hooks at startup, so restart it after changing them.
+
+##### base on examples/py-app
+=== .gitignore (blocks, base, block base)
+CLAUDE.local.md
+.claude/settings.local.json
+.acmekit/local/
+.*.[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f].tmp
+=== AGENTS.md (blocks, base, block agent-rules)
+Rules for AI coding agents, such as Claude Code, Codex, Cursor, Gemini CLI and Copilot, in this repository.
+
+## Principles
+
+1. **Think before coding.** State your assumptions. When a request is ambiguous, offer options or ask.
+2. **Simplicity first.** Write the least code that solves the problem. No speculative features or abstractions.
+3. **Surgical changes.** Touch only what the task needs. Never refactor unrelated working code.
+4. **Goal-driven.** Define what "done" means, such as the tests passing, and verify it yourself before you report.
+
+## Before creating anything new
+
+1. Search the codebase for code that already does the job.
+2. Reuse or extend it. Never duplicate it.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `pytest` | Run the tests |
+| `ruff check .` | Lint |
+| `ruff format .` | Format |
+=== CLAUDE.md (blocks, base, block agents-import)
+@AGENTS.md
+=== CLAUDE.md (blocks, base, block claude-code)
+## Claude Code
+
+- AGENTS.md holds the rules every AI tool shares, and this file imports it: change shared rules there.
+- Keep personal notes in CLAUDE.local.md, which git ignores.
+- Claude Code reads .claude/settings.json and its hooks at startup, so restart it after changing them.
