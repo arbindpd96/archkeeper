@@ -88,6 +88,21 @@ describe('init beside a .claude folder linked elsewhere, as in a dotfiles setup'
   });
 });
 
+describe('init beside an AGENTS.md linked elsewhere', () => {
+  it.skipIf(!canSymlink())(
+    'imports no AGENTS.md linked to a file outside the project, and says so',
+    async () => {
+      const { dir } = fixtureCopy('ts-app');
+      const outside = tempDir();
+      writeFiles(outside, { 'private.md': 'not for the project\n' });
+      symlinkSync(path.join(outside, 'private.md'), path.join(dir, 'AGENTS.md'));
+      const result = await runInit(dir, ['--yes']);
+      expect(read(dir, 'CLAUDE.md')).not.toContain('@AGENTS.md');
+      expect(result.stderr).toContain('AGENTS.md resolves outside the project');
+    },
+  );
+});
+
 describe('init on Windows-shaped projects', () => {
   it('runs from a path with a space and non-ASCII characters', async () => {
     const { dir } = fixtureCopy('py-app');

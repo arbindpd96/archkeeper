@@ -3,11 +3,11 @@ import path from 'node:path';
 import { configPath } from '../core/config.js';
 import { detectStack } from '../core/detect.js';
 import { type ProblemReport, UsageError } from '../core/errors.js';
-import { withoutImportedBlocks } from '../core/import-blocks.js';
+import { withoutImportedBlocks, withoutRefusedImports } from '../core/import-blocks.js';
 import { resolveOptions } from '../core/options.js';
 import { summarizePlan } from '../core/plan-summary.js';
 import { projectValues } from '../core/project-values.js';
-import { render } from '../core/render.js';
+import { render, type RenderTree } from '../core/render.js';
 import { resolveModules } from '../core/resolve.js';
 import type { StackProfile } from '../core/stack-profile.js';
 import { escapeUnprintable, quoted } from '../core/text.js';
@@ -90,6 +90,36 @@ function memoryText(rootReal: string, file: string): string | undefined {
   return textAt(rootReal, file);
 }
 
+// Claude Code follows a link, so AGENTS.md linked to a private file elsewhere would load it in every session; render
+// refuses an outside @ import in a value the same way. A link whose target cannot be resolved counts as outside.
+function resolvesOutside(rootReal: string, target: string): boolean {
+  const absolute = path.join(rootReal, ...target.split('/'));
+  if (lstatOrUndefined(absolute) === undefined) return false;
+  try {
+    const relative = path.relative(rootReal, realpathSync.native(absolute));
+    return relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative);
+  } catch {
+    return true;
+  }
+}
+
+// The kit's import blocks, left out where the user's own memory files already make the import or where the
+// imported file resolves outside the project.
+function treeToWrite(run: InitRun, rendered: RenderTree): RenderTree {
+  const read = (file: string): string | undefined => memoryText(run.rootReal, file);
+  const imported = withoutImportedBlocks(rendered, read, run.brand);
+  const { tree, refused } = withoutRefusedImports(imported, (target) =>
+    resolvesOutside(run.rootReal, target),
+  );
+  for (const { file, target } of refused) {
+    run.asking.report.warn(
+      `${file}: the kit leaves out its @${target} import, since ${target} resolves outside the project ` +
+        `(make ${target} a regular file in the project to have it imported)`,
+    );
+  }
+  return tree;
+}
+
 function warnAll(run: InitRun, reports: readonly ProblemReport[]): void {
   for (const { file, location, problem, hint } of reports) {
     run.asking.report.warn(`${file}: ${location === '' ? '' : `${location}: `}${problem} (${hint})`);
@@ -113,7 +143,7 @@ function planInit(
   const { add, remove } = next.config.modules;
   const { modules: kits } = resolveModules({ preset, stack, add, remove, options }, catalog, run.brand);
   const rendered = render(kits, { stack, options, values: projectValues(profile, stack) }, run.brand);
-  const tree = withoutImportedBlocks(rendered, (file) => memoryText(run.rootReal, file), run.brand);
+  const tree = treeToWrite(run, rendered);
   const modules = kits.map((kit) => kit.manifest.id);
   const installPlan = planProject(run.rootReal, tree, { kit: run.kit, modules, brand: run.brand });
   const plan = withConfig(installPlan, next, existing, run.brand);
