@@ -76,7 +76,7 @@ your-project/
 
 | Module                       | Sets up                                                                  | small       | medium    | full        |
 | ---------------------------- | ------------------------------------------------------------------------ | ----------- | --------- | ----------- |
-| base                         | CLAUDE.md, AGENTS.md, ignore rules, settings                             | yes         | yes       | yes         |
+| base                         | CLAUDE.md, AGENTS.md, ignore rules                                       | yes         | yes       | yes         |
 | safety                       | guard hooks, deny rules                                                  | yes         | yes       | yes         |
 | feature-memory               | MEMORY template, mistakes log, memory hooks, `/new-feature`, `/handoff`  | yes         | yes       | yes         |
 | knowledge                    | decisions, ADRs, glossary, `/why`, `/adr`                                |             | yes       | yes         |
