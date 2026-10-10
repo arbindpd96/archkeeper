@@ -7,6 +7,7 @@ import { toLf } from './text.js';
 const IMPORT_LINE = /^@\S+$/;
 const FENCE = /^ {0,3}(?:`{3,}|~{3,})/;
 const WORDS = /(?<!\\)\s+/;
+const CODE_SPAN = /`[^`\n]*`/g;
 
 function importLines(entry: RenderedEntry): string[] {
   return entry.content.split('\n').filter((line) => line.trim() !== '');
@@ -36,8 +37,9 @@ function userText(text: string, brand: Brand): string {
   return kept.join('\n');
 }
 
+// Claude Code reads no import inside a code span (reference §2.1), even one with spaces around the `@`.
 function importsIn(text: string): Set<string> {
-  const words = withoutComments(text).split(WORDS);
+  const words = withoutComments(text).replace(CODE_SPAN, ' ').split(WORDS);
   return new Set(words.filter((word) => word.startsWith('@')).map(sameImport));
 }
 
