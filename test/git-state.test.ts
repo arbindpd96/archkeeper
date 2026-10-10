@@ -57,6 +57,17 @@ describe('gitState hardening', () => {
     expect(existsSync(marker)).toBe(false);
   });
 
+  it('counts a project folder whose name starts with two dots as inside the project', () => {
+    const marker = path.join(tempDir(), 'ran');
+    const repo = tempRepo({ '.gitignore': '..bin/\n', 'README.md': '# App\n' });
+    const folder = path.join(repo, '..bin');
+    writeFiles(folder, { git: `#!/bin/sh\ntouch '${marker}'\nexit 1\n` });
+    chmodSync(path.join(folder, 'git'), 0o755);
+    stubEnv('PATH', [folder, process.env.PATH ?? ''].join(path.delimiter));
+    expect(gitState(repo)).toBe('clean');
+    expect(existsSync(marker)).toBe(false);
+  });
+
   it('ignores GIT_DIR from the environment, as a git hook would export it', () => {
     const other = tempRepo({ 'README.md': '# Other\n' });
     stubEnv('GIT_DIR', path.join(other, '.git'));

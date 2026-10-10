@@ -21,7 +21,7 @@ interface GitRun {
 
 function isInside(root: string, real: string): boolean {
   const relative = path.relative(root, real);
-  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  return relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
 }
 
 function realOrUndefined(absolute: string): string | undefined {
