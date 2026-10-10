@@ -72,6 +72,15 @@ describe('hook bundles (#30, ADR-0015)', () => {
     expect(bundle).not.toMatch(NETWORK);
   });
 
+  it.each(HOOK_SOURCES)(
+    '%s never returns updatedInput, which parallel hooks race over (reference §1.7)',
+    (hook) => {
+      expect(readFileSync(path.join(REPO_ROOT, 'dist/hooks', `${hook}.mjs`), 'utf8')).not.toContain(
+        'updatedInput',
+      );
+    },
+  );
+
   it.each(HOOK_SOURCES)('%s passes its self-test alone in a folder with no node_modules', (hook) => {
     const result = run(isolatedCopy(hook), '', ['--self-test']);
     expect(result.stdout).toMatch(new RegExp(`^${hook}: (\\d+) of \\1 samples passed\\n$`));
