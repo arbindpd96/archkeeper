@@ -72,7 +72,7 @@ Everything the kit keeps lives in `.archkeeper/` (`BRAND.stateDir`):
 
 - It is gitignored twice: by the base module's `.gitignore` block, and by its own `.archkeeper/local/.gitignore`, which contains `*` and so ignores itself too. A user who deletes the root block therefore cannot commit backups or snapshots by accident.
 - Whatever creates `local/`, the CLI or a hook, writes `local/.gitignore` in the same step, so a `local/` that a user deleted never comes back without it.
-- A backup is a set of compressed, content-addressed blobs, named like the bases, plus a `manifest.json` that maps paths to blobs, under `local/backup/<runId>/`. The last 3 runs are kept.
+- A backup is a set of compressed, content-addressed blobs under `local/backup/<runId>/`, plus a `manifest.json` that records each path as a file (with its blob and mode), a symlink (with its target) or absent. Unlike a base, a backup blob is named by the sha256 of the file's exact bytes, not of its LF-normalised content, so two files that differ only in line endings get two blobs and a restore is byte-identical. The last 3 runs are kept.
 - Backups can hold copies of gitignored files, such as a user's `.mcp.json` with tokens, so they are created with mode `0600`, like hook state.
 
 **Not discoverable.** Nothing under `.archkeeper/` is named `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md` or `SKILL.md`, sits under a `.claude/` folder, or ends in `.md`. Bases and backups are compressed, so a ripgrep search for template text finds nothing there. A test enforces both (#24). The map seeder and, from v0.2, the duplicate checker skip `.archkeeper/`.
