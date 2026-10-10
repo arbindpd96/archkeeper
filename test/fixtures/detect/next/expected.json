@@ -1,0 +1,46 @@
+{
+  "stack": [
+    "ts"
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "packageManager": "bun",
+  "pythonManager": null,
+  "tools": {
+    "formatters": [],
+    "linters": [
+      "eslint"
+    ],
+    "typeCheckers": [
+      "tsc"
+    ],
+    "testRunners": []
+  },
+  "frameworks": [
+    "react",
+    "next"
+  ],
+  "monorepo": false,
+  "commands": [
+    {
+      "stack": "ts",
+      "purpose": "build",
+      "command": "bun run build"
+    },
+    {
+      "stack": "ts",
+      "purpose": "lint",
+      "command": "bun run lint"
+    }
+  ],
+  "docs": [],
+  "claude": {
+    "claudeMd": false,
+    "agentsMd": false,
+    "settings": false,
+    "hooks": false,
+    "skills": false
+  },
+  "warnings": []
+}

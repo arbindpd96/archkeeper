@@ -1,0 +1,41 @@
+{
+  "stack": [
+    "ts"
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "packageManager": "yarn",
+  "pythonManager": null,
+  "tools": {
+    "formatters": [],
+    "linters": [],
+    "typeCheckers": [
+      "tsc"
+    ],
+    "testRunners": []
+  },
+  "frameworks": [],
+  "monorepo": true,
+  "commands": [
+    {
+      "stack": "ts",
+      "purpose": "build",
+      "command": "yarn run build"
+    },
+    {
+      "stack": "ts",
+      "purpose": "test",
+      "command": "yarn run test"
+    }
+  ],
+  "docs": [],
+  "claude": {
+    "claudeMd": false,
+    "agentsMd": false,
+    "settings": false,
+    "hooks": false,
+    "skills": false
+  },
+  "warnings": []
+}

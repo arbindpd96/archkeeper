@@ -1,0 +1,43 @@
+{
+  "stack": [
+    "ts"
+  ],
+  "languages": [
+    "javascript"
+  ],
+  "packageManager": "npm",
+  "pythonManager": null,
+  "tools": {
+    "formatters": [
+      "biome"
+    ],
+    "linters": [
+      "biome"
+    ],
+    "typeCheckers": [],
+    "testRunners": []
+  },
+  "frameworks": [],
+  "monorepo": false,
+  "commands": [
+    {
+      "stack": "ts",
+      "purpose": "lint",
+      "command": "npm run lint"
+    },
+    {
+      "stack": "ts",
+      "purpose": "format",
+      "command": "npm run format"
+    }
+  ],
+  "docs": [],
+  "claude": {
+    "claudeMd": false,
+    "agentsMd": false,
+    "settings": false,
+    "hooks": false,
+    "skills": false
+  },
+  "warnings": []
+}

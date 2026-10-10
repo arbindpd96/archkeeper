@@ -11,3 +11,4 @@ examples/
 CHANGELOG.md
 .claude/worktrees/
 schema/
+test/fixtures/detect/

@@ -1,0 +1,65 @@
+{
+  "stack": [
+    "ts",
+    "python"
+  ],
+  "languages": [
+    "typescript",
+    "python"
+  ],
+  "packageManager": "npm",
+  "pythonManager": "uv",
+  "tools": {
+    "formatters": [
+      "ruff"
+    ],
+    "linters": [
+      "ruff"
+    ],
+    "typeCheckers": [
+      "tsc"
+    ],
+    "testRunners": [
+      "vitest",
+      "pytest"
+    ]
+  },
+  "frameworks": [],
+  "monorepo": false,
+  "commands": [
+    {
+      "stack": "ts",
+      "purpose": "build",
+      "command": "npm run build"
+    },
+    {
+      "stack": "ts",
+      "purpose": "test",
+      "command": "npm run test"
+    },
+    {
+      "stack": "python",
+      "purpose": "test",
+      "command": "uv run pytest"
+    },
+    {
+      "stack": "python",
+      "purpose": "lint",
+      "command": "uv run ruff check ."
+    },
+    {
+      "stack": "python",
+      "purpose": "format",
+      "command": "uv run ruff format ."
+    }
+  ],
+  "docs": [],
+  "claude": {
+    "claudeMd": false,
+    "agentsMd": false,
+    "settings": false,
+    "hooks": false,
+    "skills": false
+  },
+  "warnings": []
+}

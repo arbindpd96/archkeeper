@@ -1,0 +1,52 @@
+{
+  "stack": [
+    "ts"
+  ],
+  "languages": [
+    "typescript"
+  ],
+  "packageManager": "pnpm",
+  "pythonManager": null,
+  "tools": {
+    "formatters": [
+      "prettier"
+    ],
+    "linters": [
+      "eslint"
+    ],
+    "typeCheckers": [
+      "tsc"
+    ],
+    "testRunners": [
+      "jest"
+    ]
+  },
+  "frameworks": [],
+  "monorepo": false,
+  "commands": [
+    {
+      "stack": "ts",
+      "purpose": "test",
+      "command": "pnpm run test"
+    },
+    {
+      "stack": "ts",
+      "purpose": "lint",
+      "command": "pnpm run lint"
+    },
+    {
+      "stack": "ts",
+      "purpose": "typecheck",
+      "command": "pnpm run type-check"
+    }
+  ],
+  "docs": [],
+  "claude": {
+    "claudeMd": false,
+    "agentsMd": false,
+    "settings": false,
+    "hooks": false,
+    "skills": false
+  },
+  "warnings": []
+}

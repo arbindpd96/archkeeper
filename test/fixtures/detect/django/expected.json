@@ -1,0 +1,38 @@
+{
+  "stack": [
+    "python"
+  ],
+  "languages": [
+    "python"
+  ],
+  "packageManager": null,
+  "pythonManager": "pip",
+  "tools": {
+    "formatters": [],
+    "linters": [],
+    "typeCheckers": [],
+    "testRunners": [
+      "pytest"
+    ]
+  },
+  "frameworks": [
+    "django"
+  ],
+  "monorepo": false,
+  "commands": [
+    {
+      "stack": "python",
+      "purpose": "test",
+      "command": "pytest"
+    }
+  ],
+  "docs": [],
+  "claude": {
+    "claudeMd": false,
+    "agentsMd": false,
+    "settings": false,
+    "hooks": false,
+    "skills": false
+  },
+  "warnings": []
+}

@@ -1,0 +1,24 @@
+{
+  "stack": [],
+  "languages": [],
+  "packageManager": null,
+  "pythonManager": null,
+  "tools": {
+    "formatters": [],
+    "linters": [],
+    "typeCheckers": [],
+    "testRunners": []
+  },
+  "frameworks": [],
+  "monorepo": false,
+  "commands": [],
+  "docs": [],
+  "claude": {
+    "claudeMd": false,
+    "agentsMd": false,
+    "settings": false,
+    "hooks": false,
+    "skills": false
+  },
+  "warnings": []
+}

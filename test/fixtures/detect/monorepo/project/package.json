@@ -1,0 +1,14 @@
+{
+  "name": "monorepo-root",
+  "private": true,
+  "packageManager": "yarn@4.10.0",
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "turbo": "^2.6.0",
+    "typescript": "~6.0.3"
+  }
+}
