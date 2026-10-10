@@ -2,7 +2,7 @@ import type * as z from 'zod/mini';
 import { BRAND, type Brand } from './brand.js';
 import { type Finding, LockError } from './errors.js';
 import { checkSchema } from './issues.js';
-import { parseJson } from './json.js';
+import { isRecord, parseJson } from './json.js';
 import { LOCKFILE_VERSION, lockSchema } from './lock-schema.js';
 import { compareText } from './text.js';
 import { compareVersions, SEMVER } from './version.js';
@@ -117,10 +117,6 @@ const RESTORE = 'restore lock.json from git; only the kit writes it, so a hand e
 function invalid(file: string, finding: Finding): LockError {
   const hint = finding.hint === '' ? RESTORE : `${RESTORE} (the schema says: ${finding.hint})`;
   return new LockError({ file, location: finding.location, problem: finding.problem, hint });
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function rawLock(text: string, file: string): Record<string, unknown> {
