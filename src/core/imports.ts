@@ -33,7 +33,7 @@ function wordProblem(word: string): string | undefined {
 }
 
 /** The text with every closed HTML comment cut out, as Claude Code reads it: `@.<!---->env` reads as `@.env`. */
-function withoutComments(text: string): string {
+export function withoutComments(text: string): string {
   let kept = '';
   let from = 0;
   let start = text.indexOf('<!--');
