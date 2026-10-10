@@ -3,7 +3,7 @@ import path from 'node:path';
 import { BRAND, type Brand } from '../core/brand.js';
 import { ApplyError, ArchkeeperError, PathSafetyError } from '../core/errors.js';
 import { HASH } from '../core/hash.js';
-import { type Lock, lockFilePath } from '../core/lock.js';
+import { blobHashes, type Lock, lockFilePath } from '../core/lock.js';
 import type { Plan } from '../core/plan.js';
 import { compareText, toLf } from '../core/text.js';
 import { ensureFolder, removeFile, removeFolders, writeAtomically } from './atomic-files.js';
@@ -148,12 +148,6 @@ function failure(
   });
 }
 
-function referencedBlobs(lock: Lock): Set<string> {
-  const entries = [...lock.files.values()].filter((entry) => entry.strategy === 'owned');
-  const blocks = [...lock.blocks.values()].flatMap((map) => [...map.values()]);
-  return new Set([...entries, ...blocks].flatMap(({ base, pending }) => [base ?? '', pending ?? '']));
-}
-
 function folderEntries(absolute: string): string[] {
   return lstatOrUndefined(absolute)?.isDirectory() === true ? readdirSync(absolute) : [];
 }
@@ -161,7 +155,7 @@ function folderEntries(absolute: string): string[] {
 // A blob is removed when no lock entry references it; anything not named like a blob is left alone.
 function pruneBlobs(rootReal: string, lock: Lock, brand: Brand): string[] {
   const folder = confinedPath(rootReal, baseFolder(brand), 'the kit base folder');
-  const referenced = referencedBlobs(lock);
+  const referenced = blobHashes(lock);
   return folderEntries(folder)
     .filter((name) => HASH.test(name) && !referenced.has(name))
     .flatMap((name) => {
