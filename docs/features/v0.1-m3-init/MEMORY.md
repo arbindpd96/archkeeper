@@ -86,7 +86,7 @@ Always-on context measured by `npm run context` (largest of ts-app, py-app and m
 
 ## Next step
 
-1. The coordinator pushes the branch (the ci.yml step for `npm run context` needs `gh auth refresh -h github.com -s workflow`), opens the M3 PR (closes #25, #26, #27, #29; refs #28 until the maintainer answers its two Open questions, then the kit implements them, #28 is amended, or a follow-up issue takes them) and lets the demo-gifs workflow render `init.gif`; `npm run gifs:pull -- <run-id>` copies it to `docs/media/init.gif`.
+1. The coordinator pushes the branch (the ci.yml step for `npm run context` needs `gh auth refresh -h github.com -s workflow`), opens the M3 PR (closes #26; refs #28 until the maintainer answers its two Open questions, then the kit implements them, #28 is amended, or a follow-up issue takes them; closes #25, #27 and #29 only once the maintainer signs off the five "Sign-off" Open questions, which the PR body lists under "Acceptance deviations for sign-off", or the issues are amended) and lets the demo-gifs workflow render `init.gif`; `npm run gifs:pull -- <run-id>` copies it to `docs/media/init.gif`.
 2. Merge gate: once `docs/media/init.gif` exists, flip both to the demo, in one commit with the GIF (`docs(readme): add the init demo GIF`), before the PR merges, since the README's Quick start already embeds the GIF:
    - `src/cli/commands.ts`: in the `init` entry, replace `internal: true` with `demo: { tape: 'init', section: 'Quick start' }`.
    - `modules/base/module.json`: replace `"internal": true` with `"demo": { "tape": "init", "section": "Quick start" }`.
@@ -108,7 +108,12 @@ Always-on context measured by `npm run context` (largest of ts-app, py-app and m
 
 - For the maintainer (#28, blocks closing it): should the base module write a create-only `CLAUDE.local.md`? M1 made it a reserved template target to keep personal memory out of a module's reach; writing it means relaxing that rule for one owned create-only file.
 - For the maintainer (#28 and the brief's "$schema only", blocks closing #28): base owns no settings entry, so under M2's decision no settings.json is written in M3. Is that acceptable until M4, or should base own something there?
+- Sign-off (#25, blocks closing it): `uv.lock` and `poetry.lock` are read as signals naming the manager, not parsed with smol-toml as #25 lists, because they hold every transitive dependency (see Decisions). Sign off, or amend #25.
+- Sign-off (#27, blocks closing it): the tape ends on `cat CLAUDE.md`, not on the resulting tree #27 names, since the plan printed before the yes lists every path (see Decisions). Sign off, or amend #27.
+- Sign-off (#27, blocks closing it): init's next steps never mention `/new-feature` in M3, because no M3 module writes that skill; they name it once a module does (M5). Sign off, or amend #27.
+- Sign-off (#29, blocks closing it): the context numbers do not feed a README presets table yet; M3 measures and reports them, and the generated table comes with M9 as the ROADMAP schedules. Sign off, or amend #29.
+- Sign-off (#29, blocks closing it): "a second init plans zero ops" is met as "a second init plans only skips and writes nothing", since the plan holds one reasoned operation per path. Sign off, or amend #29.
 - For the maintainer: `CLAUDE.md` gets two kit blocks (the import, then the pointers) where #28 says "the CLAUDE.md managed block". Acceptable?
 - For the maintainer: the git question defaults to no. A default of yes would make the hero demo one key shorter; the backup protects the files either way.
-- `dist/cli.mjs` is unminified for readable stack traces, so commander ships its JSDoc (about 100 kB unminified, about 20 kB gzip). Stripping comments in the build would keep the code readable; worth an ADR-0017 note if the tarball nears its budget.
+- `dist/main.mjs` is unminified for readable stack traces, so commander ships its JSDoc (about 100 kB unminified, about 20 kB gzip). Stripping comments in the build would keep the code readable; worth an ADR-0017 note if the tarball nears its budget.
 - `--modules -base` fails with a ResolveError that names `config.json: modules.remove[0]`, since the flag's ids go into the config before resolution; the message is right about the fix but not about where the id came from.
