@@ -179,6 +179,32 @@ describe('check-package', () => {
     expect(result.stderr).toContain('dist/hooks/stop.mjs is 0.2 kB, over its budget');
   });
 
+  it('holds a hook bundle to its own budget when budgets.json gives it one', () => {
+    const hook = `export const padding = '${'x'.repeat(200)}';\n`;
+    const snapshot = 'dist/cli.mjs\ndist/hooks/guard.mjs\ndist/hooks/stop.mjs\npackage.json\n';
+    const budgets = JSON.stringify({ ...BUDGETS, hookBundle: { maxBytes: 100, overrides: { guard: 1000 } } });
+    const files = {
+      'dist/hooks/guard.mjs': hook,
+      'dist/hooks/stop.mjs': hook,
+      'scripts/package-files.txt': snapshot,
+    };
+    const result = checkPackage(fixture({}, { ...files, 'budgets.json': budgets }));
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('| dist/hooks/guard.mjs | 0.2 kB | 1.0 kB |');
+    expect(result.stderr).not.toContain('dist/hooks/guard.mjs is');
+    expect(result.stderr).toContain('dist/hooks/stop.mjs is 0.2 kB, over its budget');
+  });
+
+  it('names an override that is not a non-negative number', () => {
+    const budgets = JSON.stringify({
+      ...BUDGETS,
+      hookBundle: { maxBytes: 100, overrides: { guard: 'big' } },
+    });
+    const result = checkPackage(fixture({}, { 'budgets.json': budgets }));
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('hookBundle.overrides.guard');
+  });
+
   it('reports publint errors', () => {
     const result = checkPackage(fixture({ main: 'dist/missing.mjs' }));
     expect(result.status).toBe(1);

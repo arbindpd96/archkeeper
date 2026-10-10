@@ -22,6 +22,7 @@ const BUDGET_KEYS = [
 ];
 
 const readJson = (file) => JSON.parse(readFileSync(file, 'utf8'));
+const isBudget = (value) => typeof value === 'number' && Number.isFinite(value) && value >= 0;
 const kB = (bytes) => `${(bytes / 1000).toFixed(1)} kB`;
 
 /** Reads budgets.json, exiting unless every expected budget is a non-negative finite number. */
@@ -33,15 +34,25 @@ function readBudgets(root) {
   } catch (error) {
     return exitWith(`check-package: cannot read ${file}: ${error.message}. Restore it (ADR-0017).`, 1);
   }
-  const invalid = BUDGET_KEYS.filter(([group, limit]) => {
-    const value = budgets?.[group]?.[limit];
-    return typeof value !== 'number' || !Number.isFinite(value) || value < 0;
-  });
+  const invalid = BUDGET_KEYS.filter(([group, limit]) => !isBudget(budgets?.[group]?.[limit])).map(
+    (keyPath) => keyPath.join('.'),
+  );
+  const overrides = Object.entries(budgets?.hookBundle?.overrides ?? {});
+  invalid.push(
+    ...overrides.filter(([, value]) => !isBudget(value)).map(([hook]) => `hookBundle.overrides.${hook}`),
+  );
   if (invalid.length > 0) {
-    const keys = invalid.map((keyPath) => keyPath.join('.')).join(', ');
-    exitWith(`check-package: budgets.json needs a non-negative number for ${keys} (ADR-0017).`, 1);
+    exitWith(
+      `check-package: budgets.json needs a non-negative number for ${invalid.join(', ')} (ADR-0017).`,
+      1,
+    );
   }
   return budgets;
+}
+
+/** A hook bundle's budget: its own in `hookBundle.overrides`, recorded with an ADR note, else the shared one. */
+function hookBudget(budgets, file) {
+  return budgets.hookBundle.overrides?.[path.basename(file, '.mjs')] ?? budgets.hookBundle.maxBytes;
 }
 
 /** Fails on runtime dependencies beyond the budget and on scripts that run when users install. */
@@ -101,11 +112,9 @@ function measure(pack, runtime, budgets) {
   const problems = [];
   if (pack.size > budgets.tarball.maxBytes) problems.push(`tarball is ${kB(pack.size)}, over its budget`);
   for (const { path: file, size } of pack.files.filter((entry) => entry.path.endsWith('.mjs'))) {
-    const isHook = HOOK_BUNDLE.test(file);
-    rows.push([file, kB(size), isHook ? kB(budgets.hookBundle.maxBytes) : '']);
-    if (isHook && size > budgets.hookBundle.maxBytes) {
-      problems.push(`${file} is ${kB(size)}, over its budget`);
-    }
+    const budget = HOOK_BUNDLE.test(file) ? hookBudget(budgets, file) : undefined;
+    rows.push([file, kB(size), budget === undefined ? '' : kB(budget)]);
+    if (budget !== undefined && size > budget) problems.push(`${file} is ${kB(size)}, over its budget`);
   }
   return { rows, problems };
 }
