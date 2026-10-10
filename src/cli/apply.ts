@@ -5,6 +5,7 @@ import { ApplyError, ArchkeeperError, PathSafetyError } from '../core/errors.js'
 import { HASH } from '../core/hash.js';
 import { type Lock, lockFilePath } from '../core/lock.js';
 import type { Plan } from '../core/plan.js';
+import { toLf } from '../core/text.js';
 import { ensureFolder, removeFile, removeFolders, writeAtomically } from './atomic-files.js';
 import { backUp, type Backup, backupsFolder, restore, type SavedPath } from './backup.js';
 import { baseFolder, compressed } from './blob-store.js';
@@ -47,7 +48,7 @@ function changes(rootReal: string, plan: Plan, brand: Brand): Change[] {
   const lockPath = confined(lock);
   const current = readState(lockPath);
   const lockChange =
-    current?.kind === 'file' && current.content === plan.lockText
+    current?.kind === 'file' && toLf(current.content) === plan.lockText
       ? []
       : [{ relative: lock, absolute: lockPath, data: plan.lockText }];
   return [...blobs, ...writes, ...lockChange];
