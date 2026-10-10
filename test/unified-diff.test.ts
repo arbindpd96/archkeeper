@@ -1,6 +1,9 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { unifiedDiff } from '../src/core/unified-diff.js';
+import { git, tempDir, writeFiles } from './helpers.js';
 
 const HUNK = /^@@ -(\d+),(\d+) \+(\d+),(\d+) @@$/;
 
@@ -105,6 +108,24 @@ describe('unifiedDiff', () => {
         expect(diff === '' ? before : applyDiff(before, diff)).toBe(after);
       }),
       { numRuns: 500 },
+    );
+  });
+
+  it('gives a diff git apply accepts and that turns the old file into the new one', () => {
+    const line = fc.constantFrom('a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', '');
+    const text = fc
+      .tuple(fc.array(line, { minLength: 1, maxLength: 24 }), fc.boolean())
+      .map(([lines, newline]) => `${lines.join('\n')}${newline ? '\n' : ''}`);
+    fc.assert(
+      fc.property(text, text, (before, after) => {
+        const diff = unifiedDiff('f.txt', before, after);
+        if (diff === '') return;
+        const dir = tempDir();
+        writeFiles(dir, { 'f.txt': before, 'f.patch': diff });
+        git(dir, 'apply', '--whitespace=nowarn', 'f.patch');
+        expect(readFileSync(path.join(dir, 'f.txt'), 'utf8')).toBe(after);
+      }),
+      { numRuns: 40 },
     );
   });
 });
