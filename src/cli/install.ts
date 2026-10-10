@@ -8,6 +8,7 @@ import { type Plan, planInstall, snapshotPaths } from '../core/plan.js';
 import type { Ownable } from '../core/plan-types.js';
 import type { RenderTree } from '../core/render-tree.js';
 import { type ApplyResult, applyPlan } from './apply.js';
+import { assertRealStateFolders } from './backup.js';
 import { baseFolder } from './blob-store.js';
 import { confinedPath, lstatOrUndefined, readConfined, readSnapshot } from './project-files.js';
 
@@ -53,6 +54,7 @@ function blobNames(rootReal: string, brand: Brand): Set<string> {
 export function planProject(root: string, tree: RenderTree, options: InstallOptions): Plan {
   const brand = options.brand ?? BRAND;
   const rootReal = realpathSync.native(root);
+  assertRealStateFolders(rootReal, brand);
   const read = readProjectLock(rootReal, options.kit, brand);
   const sides: readonly Lock[] = read === undefined ? [] : read.conflicted ? read.sides : [read.lock];
   const snapshot = readSnapshot(rootReal, snapshotPaths(tree, sides, brand));
