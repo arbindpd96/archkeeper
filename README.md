@@ -49,7 +49,7 @@ npx archkeeper init --dry-run   # print the plan as a unified diff and write not
 npx archkeeper init --yes       # no questions, as in CI; also --preset, --stack, --modules
 ```
 
-Your own lines in CLAUDE.md and AGENTS.md stay as they are: the kit writes only its managed blocks, and a file it would replace gets a sidecar instead. Exit codes: 0 done, 1 error or cancelled, 2 done with sidecars to review. Then restart Claude Code and run `/new-feature checkout-flow`.
+Your own lines in CLAUDE.md and AGENTS.md stay as they are: the kit writes only its managed blocks, and a file it would replace gets a sidecar instead. Exit codes: 0 done, 1 error or cancelled, 2 done with sidecars to review. Then restart Claude Code and start a feature with `/new-feature checkout-flow`, the skill the feature-memory module adds.
 
 That's it. You get:
 

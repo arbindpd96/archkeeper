@@ -100,6 +100,7 @@ Always-on context measured by `npm run context` (largest of ts-app, py-app and m
    - Run `npm run check`: the demos step then requires the GIF (≤ 2 MB, ≤ 30 s as the `# hero` tape) and the README "Quick start" section that shows it.
 3. Run the `reviewer` and `security-reviewer` agents on the full diff; answer the Open questions with the maintainer in the PR.
 4. Then start M4 with `/new-feature v0.1-m4-safety`: the safety module's deny rules make `.claude/settings.json` appear, and the golden trees, static settings rules and context budget already cover it.
+5. Release gate: the README's Quick start tells users to run `/new-feature`, which the feature-memory module adds only in M5, while init names it only once a module writes it; v0.1 does not release before M5 lands (third review).
 
 ## Gotchas / don't try again
 
