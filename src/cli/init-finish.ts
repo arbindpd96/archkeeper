@@ -57,7 +57,7 @@ export function applyPlanned(run: InitRun, planned: Planned): number {
     const backup = applied.backup === undefined ? '' : ` A backup of what changed is in ${applied.backup}.`;
     say(escapeUnprintable(`Done.${backup}`));
     say();
-    for (const line of nextStepLines(sidecars, run.brand)) say(line);
+    for (const line of nextStepLines(sidecars, [...planned.tree.keys()], run.brand)) say(line);
   } else if (sidecars.length > 0) {
     say('Nothing to change, but sidecars still wait for review:');
     for (const line of sidecarLines(sidecars, run.brand)) say(line);
