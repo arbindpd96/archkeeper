@@ -71,6 +71,21 @@ describe('write targets on disk (#23)', () => {
     expect(install(dir, fixtureTree(), OPTIONS).applied.changed).toBe(false);
   });
 
+  it.runIf(LINKS)(
+    'never offers the blocks of a symlinked file again once the user deletes the sidecar',
+    () => {
+      const dir = tempDir();
+      writeFiles(dir, { 'AGENTS.md': '# Shared rules\n' });
+      symlinkSync('AGENTS.md', path.join(dir, 'CLAUDE.md'), 'file');
+      install(dir, fixtureTree(), OPTIONS);
+      rmSync(path.join(dir, 'CLAUDE.md.acmekit-new'));
+      const seen = install(dir, fixtureTree(), OPTIONS);
+      expect(seen.plan.ops.find((op) => op.path === 'CLAUDE.md')?.kind).toBe('adopt');
+      expect(existsSync(path.join(dir, 'CLAUDE.md.acmekit-new'))).toBe(false);
+      expect(install(dir, fixtureTree(), OPTIONS).applied.changed).toBe(false);
+    },
+  );
+
   it.runIf(LINKS)('never deletes through a symlink, even where the lock says the kit wrote the file', () => {
     const dir = tempDir();
     const outside = tempDir();

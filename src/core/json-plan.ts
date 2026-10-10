@@ -17,7 +17,7 @@ import type { Removal } from './lock.js';
 import { SETTINGS_FILE } from './manifest-schema.js';
 import type { OpKind, Ownable, PathOutcome, PathState, PlanOp, ScriptState } from './plan-types.js';
 import type { RenderedEntry } from './render-tree.js';
-import { keptSidecarReason, sidecarAction, sidecarPath } from './sidecar.js';
+import { sidecarAction, sidecarPath } from './sidecar.js';
 
 /** The `$schema` the json strategy sets in a settings file that has none (reference §1.8). */
 export const SETTINGS_SCHEMA = 'https://json.schemastore.org/claude-code-settings.json';
@@ -240,8 +240,12 @@ function unwritable(job: JsonJob, kit: readonly KitEntry[], what: string): PathO
       ...kept,
     };
   }
+  // The lock records no pending version of a JSON entry, so the kit cannot tell its own earlier sidecar from one
+  // the user edited; it keeps any sidecar that differs and says how to get the current entries.
   const reason =
-    action === 'same' ? `${sidecar} already holds the kit entries` : keptSidecarReason(job.path, job.brand);
+    action === 'same'
+      ? `${sidecar} already holds the kit entries`
+      : `${sidecar} differs from the current kit entries, and the kit cannot tell whether the user edited it, so it is left alone; delete it to get the current entries`;
   return { ops: [{ kind: 'skip', path: job.path, reason: `${why}; ${reason}` }], ...kept };
 }
 
