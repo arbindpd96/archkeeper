@@ -43,7 +43,12 @@ jobs:
         run: npm run schema:check
       - name: Demos (GIFs within 2 MB and 20 s or 30 s for the hero; each module has a demo or is internal)
         run: npm run demos
+      # The state-folder test searches the project with ripgrep (#24); REQUIRE_RIPGREP fails it if rg is missing.
+      - name: Install ripgrep
+        run: sudo apt-get update && sudo apt-get install --yes ripgrep
       - name: Tests
+        env:
+          REQUIRE_RIPGREP: '1'
         run: npm test
 
   test:
