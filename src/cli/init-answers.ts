@@ -130,6 +130,23 @@ export async function goOnWithoutGit(asking: Asking, state: GitState, root: stri
   return (await asking.prompter.confirm('Continue anyway?', false)) === true;
 }
 
+/** Modules whose hooks and deny rules guard against dangerous commands and leaked secrets. */
+const GUARD_MODULES: readonly string[] = ['safety'];
+
+/** The guard modules a config leaves out in `modules.remove`, which turns them off for everyone who runs init. */
+export function guardsLeftOut(config: ProjectConfig): string[] {
+  return config.modules.remove.filter((id) => GUARD_MODULES.includes(id));
+}
+
+/**
+ * Asks whether to go on without the guard modules the config or --modules leaves out (#27), defaulting to no; the
+ * plan has warned already, and only a terminal asks, since a scripted run needs --yes to write anyway.
+ */
+export async function goOnWithoutGuards(asking: Asking, guards: readonly string[]): Promise<boolean> {
+  if (guards.length === 0 || !asking.interactive) return true;
+  return (await asking.prompter.confirm(`Continue without ${guards.join(', ')}?`, false)) === true;
+}
+
 function tokens(preset: string): string {
   const budget = (budgets.alwaysOnContext as Readonly<Record<string, unknown>>)[preset];
   return typeof budget === 'number'
