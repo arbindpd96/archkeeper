@@ -17,6 +17,7 @@ import { isInside, NO_FOLLOW, readRegularFile } from './project.js';
 const PRIVATE_FOLDER = 0o700;
 const PRIVATE_FILE = 0o600;
 const IGNORE_ALL = '*\n';
+const IGNORE_FILE = '.gitignore';
 const MAX_STATE_BYTES = 1_000_000;
 const STATE_NAME = /^(?!\.{1,2}(?:\/|$))[\w.-]+(?:\/(?!\.{1,2}(?:\/|$))[\w.-]+)*$/;
 // Created exclusively, so a file or link planted at the temp name is never written through.
@@ -30,14 +31,21 @@ export class StateRefused extends Error {
 /** The outcome of a state write: written, or skipped with the reason the hook reports on stderr. */
 export type StateWrite = { readonly written: true } | { readonly written: false; readonly problem: string };
 
+interface StateFile {
+  readonly file: string;
+  readonly rootReal: string;
+}
+
 function refused(folder: string, problem: string): never {
   throw new StateRefused(`${folder} ${problem}`);
 }
 
-// Every folder on the way must be a real folder whose real path is inside the project; a missing one is created.
-function ensureRealFolder(folder: string, rootReal: string): void {
+// Every folder on the way must be a real folder whose real path is inside the project; a missing one is created
+// only for a write, so a read changes nothing on disk.
+function ensureRealFolder(folder: string, rootReal: string, create: boolean): void {
   const stats = lstatSync(folder, { throwIfNoEntry: false });
   if (stats === undefined) {
+    if (!create) refused(folder, 'does not exist');
     mkdirSync(folder, { mode: PRIVATE_FOLDER });
     return;
   }
@@ -46,14 +54,21 @@ function ensureRealFolder(folder: string, rootReal: string): void {
   if (!isInside(rootReal, realpathSync.native(folder))) refused(folder, 'resolves outside the project');
 }
 
-function writeExclusively(file: string, content: string): void {
+// O_NOFOLLOW guards only the last name, so a folder swapped for a link after its check is caught here instead.
+function writeExclusively(file: string, content: string, rootReal: string): void {
   const temp = path.join(path.dirname(file), `.${path.basename(file)}.${randomBytes(6).toString('hex')}.tmp`);
   const descriptor = openSync(temp, CREATE_FLAGS, PRIVATE_FILE);
   try {
+    if (!isInside(rootReal, realpathSync.native(path.dirname(temp)))) {
+      refused(path.dirname(file), 'moved outside the project');
+    }
     writeSync(descriptor, content);
-  } finally {
+  } catch (error) {
     closeSync(descriptor);
+    rmSync(temp, { force: true });
+    throw error;
   }
+  closeSync(descriptor);
   try {
     renameSync(temp, file);
   } catch (error) {
@@ -63,32 +78,34 @@ function writeExclusively(file: string, content: string): void {
 }
 
 // Whatever creates local/ writes its .gitignore of `*`, which ignores the folder and itself (ADR-0014).
-function ensureIgnoreAll(local: string): void {
-  const ignore = path.join(local, '.gitignore');
+function ensureIgnoreAll(local: string, rootReal: string): void {
+  const ignore = path.join(local, IGNORE_FILE);
   const stats = lstatSync(ignore, { throwIfNoEntry: false });
   if (stats !== undefined && !stats.isFile()) refused(ignore, 'is not a regular file');
   const text = stats === undefined ? null : readRegularFile(ignore, MAX_STATE_BYTES);
-  if (text?.replaceAll('\r', '').trim() !== '*') writeExclusively(ignore, IGNORE_ALL);
+  if (text?.replaceAll('\r', '').trim() !== '*') writeExclusively(ignore, IGNORE_ALL, rootReal);
 }
 
-/** The absolute path of `<state dir>/local/<name>`, with every folder on the way checked or created. */
-function statePath(projectDir: string, name: string, brand: Brand): string {
-  if (!STATE_NAME.test(name)) throw new StateRefused(`${name} is not a plain relative state name`);
+/** Where `<state dir>/local/<name>` is, with every folder on the way checked, and created when `create` is set. */
+function stateFile(projectDir: string, name: string, brand: Brand, create: boolean): StateFile {
+  if (!STATE_NAME.test(name) || name === IGNORE_FILE) {
+    throw new StateRefused(`${name} is not a plain relative state name`);
+  }
   const rootReal = realpathSync.native(projectDir);
   const local = path.join(projectDir, brand.stateDir, 'local');
-  ensureRealFolder(path.dirname(local), rootReal);
-  ensureRealFolder(local, rootReal);
-  ensureIgnoreAll(local);
+  ensureRealFolder(path.dirname(local), rootReal, create);
+  ensureRealFolder(local, rootReal, create);
+  if (create) ensureIgnoreAll(local, rootReal);
   const parts = name.split('/');
   let folder = local;
   for (const part of parts.slice(0, -1)) {
     folder = path.join(folder, part);
-    ensureRealFolder(folder, rootReal);
+    ensureRealFolder(folder, rootReal, create);
   }
   const file = path.join(folder, parts.at(-1) ?? '');
   const stats = lstatSync(file, { throwIfNoEntry: false });
   if (stats !== undefined && !stats.isFile()) refused(file, 'is not a regular file');
-  return file;
+  return { file, rootReal };
 }
 
 /**
@@ -103,7 +120,8 @@ export function writeState(
   brand: Brand = BRAND,
 ): StateWrite {
   try {
-    writeExclusively(statePath(projectDir, name, brand), content);
+    const { file, rootReal } = stateFile(projectDir, name, brand, true);
+    writeExclusively(file, content, rootReal);
     return { written: true };
   } catch (error) {
     const problem = error instanceof Error ? error.message : String(error);
@@ -114,7 +132,7 @@ export function writeState(
 /** Reads hook state from `<state dir>/local/<name>`, or null when it is missing, refused or not a small regular file. */
 export function readState(projectDir: string, name: string, brand: Brand = BRAND): string | null {
   try {
-    return readRegularFile(statePath(projectDir, name, brand), MAX_STATE_BYTES);
+    return readRegularFile(stateFile(projectDir, name, brand, false).file, MAX_STATE_BYTES);
   } catch {
     return null;
   }
