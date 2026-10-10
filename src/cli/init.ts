@@ -146,7 +146,11 @@ function showPlan(run: InitRun, planned: Planned): void {
   say();
   say(paint('bold', 'Plan:'));
   for (const line of planLines(summarizePlan(planned.plan), paint)) say(line);
-  if (planned.next.changed) say(`  and ${escapeUnprintable(configPath(run.brand))}`);
+  const state = [
+    ...(planned.next.changed ? [configPath(run.brand)] : []),
+    ...(planned.plan.writes.size > 0 ? ['the lock and base blobs'] : []),
+  ];
+  if (state.length > 0) say(`  and ${escapeUnprintable(state.join(', '))}`);
 }
 
 function printJson(run: InitRun, planned: Planned, applied: ApplyResult | null, exitCode: number): void {
