@@ -11,8 +11,11 @@ export interface AlwaysOnContext {
   readonly tokens: number;
 }
 
-/** The `@path` imports Claude Code 2.1.295 reads in a memory file, as written: cut at `#`, unescaped, trimmed. */
-export declare function importsOf(text: string): string[];
+/**
+ * The `@path` imports Claude Code 2.1.295 reads in a memory file, as written: cut at `#`, unescaped, trimmed.
+ * `bytes` is the file's size on disk, by default the text's UTF-8 length.
+ */
+export declare function importsOf(text: string, bytes?: number): string[];
 
 /** Estimates the context Claude Code loads in every session of the project at `root` (ADR-0017). */
 export declare function alwaysOnContext(root: string, sessionStartCap: number): AlwaysOnContext;

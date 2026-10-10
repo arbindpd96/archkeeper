@@ -81,10 +81,11 @@ function lexed(text) {
 /**
  * The `@path` imports Claude Code 2.1.295 reads in a memory file's text, as written: each cut at `#`, `\ `
  * unescaped and trimmed, from its text tokens and what closed HTML comments leave. None for a file it skips: over
- * 4 MiB, one marked cannot lex, or one with a NUL in an import path.
+ * 4 MiB, one marked cannot lex, or one with a NUL in an import path. `bytes` is the file's size on disk, which is
+ * what Claude Code checks; it defaults to the text's UTF-8 length, which is longer for bytes that are not UTF-8.
  */
-export function importsOf(text) {
-  if (Buffer.byteLength(text, 'utf8') > MEMORY_FILE_BYTES || !text.includes('@')) return [];
+export function importsOf(text, bytes = Buffer.byteLength(text, 'utf8')) {
+  if (bytes > MEMORY_FILE_BYTES || !text.includes('@')) return [];
   const tokens = lexed(text);
   if (tokens === undefined) return [];
   const found = new Set();
