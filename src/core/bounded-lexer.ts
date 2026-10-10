@@ -158,6 +158,9 @@ class BoundedLexer extends Lexer {
  * Lexes `text` as Claude Code 2.1.295 does, with marked's Lexer and `{ gfm: false }`, or returns undefined where
  * Claude Code would read no import from it: marked throws (an "Infinite loop on byte" error, or a stack overflow
  * on deep nesting), which makes Claude Code skip the whole file, or the text takes more work than the kit spends.
+ * Every error is taken, whatever its type: an error marked throws on a hostile text cannot be told apart by type
+ * from a bug in the subclasses above, and init must not fail on a file it only reads; such a bug would show as a
+ * redundant import line, which the tests of texts that do import catch.
  */
 export function lexedTokens(text: string): TokensList | undefined {
   try {
