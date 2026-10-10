@@ -21,14 +21,13 @@ interface WalkedToken {
 /** Thrown where Claude Code's path expansion throws, which makes it skip the whole memory file. */
 class SkippedFile extends Error {}
 
-function utf8Bytes(text: string): number {
-  if (text.length * 3 <= MEMORY_FILE_BYTES || text.length > MEMORY_FILE_BYTES) return text.length;
-  return new TextEncoder().encode(text).byteLength;
-}
-
 /** Whether Claude Code skips a memory file of this text for its size, so that none of its imports load. */
 export function skipsMemoryFile(text: string): boolean {
-  return utf8Bytes(text) > MEMORY_FILE_BYTES;
+  // A UTF-16 unit takes one to three UTF-8 bytes, so only a length between a third of the limit and the limit
+  // needs the text encoded.
+  if (text.length * 3 <= MEMORY_FILE_BYTES) return false;
+  if (text.length > MEMORY_FILE_BYTES) return true;
+  return new TextEncoder().encode(text).byteLength > MEMORY_FILE_BYTES;
 }
 
 function frontmatterIn(body: string): RegExpExecArray | null {
