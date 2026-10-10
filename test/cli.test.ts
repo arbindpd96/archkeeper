@@ -4,7 +4,14 @@ import { pathToFileURL } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CliContext } from '../src/cli/context.js';
 import { readKit } from '../src/cli/kit.js';
-import { EXIT_CODES, main, readPackageInfo, type CliOutput, type PackageInfo } from '../src/cli/main.js';
+import {
+  EXIT_CODES,
+  inCi,
+  main,
+  readPackageInfo,
+  type CliOutput,
+  type PackageInfo,
+} from '../src/cli/main.js';
 import { nodeVersionProblem, SUPPORTED_NODE_RANGE } from '../src/cli/node-version.js';
 import { printError } from '../src/cli/output.js';
 import { BRAND } from '../src/core/brand.js';
@@ -121,6 +128,19 @@ describe('main', () => {
       'modules/base/module.json: id: is wrong\n' +
         `The ${BRAND.displayName} install looks damaged. Reinstall it and try again.\n`,
     );
+  });
+});
+
+describe('inCi', () => {
+  it.each([undefined, '', ' ', 'false', 'FALSE', '0'])(
+    'reads CI=%j as not CI, so a terminal can ask',
+    (ci) => {
+      expect(inCi(ci === undefined ? {} : { CI: ci })).toBe(false);
+    },
+  );
+
+  it.each(['true', '1', 'github-actions'])('reads CI=%j as CI, so nothing prompts', (ci) => {
+    expect(inCi({ CI: ci })).toBe(true);
   });
 });
 
