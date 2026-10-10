@@ -173,6 +173,8 @@ const ADVERSARIAL: readonly (readonly [name: string, text: string])[] = [
   ['lazy lines in a list item', `- @a\n${fill('a\n', TWICE)}`],
   ['a last line of tildes', `@a\n${'~'.repeat(ONCE)}`],
   ['lazy lines between nested quotes', fill('    @a>\n> > ()\n', ONCE)],
+  ['paragraphs broken off by rules', `@a\n\n${fill('x\n***\n', ONCE)}`],
+  ['paragraphs broken off by comments in a quote', `@a\n\n${fill('> x\n> <!-->x\n', TWICE)}`],
 ];
 
 // One text per superlinear cost in bounded-lexer.ts, each holding an import Claude Code reads, that the kit refuses
@@ -180,6 +182,7 @@ const ADVERSARIAL: readonly (readonly [name: string, text: string])[] = [
 const COSTLY: readonly (readonly [cost: string, text: string])[] = [
   ["a list item's lazy lines rescanned", `- @AGENTS.md\n${'a\n'.repeat(5000)}`],
   ["a quote's lazy lines copying its rest", `@AGENTS.md\n\n${'> a\nb\n'.repeat(12_000)}`],
+  ['paragraphs broken off by rules, each rescanning the run', `@AGENTS.md\n\n${'x\n***\n'.repeat(3000)}`],
   ['a last line of tildes backtracking', `@AGENTS.md\n${'~'.repeat(20_000)}`],
   ['emphasis openers scanning the runs after them', `@AGENTS.md ${'*a '.repeat(2000)}`],
   ['an emphasis opener scanning a long run', `@AGENTS.md ${'_'.repeat(8000)}`],

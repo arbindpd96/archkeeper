@@ -3,8 +3,9 @@ import { Lexer, type Token, type Tokens, type TokensList, Tokenizer } from 'mark
 /**
  * The most lexing work, in estimated nanoseconds, the kit spends on one memory file before it gives up and
  * counts no import. marked is superlinear on some texts (a paragraph of `*a `, a list item of many lazy lines,
- * deep nesting), where Claude Code itself would take seconds; on the maintainer's Mac a file at the limit lexes
- * in at most about 100 ms, and every real Markdown file tried, up to 150 kB, stays below it.
+ * paragraphs broken off by rules, deep nesting), where Claude Code itself would take seconds. The estimate bounds
+ * only the costs it models: on the maintainer's Mac the slowest of about 35 such shapes, each from 1 to 300 kB,
+ * took about 90 ms, and every real Markdown file tried, up to 150 kB, stays below it.
  */
 const MAX_WORK = 100_000_000;
 /** marked recurses once per nested list, quote, emphasis or link; past this depth the kit counts nothing. */
@@ -13,12 +14,14 @@ const MAX_DEPTH = 64;
 const CALL = { block: 2000, inline: 1000, perChar: 200 } as const;
 /**
  * The superlinear costs, each per unit of what it multiplies: a list item's text rule rescans the rest of its run
- * of lines at each line; a quote's lazy lines each copy the quote's remaining lines; a last line that opens with
- * `~~~` backtracks over itself; a nested quote is re-read per level; an emphasis opener scans the delimiter runs
- * after it; and a code span opener, a tag or a masked span scans or copies the rest of the inline text.
+ * of lines at each line; a paragraph broken off by a rule or one-line HTML has the next one rescan the run; a
+ * quote's lazy lines each copy the quote's remaining lines; a last line that opens with `~~~` backtracks over
+ * itself; a nested quote is re-read per level; an emphasis opener scans the delimiter runs after it; and a code
+ * span opener, a tag or a masked span scans or copies the rest of the inline text.
  */
 const RATE = {
   itemLine: 5,
+  paragraphBreak: 3,
   quoteBreak: 0.5,
   tildeTail: 0.5,
   emphasisRun: 60,
@@ -31,38 +34,49 @@ const RATE = {
 const BLANK = /^[ \t]*$/;
 const QUOTE = /^ {0,3}>/;
 const TILDE_FENCE = /^ {0,3}~~~/;
+const PARAGRAPH_BREAK =
+  /^ {0,3}(?:(?:(?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})$|<(?:!--|script|pre|style|textarea))/i;
 
 /** Thrown inside the lexer when a text would take more work than the kit spends on it. */
 class WorkRefused extends Error {}
 
-/** Each run of non-blank lines' line count times its length, summed: what a list item's text rule rescans. */
-function rescannedRuns(lines: readonly string[]): number {
-  let total = 0;
-  let runLines = 0;
-  let runLength = 0;
-  for (const line of lines) {
-    if (BLANK.test(line)) {
-      total += runLines * runLength;
-      runLines = 0;
-      runLength = 0;
-    } else {
-      runLines += 1;
-      runLength += line.length + 1;
-    }
-  }
-  return total + runLines * runLength;
+/** What the runs of non-blank lines make marked rescan: each run's length times its lines, and times its breaks. */
+interface Rescans {
+  readonly lines: number;
+  readonly breaks: number;
 }
 
-/** The superlinear block work of `src`; a top-level paragraph takes its run of lines at once. */
+function rescannedRuns(lines: readonly string[]): Rescans {
+  const total = { lines: 0, breaks: 0 };
+  const run = { lines: 0, breaks: 0, length: 0 };
+  for (const line of [...lines, '']) {
+    if (BLANK.test(line)) {
+      total.lines += run.lines * run.length;
+      total.breaks += run.breaks * run.length;
+      Object.assign(run, { lines: 0, breaks: 0, length: 0 });
+    } else {
+      run.lines += 1;
+      run.breaks += PARAGRAPH_BREAK.test(line) ? 1 : 0;
+      run.length += line.length + 1;
+    }
+  }
+  return total;
+}
+
+/**
+ * The superlinear block work of `src`. A top-level paragraph takes its run of lines at once, unless a rule or a
+ * one-line HTML block breaks it off, after which the next paragraph's setext heading test rescans the run again.
+ */
 function blockWork(src: string, top: boolean): number {
   const lines = src.split('\n');
+  const rescans = rescannedRuns(lines);
   const quoteBreaks = lines.filter(
     (line, index) => index > 0 && QUOTE.test(lines[index - 1] ?? '') && !QUOTE.test(line),
   );
   const last = lines.at(-1) ?? '';
   const tail = TILDE_FENCE.test(last) ? last.length ** 2 : 0;
   return (
-    (top ? 0 : RATE.itemLine * rescannedRuns(lines)) +
+    (top ? RATE.paragraphBreak * rescans.breaks : RATE.itemLine * rescans.lines) +
     RATE.quoteBreak * quoteBreaks.length * lines.length +
     RATE.tildeTail * tail
   );
