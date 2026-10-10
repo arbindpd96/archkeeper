@@ -11,7 +11,7 @@ const CODE_SPAN = /`[^`\n]*`/g;
 // a word such as an email address, and the path ends where that markdown closes (reference §2.1).
 const IMPORT = /(?<![\w@])@((?:\\ |[^\s])+)/g;
 const MARKDOWN_CLOSE = /[*_~)\],.;:!?]+$/;
-/** Memory files Claude Code loads together with a file the kit writes, so their imports count as made too. */
+/** Memory files Claude Code loads together with a file the kit writes (reference §2.1), so their imports count too. */
 const COMPANIONS: Readonly<Record<string, readonly string[]>> = { 'CLAUDE.md': ['.claude/CLAUDE.md'] };
 
 function importLines(entry: RenderedEntry): string[] {
