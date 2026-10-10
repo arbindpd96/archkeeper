@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { install } from '../src/cli/install.js';
 import { ApplyError } from '../src/core/errors.js';
 import type { RenderTree } from '../src/core/render-tree.js';
-import { tempDir, writeFiles } from './helpers.js';
+import { canSymlink, tempDir, writeFiles } from './helpers.js';
 import { fixtureTree, OPTIONS } from './install-helpers.js';
 import { TEST_BRAND } from './kit-fixtures.js';
 
@@ -132,6 +132,21 @@ describe('a failure in the middle of an apply', () => {
     expect(applyError(dir).message).toContain('every file it touched was restored');
     expect(fs.readFileSync(path.join(dir, 'CLAUDE.md'), 'utf8')).toBe('# Saved meanwhile\n');
   });
+
+  it.runIf(canSymlink())(
+    'refuses a write once a folder on its way became a symlink out of the project',
+    () => {
+      const dir = tempDir();
+      const outside = tempDir();
+      writeFiles(dir, { [`${LOCAL}/.gitignore`]: '*\n' });
+      vi.mocked(fs.renameSync).mockImplementation((from, to) => {
+        realRename(from, to);
+        if (String(to).endsWith('guard.mjs')) fs.symlinkSync(outside, path.join(dir, '.claude/rules'), 'dir');
+      });
+      expect(applyError(dir).message).toContain('resolves through a symlink to a place outside the project');
+      expect(fs.readdirSync(outside)).toEqual([]);
+    },
+  );
 
   it('changes nothing in the project when the backup itself cannot be made', () => {
     const dir = tempDir();
