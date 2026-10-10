@@ -23,7 +23,7 @@ flowchart LR
 - **Layers are lint-enforced** (ESLint `no-restricted-*` rules in `eslint.config.mjs`; each is proven by a fixture in `test/fixtures/layers/`):
   - `src/core` never imports `src/cli`, commander or @clack/prompts. It never uses `process` or `console`, whether as a global, through `globalThis`, or imported from `process`, `console` or their `node:` forms, and never imports `fs` or `fs/promises`: callers pass file contents in through an injected reader. It never imports `zlib` either: core hashes blob content, and `src/cli` compresses it. It starts no process and opens no connection (`child_process`, `worker_threads`, `net`, `http`, `https`, `http2` and `dgram` are refused), so stack detection is pure by construction.
   - The install engine splits along that line: `src/core` plans every write and merge purely (`planInstall`), and `src/cli` reads the snapshot and applies the plan transactionally (`install`).
-  - `src/hooks` imports only `node:` built-ins and `src/hooks/runtime`.
+  - `src/hooks` imports only `node:` built-ins and `src/hooks/runtime`, and no hook file imports a network module (`net`, `http`, `https`, `http2`, `tls`, `dgram`, `dns`) or uses `fetch`, `WebSocket`, `XMLHttpRequest` or `EventSource` (ADR-0018).
   - `src/hooks/runtime` imports no npm package.
 
 ## Repository layout
