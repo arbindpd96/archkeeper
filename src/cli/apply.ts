@@ -9,7 +9,7 @@ import { toLf } from '../core/text.js';
 import { ensureFolder, removeFile, removeFolders, writeAtomically } from './atomic-files.js';
 import { backUp, type Backup, backupsFolder, restore, type SavedPath } from './backup.js';
 import { baseFolder, compressed } from './blob-store.js';
-import { confinedPath, lstatOrUndefined, readState } from './project-files.js';
+import { confinedPath, lstatOrUndefined, readConfined } from './project-files.js';
 
 /** What an apply did: whether it wrote anything, where its backup is, and cleanup problems worth reporting. */
 export interface ApplyResult {
@@ -46,7 +46,7 @@ function changes(rootReal: string, plan: Plan, brand: Brand): Change[] {
   }));
   const lock = lockFilePath(brand);
   const lockPath = confined(lock);
-  const current = readState(lockPath);
+  const current = readConfined(rootReal, lock, 'the kit lock');
   const lockChange =
     current?.kind === 'file' && toLf(current.content) === plan.lockText
       ? []

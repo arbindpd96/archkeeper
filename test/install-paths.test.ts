@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -15,12 +16,13 @@ import { removeFile, renameWithRetry } from '../src/cli/atomic-files.js';
 import { compressed, MAX_BLOB_BYTES, readBlob } from '../src/cli/blob-store.js';
 import { install } from '../src/cli/install.js';
 import { confinedPath } from '../src/cli/project-files.js';
-import { LockError, PathSafetyError } from '../src/core/errors.js';
+import { ApplyError, LockError, PathSafetyError } from '../src/core/errors.js';
 import { contentHash } from '../src/core/hash.js';
 import { canSymlink, tempDir, writeFiles } from './helpers.js';
 import { filesUnder, fixtureTree, OPTIONS } from './install-helpers.js';
 
 const LINKS = canSymlink();
+const UNREADABLE = process.platform !== 'win32' && process.getuid?.() !== 0;
 
 function errno(code: string): Error {
   return Object.assign(new Error(code), { code });
@@ -111,6 +113,25 @@ describe('write targets on disk (#23)', () => {
     execFileSync('mkfifo', [path.join(dir, 'docs/notes.md')]);
     const { plan } = install(dir, fixtureTree(), OPTIONS);
     expect(plan.ops.find((op) => op.path === 'docs/notes.md')?.kind).toBe('skip');
+  });
+
+  it.runIf(LINKS)('refuses a kit folder that is a broken symlink, naming the link and the fix', () => {
+    const dir = tempDir();
+    symlinkSync(path.join(tempDir(), 'missing'), path.join(dir, '.claude'), 'dir');
+    const run = (): unknown => install(dir, fixtureTree(), OPTIONS);
+    expect(run).toThrow(PathSafetyError);
+    expect(run).toThrow('resolves through .claude, a symlink to nothing (ENOENT)');
+    expect(run).toThrow('Try: remove or repoint the broken symlink .claude, and run again');
+  });
+
+  it.runIf(UNREADABLE)('refuses a kit path it cannot read, naming the file and the fix', () => {
+    const dir = tempDir();
+    writeFiles(dir, { 'AGENTS.md': '# Mine\n' });
+    chmodSync(path.join(dir, 'AGENTS.md'), 0o000);
+    const run = (): unknown => install(dir, fixtureTree(), OPTIONS);
+    expect(run).toThrow(ApplyError);
+    expect(run).toThrow('AGENTS.md: read for the plan: could not be read (EACCES), so the kit wrote nothing');
+    expect(filesUnder(dir)).toEqual(['AGENTS.md']);
   });
 
   it('refuses a path the lexical checks refuse before touching the disk', () => {

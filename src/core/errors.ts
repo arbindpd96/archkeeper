@@ -71,7 +71,7 @@ export class LockError extends ArchkeeperError {
   override readonly name = 'LockError';
 }
 
-/** A file operation that failed while applying a plan, after every touched path was restored (#24). */
+/** A file the kit could not read while planning, or change while applying, with nothing left half written (#24). */
 export class ApplyError extends ArchkeeperError {
   override readonly name = 'ApplyError';
 }
