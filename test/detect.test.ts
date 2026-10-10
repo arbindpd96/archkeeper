@@ -7,7 +7,7 @@ import { BRAND } from '../src/core/brand.js';
 import { detectStack } from '../src/core/detect.js';
 import type { ProjectView, StackProfile } from '../src/core/stack-profile.js';
 import { unsafeValue } from '../src/core/template.js';
-import { canSymlink, REPO_ROOT, tempDir, writeFiles } from './helpers.js';
+import { canSymlink, git, REPO_ROOT, tempDir, tempRepo, writeFiles } from './helpers.js';
 
 const FIXTURES = path.join(REPO_ROOT, 'test/fixtures/detect');
 const NAMES = readdirSync(FIXTURES).sort();
@@ -61,7 +61,8 @@ describe('detectStack', () => {
   });
 
   it.each(NAMES)('reports what %s/expected.json says', (name) => {
-    expect(detectStack(projectView(projectOf(name)))).toEqual(expectedOf(name));
+    const { list, read } = projectView(projectOf(name));
+    expect(detectStack({ list, read })).toEqual(expectedOf(name));
   });
 
   it.each(NAMES)('detects %s in under 100 ms', (name) => {
@@ -108,6 +109,30 @@ describe('detectStack', () => {
 
   it('reports a CLAUDE.md kept in .claude/ as an existing CLAUDE.md', () => {
     expect(detectIn({ '.claude/CLAUDE.md': '# Notes\n' }).claude.claudeMd).toBe(true);
+  });
+
+  it("uses the workspace root's manager for a package with no lockfile of its own, as detect() does", () => {
+    const repo = tempRepo({
+      'package.json': JSON.stringify({ private: true, workspaces: ['packages/*'] }),
+      'yarn.lock': '',
+      'packages/web/package.json': JSON.stringify({ scripts: { test: 'vitest' } }),
+    });
+    const profile = detectStack(projectView(realpathSync.native(path.join(repo, 'packages/web'))));
+    expect(profile.packageManager).toBe('yarn');
+    expect(profile.commands.map((command) => command.command)).toEqual(['yarn run test']);
+  });
+
+  it('looks for the manager no higher than the root of the repository that holds the project', () => {
+    const outside = tempDir();
+    writeFiles(outside, { 'pnpm-lock.yaml': '', 'repo/packages/web/package.json': '{}' });
+    git(path.join(outside, 'repo'), 'init', '-q');
+    const web = realpathSync.native(path.join(outside, 'repo/packages/web'));
+    expect(detectStack(projectView(web)).packageManager).toBe('npm');
+  });
+
+  it('takes rush.json before the manager package.json names, as detect() does', () => {
+    const manifest = JSON.stringify({ packageManager: 'yarn@4.0.0' });
+    expect(detectIn({ 'package.json': manifest, 'rush.json': '{}' }).packageManager).toBe('pnpm');
   });
 
   it('reads a monorepo root only, reporting the workspace flag', () => {
