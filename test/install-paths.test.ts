@@ -88,6 +88,21 @@ describe('write targets on disk (#23)', () => {
     },
   );
 
+  it.runIf(LINKS)(
+    'never offers an owned file that is a symlink again once the user deletes its sidecar',
+    () => {
+      const dir = tempDir();
+      const rule = '.claude/rules/acmekit/python.md';
+      writeFiles(dir, { 'notes.md': '# Mine\n', '.claude/rules/acmekit/.keep': '' });
+      symlinkSync('../../../notes.md', path.join(dir, rule), 'file');
+      install(dir, fixtureTree(), OPTIONS);
+      rmSync(path.join(dir, `${rule}.acmekit-new`));
+      install(dir, fixtureTree(), OPTIONS);
+      expect(existsSync(path.join(dir, `${rule}.acmekit-new`))).toBe(false);
+      expect(install(dir, fixtureTree(), OPTIONS).applied.changed).toBe(false);
+    },
+  );
+
   it.runIf(LINKS)('never deletes through a symlink, even where the lock says the kit wrote the file', () => {
     const dir = tempDir();
     const outside = tempDir();
