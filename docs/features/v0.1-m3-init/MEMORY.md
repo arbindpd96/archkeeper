@@ -49,6 +49,8 @@ v0.1 milestone M3 (issues #25, #26, #27, #28, #29): `npx <bin> init` works end t
 
 - 2026-10-10 (third review): init also refuses the user's Claude Code folder, `~/.claude` by real path, as the project. Why: its CLAUDE.md is the user's memory for every project, so a `--cwd ~/.claude` by mistake added the kit's blocks and an `@AGENTS.md` import to every session, the same reason that refuses the home folder.
 
+- 2026-10-10 (third review): The two readers of the same `@` import grammar, `import-blocks.ts` and `scripts/context-rules.mjs`, stay separate as decided, and `test/import-readers.test.ts` runs both over one table of texts. It found one drift, now fixed: the context reader cut a code span out with nothing in its place, so in ``run`npm test`@AGENTS.md`` the import read as inside a word; both now leave a space, which reads an `@` right after a code span as an import, as the kit's reader and `importProblem` already did. Why: the review asked for a guard against drift; the space errs towards counting more context, the safe side for a budget gate.
+
 ## Measured sizes (ADR-0017)
 
 | Item                       | Before M3               | After M3                                     | Budget |
