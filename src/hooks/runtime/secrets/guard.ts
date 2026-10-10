@@ -3,6 +3,7 @@ import { BRAND } from '../../../core/brand.js';
 import { secretKinds } from '../../../core/secrets.js';
 import { escapeUnprintable, isRecord } from '../../../core/text.js';
 import { isEnvFileName } from '../env-files.js';
+import { guardFileMatch } from '../guard-files.js';
 import { type Answer, type HookInput, noAnswer, permission, stringField } from '../io.js';
 import type { HookContext, HookModule, Sample } from '../launch.js';
 import { isInside, slashed } from '../project.js';
@@ -66,13 +67,18 @@ function judgeEdits(location: Location, edits: readonly Edit[], file: string): A
   );
 }
 
-function envName(location: Location): string | undefined {
-  const names = [location.file, 'real' in location ? location.real : null];
-  return names
-    .filter((name): name is string => name !== null && name !== '')
+const namesOf = (location: Location): string[] =>
+  [location.file, 'real' in location ? location.real : null].filter(
+    (name): name is string => name !== null && name !== '',
+  );
+
+const envName = (location: Location): string | undefined =>
+  namesOf(location)
     .map((name) => path.basename(name))
     .find(isEnvFileName);
-}
+
+const isGuardFile = (location: Location): boolean =>
+  namesOf(location).some((name) => guardFileMatch(slashed(name).toLowerCase().split('/')) === 'inside');
 
 function judgeWrite(
   toolInput: Readonly<Record<string, unknown>>,
@@ -111,7 +117,12 @@ function judge(input: HookInput, context: HookContext): Answer | null {
   if (name !== undefined) {
     return ask(`${escapeUnprintable(name)} holds secrets. Confirm with the user before editing it.`);
   }
-  return judgeWrite(toolInput, location, shown(location.file, context.projectDir));
+  const file = shown(location.file, context.projectDir);
+  const verdict = judgeWrite(toolInput, location, file);
+  if (verdict !== null || !isGuardFile(location)) return verdict;
+  return ask(
+    `${file} keeps the guards running or holds their options. Confirm with the user before changing it.`,
+  );
 }
 
 function answer(input: HookInput, context: HookContext): Answer {

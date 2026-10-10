@@ -2,6 +2,7 @@ import { type Command, parseCommands } from '../shell/commands.js';
 import { ShellSyntaxError } from '../shell/syntax.js';
 import { findPipedToRm, findRule, rmRule } from './delete-rules.js';
 import { gitEnvironmentRule } from './git-config.js';
+import { guardFilesRule } from './guard-file-rules.js';
 import { gitRule } from './git-rules.js';
 import { interpreterVerdict } from './interpreter-rules.js';
 import type { JudgeContext, Rule } from './judge-context.js';
@@ -40,6 +41,7 @@ const COMMAND_RULES: readonly Rule[] = [
   unknownProgramRule,
   gitEnvironmentRule,
   denyCommandsRule,
+  guardFilesRule,
 ];
 
 // A program named by an expansion could be any program, so every program's rules apply to it.
