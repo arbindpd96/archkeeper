@@ -12,6 +12,7 @@ import {
   backUp,
   type Backup,
   backupsFolder,
+  currentPaths,
   restore,
   type SavedPath,
 } from './backup.js';
@@ -61,8 +62,8 @@ function changes(rootReal: string, plan: Plan, brand: Brand): Change[] {
   return [...blobs, ...writes, ...lockChange];
 }
 
-function refuseUnwritable(backup: Backup): void {
-  const blocked = backup.paths.find(({ saved }) => saved.type === 'symlink' || saved.type === 'other');
+function refuseUnwritable(paths: readonly SavedPath[]): void {
+  const blocked = paths.find(({ saved }) => saved.type === 'symlink' || saved.type === 'other');
   if (blocked === undefined) return;
   const what = blocked.saved.type === 'symlink' ? 'a symlink' : 'not a regular file';
   throw new PathSafetyError({
@@ -74,8 +75,8 @@ function refuseUnwritable(backup: Backup): void {
 }
 
 // A path edited between planning and applying, say while init waits for a yes, would lose that edit.
-function refuseChanged(backup: Backup, expected: ReadonlyMap<string, string | null>): void {
-  const changed = backup.paths.find(({ relative, saved }) => {
+function refuseChanged(paths: readonly SavedPath[], expected: ReadonlyMap<string, string | null>): void {
+  const changed = paths.find(({ relative, saved }) => {
     if (!expected.has(relative)) return false;
     return expected.get(relative) !== (saved.type === 'file' ? saved.blob : null);
   });
@@ -114,9 +115,9 @@ function reasonOf(error: unknown): string {
 }
 
 // Nothing outside the kit's local folder is written until the backup is complete.
-function backUpOrFail(rootReal: string, pending: readonly Change[], brand: Brand): Backup {
+function beforeChanges<Result>(brand: Brand, step: () => Result): Result {
   try {
-    return backUp(rootReal, pending, brand);
+    return step();
   } catch (error) {
     if (error instanceof ArchkeeperError) throw error;
     throw new ApplyError({
@@ -203,9 +204,10 @@ export function applyPlan(root: string, plan: Plan, brand: Brand = BRAND): Apply
   assertRealStateFolders(rootReal, brand);
   const pending = changes(rootReal, plan, brand);
   if (pending.length === 0) return { changed: false, warnings: [] };
-  const backup = backUpOrFail(rootReal, pending, brand);
-  refuseUnwritable(backup);
-  refuseChanged(backup, plan.expected);
+  const found = beforeChanges(brand, () => currentPaths(pending));
+  refuseUnwritable(found);
+  refuseChanged(found, plan.expected);
+  const backup = beforeChanges(brand, () => backUp(rootReal, found, brand));
   const created: string[] = [];
   let current: Change | undefined;
   try {

@@ -222,7 +222,7 @@ describe('a plan applied after the project changed', () => {
     expect(readFileSync(path.join(dir, 'AGENTS.md'), 'utf8')).toBe(
       '# Agents, edited while the plan waited\n',
     );
-    expect(filesUnder(dir).filter((file) => !file.startsWith(`${STATE}/local/`))).toEqual(['AGENTS.md']);
+    expect(filesUnder(dir)).toEqual(['AGENTS.md']);
   });
 
   it('refuses to replace a file created where the plan found none', () => {
