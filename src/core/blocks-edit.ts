@@ -78,8 +78,8 @@ function withFirst(file: BlocksFile, text: string, at: number, blocks: readonly 
 /**
  * Applies block edits to a parsed file and returns its new text. Bytes outside managed blocks, the byte-order
  * mark and the line endings stay as they are. A new block of `@` imports goes first, after any YAML frontmatter
- * of a Markdown file (after the managed block its closing line falls in), followed by a blank line; any other new block is appended after a blank line. New markers
- * use `prefix`; existing ones keep theirs.
+ * of a Markdown file (after the managed block its closing line falls in), followed by a blank line; any other new
+ * block is appended after a blank line. New markers use `prefix`; existing ones keep theirs.
  */
 export function editBlocks(file: BlocksFile, edits: BlockEdits, prefix: string): string {
   const { eol } = file;
