@@ -84,14 +84,20 @@ export function withEnv(overrides: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
 /** Runs a Node script from the repo with an optional JSON payload on stdin. */
 export function runScript(
   script: string,
-  options: { payload?: unknown; args?: string[]; env?: NodeJS.ProcessEnv; cwd?: string } = {},
+  options: {
+    payload?: unknown;
+    args?: string[];
+    env?: NodeJS.ProcessEnv;
+    cwd?: string;
+    timeoutMs?: number;
+  } = {},
 ): RunResult {
   const run = spawnSync(process.execPath, [path.join(REPO_ROOT, script), ...(options.args ?? [])], {
     cwd: options.cwd,
     input: options.payload === undefined ? '' : JSON.stringify(options.payload),
     encoding: 'utf8',
     env: withEnv(options.env),
-    timeout: SCRIPT_TIMEOUT_MS,
+    timeout: options.timeoutMs ?? SCRIPT_TIMEOUT_MS,
   });
   return { status: run.status, stdout: run.stdout, stderr: run.stderr };
 }
