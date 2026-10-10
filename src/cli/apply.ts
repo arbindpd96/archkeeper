@@ -7,7 +7,14 @@ import { type Lock, lockFilePath } from '../core/lock.js';
 import type { Plan } from '../core/plan.js';
 import { toLf } from '../core/text.js';
 import { ensureFolder, removeFile, removeFolders, writeAtomically } from './atomic-files.js';
-import { backUp, type Backup, backupsFolder, restore, type SavedPath } from './backup.js';
+import {
+  assertRealStateFolders,
+  backUp,
+  type Backup,
+  backupsFolder,
+  restore,
+  type SavedPath,
+} from './backup.js';
 import { baseFolder, compressed } from './blob-store.js';
 import { confinedPath, lstatOrUndefined, readConfined } from './project-files.js';
 
@@ -192,6 +199,7 @@ function pruneBackups(rootReal: string, brand: Brand): string[] {
  */
 export function applyPlan(root: string, plan: Plan, brand: Brand = BRAND): ApplyResult {
   const rootReal = realpathSync.native(root);
+  assertRealStateFolders(rootReal, brand);
   const pending = changes(rootReal, plan, brand);
   if (pending.length === 0) return { changed: false, warnings: [] };
   const backup = backUpOrFail(rootReal, pending, brand);
