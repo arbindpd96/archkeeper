@@ -1,7 +1,9 @@
 import type { Command } from 'commander';
 import type { Brand } from '../core/brand.js';
 import type { Catalog } from '../core/loader.js';
+import type { GitState } from './git-state.js';
 import type { CliOutput } from './output.js';
+import type { Prompter } from './prompts.js';
 
 /** The fields the CLI reads from its own package.json. */
 export interface PackageInfo {
@@ -17,6 +19,10 @@ export interface CliContext {
   readonly brand: Brand;
   /** The folder the CLI started in, which `--cwd` is relative to. */
   readonly cwd: string;
+  /** Whether prompts can run: stdin and stdout are terminals and no CI is detected (#27). */
+  readonly interactive: boolean;
+  readonly prompter: Prompter;
+  readonly gitState: (root: string) => GitState;
 }
 
 /** The global flags of every command (#26). */

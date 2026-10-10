@@ -23,6 +23,14 @@ export function configPath(brand: Brand = BRAND): string {
   return `${brand.stateDir}/config.json`;
 }
 
+/**
+ * The `$schema` a new config points at: the config schema the given kit version publishes, on jsDelivr's npm CDN.
+ * Editors fetch it; the kit never does (ADR-0018). Pinned to the version, so it always matches the kit that wrote it.
+ */
+export function configSchemaUrl(version: string, brand: Brand = BRAND): string {
+  return `https://cdn.jsdelivr.net/npm/${brand.npmName}@${version}/${CONFIG_SCHEMA}`;
+}
+
 function unknownKeys(value: unknown, known: readonly string[], path: readonly string[]): string[] {
   if (!isRecord(value)) return [];
   return Object.keys(value)
