@@ -21,6 +21,13 @@ const CASES: readonly (readonly [text: string, imports: boolean])[] = [
   ['   ~~~md\n@AGENTS.md\n   ~~~', false],
   ['```\ncode\n```\n@AGENTS.md', true],
   ['@AGENTS.mdx', false],
+  ['@../AGENTS.md', false],
+  ['@../../AGENTS.md', false],
+  ['@/AGENTS.md', false],
+  ['@~/AGENTS.md', false],
+  ['@~/../AGENTS.md', false],
+  ['@C:/../AGENTS.md', false],
+  ['@..\\docs/../AGENTS.md', false],
 ];
 
 function kitLeavesOutItsImport(text: string): boolean {
