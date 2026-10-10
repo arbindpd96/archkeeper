@@ -99,10 +99,12 @@ function walk(tokens: readonly WalkedToken[], found: Set<string>): void {
  * unescaped and trimmed. This ports its extractor word for word (functions FOe, z7n with ni, and Q7n in the
  * 2.1.295 binary; reference §2.1): drop a leading byte-order mark and YAML frontmatter, lex with marked 15.0.6
  * (the version it bundles) without GFM, and match `(?:^|\s)@((?:[^\s\\]|\\ )+)` in every text token and in what
- * a closed HTML comment token leaves, skipping code. Path checks are left to the caller. It lists none for a
- * text Claude Code skips (over 4 MiB, a marked error, a NUL in a path), for one whose frontmatter names `paths`
- * or holds a `*` or a `\`, which Claude Code skips when the value it expands nests itself or too deeply, and for
- * one that takes more work than the kit spends on it (see bounded-lexer.ts).
+ * a closed HTML comment token leaves, skipping code. Path checks are left to the caller, Q7n's guard ZP among
+ * them, which drops UNC, device and some network paths: the caller refuses every path with a leading separator.
+ * It lists none for a text Claude Code skips (over 4 MiB, a marked error, a NUL in a path) or may skip (a NUL in a
+ * path ZP may drop first, frontmatter that names `paths` or holds a `*` or a `\`, which Claude Code skips when the
+ * value it expands nests itself or too deeply), and for one that takes more work than the kit spends on it (see
+ * bounded-lexer.ts).
  */
 export function memoryImports(text: string): string[] {
   const body = skipsMemoryFile(text) || !text.includes('@') ? undefined : withoutFrontmatter(text);
