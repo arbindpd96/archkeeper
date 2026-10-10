@@ -62,6 +62,14 @@ function changes(rootReal: string, plan: Plan, brand: Brand): Change[] {
   return [...blobs, ...writes, ...lockChange];
 }
 
+/**
+ * The project paths applying `plan` writes, in the order it writes them: each missing base blob, each file of the
+ * plan, then the lock when its text changes. Empty when the apply would write nothing.
+ */
+export function plannedWrites(rootReal: string, plan: Plan, brand: Brand = BRAND): string[] {
+  return changes(rootReal, plan, brand).map((change) => change.relative);
+}
+
 function refuseUnwritable(paths: readonly SavedPath[]): void {
   const blocked = paths.find(({ saved }) => saved.type === 'symlink' || saved.type === 'other');
   if (blocked === undefined) return;

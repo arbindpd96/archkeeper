@@ -1,16 +1,14 @@
-import path from 'node:path';
 import type { Brand } from '../core/brand.js';
-import { type KitId, lockFilePath } from '../core/lock.js';
+import type { KitId } from '../core/lock.js';
 import type { Plan } from '../core/plan.js';
 import type { RenderTree } from '../core/render.js';
 import type { Stack } from '../core/schema-parts.js';
 import type { StackProfile } from '../core/stack-profile.js';
-import { toLf } from '../core/text.js';
-import { baseFolder } from './blob-store.js';
+import { plannedWrites } from './apply.js';
 import type { Session } from './context.js';
 import type { Asking } from './init-answers.js';
 import type { ExistingConfig, NextConfig } from './init-config.js';
-import { lstatOrUndefined, readConfined } from './project-files.js';
+import { readConfined } from './project-files.js';
 
 /** The flags of `init` itself (#27); the global ones come from the session. */
 export interface InitFlags {
@@ -53,13 +51,9 @@ export function textAt(rootReal: string, file: string): string | undefined {
 }
 
 /**
- * Whether applying `plan` writes anything, as the apply decides it: a file or the config, the lock when its text
- * changes, as after a kit upgrade, or a base blob that is missing. Any write needs a yes (#27).
+ * Whether applying `plan` writes anything, decided from the same list the apply writes: a file or the config, the
+ * lock when its text changes, as after a kit upgrade, or a base blob that is missing. Any write needs a yes (#27).
  */
 export function writesAnything(rootReal: string, plan: Plan, brand: Brand): boolean {
-  if (plan.writes.size > 0) return true;
-  const lock = textAt(rootReal, lockFilePath(brand));
-  if (lock === undefined || toLf(lock) !== plan.lockText) return true;
-  const blobs = path.join(rootReal, ...baseFolder(brand).split('/'));
-  return [...plan.blobs.keys()].some((hash) => lstatOrUndefined(path.join(blobs, hash)) === undefined);
+  return plannedWrites(rootReal, plan, brand).length > 0;
 }
