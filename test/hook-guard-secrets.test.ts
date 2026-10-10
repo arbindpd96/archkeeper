@@ -37,6 +37,12 @@ describe('guard-secrets patterns (#32)', () => {
     expect(reason).not.toContain(secret);
   });
 
+  it('escapes control and bidirectional characters in the file name it shows', () => {
+    const { reason } = verdict(write(`const token = 'ghp_${'s'.repeat(36)}';`, 'src/\u202Egnp.ts\u001b[2J'));
+    expect(reason).toContain('src/\\u202egnp.ts\\u001b[2J');
+    expect(reason.includes('\u202E') || reason.includes('\u001b')).toBe(false);
+  });
+
   it.each([
     ['an edit', { file_path: 'a.ts', new_string: `token = 'ghp_${'a'.repeat(36)}'` }],
     [

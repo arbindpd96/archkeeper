@@ -1,4 +1,5 @@
 import { BRAND } from '../../../core/brand.js';
+import { escapeUnprintable } from '../../../core/text.js';
 import { isEnvFileName, isEnvTemplateName } from '../env-files.js';
 import { configFile } from '../options.js';
 import type { Command } from '../shell/commands.js';
@@ -120,5 +121,6 @@ function matchesDenied(command: Command, denied: string): boolean {
 export function denyCommandsRule(command: Command, { options }: JudgeContext): Verdict | null {
   const denied = options.denyCommands.find((entry) => matchesDenied(command, entry));
   if (denied === undefined) return null;
-  return deny(`"${denied.trim()}" is denied by options.safety.denyCommands in ${configFile(BRAND)}.`);
+  const shown = escapeUnprintable(denied.trim());
+  return deny(`"${shown}" is denied by options.safety.denyCommands in ${configFile(BRAND)}.`);
 }
