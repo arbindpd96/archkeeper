@@ -1,4 +1,7 @@
+import { type BlockEdits, editBlocks } from './blocks-edit.js';
+import { blockParts, type BlocksFile, parseBlocks } from './blocks-file.js';
 import { BRAND, type Brand } from './brand.js';
+import { MergeError } from './errors.js';
 import { memoryImports, skipsMemoryFile } from './memory-imports.js';
 import { markerPattern, markerStyle, parseMarker } from './markers.js';
 import type { RenderedEntry, RenderTree } from './render-tree.js';
@@ -59,20 +62,78 @@ function userText(text: string, brand: Brand): string {
   return bom + lines.join('');
 }
 
-function importsIn(text: string, folder: string, brand: Brand): string[] {
-  if (skipsMemoryFile(text)) return [];
-  return memoryImports(userText(text, brand)).flatMap((target) => {
-    const path = resolved(folder, target);
-    return path === undefined ? [] : [path];
-  });
+function parsedOrUndefined(path: string, text: string, brand: Brand): BlocksFile | undefined {
+  try {
+    return parseBlocks(path, text, brand);
+  } catch (error) {
+    if (error instanceof MergeError) return undefined;
+    throw error;
+  }
 }
 
-function importsMade(path: string, read: (path: string) => string | undefined, brand: Brand): Set<string> {
+// The file as Claude Code reads it once the kit writes it, without the import blocks being decided on: as it is
+// now, which a kept conflict leaves, and with the kit's other blocks as rendered. Undefined for broken markers,
+// where the kit writes nothing.
+function writtenTexts(
+  path: string,
+  text: string,
+  entries: readonly RenderedEntry[],
+  brand: Brand,
+): string[] | undefined {
+  const file = parsedOrUndefined(path, text, brand);
+  if (file === undefined) return undefined;
+  const present = blockParts(file);
+  const blocks = entries.flatMap((entry) =>
+    entry.blockId === undefined
+      ? []
+      : [{ id: entry.blockId, body: entry.content, imports: isImportBlock(entry) }],
+  );
+  const remove = new Set(blocks.filter((block) => block.imports).map((block) => block.id));
+  const others = blocks.filter((block) => !block.imports);
+  const rendered: BlockEdits = {
+    replace: new Map(others.filter(({ id }) => present.has(id)).map(({ id, body }) => [id, body])),
+    remove,
+    insert: others.filter(({ id }) => !present.has(id)),
+  };
+  const now: BlockEdits = { replace: new Map(), remove, insert: [] };
+  return [now, rendered].map((edits) => editBlocks(file, edits, brand.markerPrefix));
+}
+
+function importedPaths(text: string, folder: string): Set<string> {
+  return new Set(
+    memoryImports(text).flatMap((target) => {
+      const path = resolved(folder, target);
+      return path === undefined ? [] : [path];
+    }),
+  );
+}
+
+// An import counts only when the user's text, with the kit's blocks masked, makes it and the file as Claude Code
+// reads it once written makes it too: a block's lines can open HTML or a fence, or end one, where a mask cannot.
+function importsIn(path: string, text: string, entries: readonly RenderedEntry[], brand: Brand): string[] {
+  if (skipsMemoryFile(text)) return [];
+  const written = entries.length === 0 ? [text] : writtenTexts(path, text, entries, brand);
+  if (written === undefined) return [];
+  let found: string[] | undefined;
+  for (const view of new Set([userText(text, brand), ...written])) {
+    const paths = importedPaths(view, folderOf(path));
+    found = (found ?? [...paths]).filter((target) => paths.has(target));
+    if (found.length === 0) return [];
+  }
+  return found ?? [];
+}
+
+function importsMade(
+  path: string,
+  entries: readonly RenderedEntry[],
+  read: (path: string) => string | undefined,
+  brand: Brand,
+): Set<string> {
   const files = [path, ...(COMPANIONS[path] ?? [])];
   return new Set(
     files.flatMap((file) => {
       const text = read(file);
-      return text === undefined ? [] : importsIn(text, folderOf(file), brand);
+      return text === undefined ? [] : importsIn(file, text, file === path ? entries : [], brand);
     }),
   );
 }
@@ -80,7 +141,7 @@ function importsMade(path: string, read: (path: string) => string | undefined, b
 /**
  * Leaves out each rendered block made only of `@` imports, such as base's `@AGENTS.md`, that its Markdown file, or
  * a memory file loaded with it such as `.claude/CLAUDE.md`, already makes outside the kit's blocks, code and HTML
- * comments, so an import a user wrote is never duplicated (#28). An import that may name a file outside the
+ * comments, and still makes once the kit writes the file, so an import a user wrote is never duplicated (#28). An import that may name a file outside the
  * project, such as `@../../AGENTS.md` in a workspace package, never counts. `read` gives a file's current text, or
  * undefined when it is absent or not a text file.
  */
@@ -93,7 +154,7 @@ export function withoutImportedBlocks(
   for (const [path, entries] of tree) {
     const blocks = entries.filter(isImportBlock);
     const made =
-      markerStyle(path) === 'html' && blocks.length > 0 ? importsMade(path, read, brand) : new Set();
+      markerStyle(path) === 'html' && blocks.length > 0 ? importsMade(path, entries, read, brand) : new Set();
     const isMade = (line: string): boolean => {
       const target = resolved(folderOf(path), line.slice(1));
       return target !== undefined && made.has(target);
