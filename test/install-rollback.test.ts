@@ -10,16 +10,23 @@ import { TEST_BRAND } from './kit-fixtures.js';
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof fs>();
-  return { ...actual, renameSync: vi.fn(actual.renameSync), writeFileSync: vi.fn(actual.writeFileSync) };
+  return {
+    ...actual,
+    renameSync: vi.fn(actual.renameSync),
+    writeFileSync: vi.fn(actual.writeFileSync),
+    closeSync: vi.fn(actual.closeSync),
+  };
 });
 
 const realRename = vi.mocked(fs.renameSync).getMockImplementation() ?? fs.renameSync;
 const realWrite = vi.mocked(fs.writeFileSync).getMockImplementation() ?? fs.writeFileSync;
+const realClose = vi.mocked(fs.closeSync).getMockImplementation() ?? fs.closeSync;
 const LOCAL = `${TEST_BRAND.stateDir}/local`;
 
 afterEach(() => {
   vi.mocked(fs.renameSync).mockImplementation(realRename);
   vi.mocked(fs.writeFileSync).mockImplementation(realWrite);
+  vi.mocked(fs.closeSync).mockImplementation(realClose);
 });
 
 /** Every file and folder outside the kit's local folder, with each file's exact bytes. */
@@ -198,6 +205,26 @@ describe('a failure in the middle of an apply', () => {
       expect(tempFiles(dir), `after a failure at write ${String(failing)}`).toEqual([]);
       expect(contents(dir), `after a failure at write ${String(failing)}`).toEqual(before);
     }
+  });
+
+  it('reports the full disk, not a close that failed after it', () => {
+    const dir = tempDir();
+    writeFiles(dir, { [`${LOCAL}/.gitignore`]: '*\n' });
+    let writeFailed = false;
+    vi.mocked(fs.writeFileSync).mockImplementation((file, data, options) => {
+      if (typeof file === 'number' && !writeFailed) {
+        writeFailed = true;
+        throw Object.assign(new Error('no space left'), { code: 'ENOSPC' });
+      }
+      realWrite(file, data, options);
+    });
+    vi.mocked(fs.closeSync).mockImplementation((descriptor) => {
+      realClose(descriptor);
+      if (writeFailed) throw Object.assign(new Error('close failed'), { code: 'EIO' });
+    });
+    const { message } = applyError(dir);
+    expect(message).toContain('no space left');
+    expect(message).not.toContain('close failed');
   });
 
   it('changes nothing in the project when the backup itself cannot be made', () => {
