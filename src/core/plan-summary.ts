@@ -7,8 +7,7 @@ import { compareText } from './text.js';
 /** How a path fares in a plan, as #27 groups it: created, modified, left with a sidecar, or left as it is. */
 export type PlanGroup = 'create' | 'modify' | 'conflict' | 'skip';
 
-/** The groups in the order a plan summary shows them. */
-export const PLAN_GROUPS: readonly PlanGroup[] = ['create', 'modify', 'conflict', 'skip'];
+const PLAN_GROUPS: readonly PlanGroup[] = ['create', 'modify', 'conflict', 'skip'];
 
 /** One project path of a plan with its group and its operations. */
 export interface PathSummary {
