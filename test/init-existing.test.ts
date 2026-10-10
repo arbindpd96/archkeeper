@@ -2,6 +2,8 @@ import { existsSync, readFileSync, symlinkSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { loadCatalog } from '../src/core/loader.js';
+import { memoryImports } from '../src/core/memory-imports.js';
+import { BYTE_ORDER_MARK } from '../src/core/text.js';
 import { canSymlink, fixtureCopy, tempDir, writeFiles } from './helpers.js';
 import { projectText } from './install-helpers.js';
 import { existingClaudeSetup as existingSetup, runInit, USER_SETUP } from './init-helpers.js';
@@ -35,6 +37,29 @@ describe('init on a project with its own Claude Code setup', () => {
   it('changes nothing on a second run', async () => {
     const dir = existingSetup();
     await runInit(dir, ['--yes']);
+    const before = projectText(dir);
+    const again = await runInit(dir, ['--yes']);
+    expect(again.code).toBe(0);
+    expect(again.stdout).toContain('Nothing to change');
+    expect(projectText(dir)).toBe(before);
+  });
+});
+
+describe('init on a CLAUDE.md that opens with YAML frontmatter', () => {
+  const marker = (edge: string, id: string): string => `<!-- ${TEST_BRAND.markerPrefix}:${edge} ${id} -->`;
+
+  it('imports AGENTS.md right after the frontmatter, with the byte-order mark and CRLF kept, once', async () => {
+    const { dir } = fixtureCopy('ts-app');
+    const frontmatter = `${BYTE_ORDER_MARK}---\r\nname: rules\r\n---\r\n`;
+    writeFiles(dir, { 'CLAUDE.md': `${frontmatter}# Notes\r\n` });
+    expect((await runInit(dir, ['--yes'])).code).toBe(0);
+    const claude = read(dir, 'CLAUDE.md');
+    const imports = `${marker('begin', 'agents-import')}\r\n@AGENTS.md\r\n${marker('end', 'agents-import')}\r\n`;
+    expect(
+      claude.startsWith(`${frontmatter}${imports}\r\n# Notes\r\n\r\n${marker('begin', 'claude-code')}\r\n`),
+    ).toBe(true);
+    expect(memoryImports(claude)).toEqual(['AGENTS.md']);
+    expect(claude.match(/@AGENTS\.md/g)).toHaveLength(1);
     const before = projectText(dir);
     const again = await runInit(dir, ['--yes']);
     expect(again.code).toBe(0);
