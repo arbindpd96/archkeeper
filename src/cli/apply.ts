@@ -17,7 +17,7 @@ import {
   type SavedPath,
 } from './backup.js';
 import { baseFolder, compressed } from './blob-store.js';
-import { confinedPath, lstatOrUndefined, readConfined } from './project-files.js';
+import { confinedPath, lstatOrUndefined, readConfined, readFileBytes } from './project-files.js';
 
 /** What an apply did: whether it wrote anything, where its backup is, and cleanup problems worth reporting. */
 export interface ApplyResult {
@@ -105,18 +105,58 @@ function applyChange(
   writeAtomically(absolute, change.data, saved?.saved.type === 'file' ? saved.saved.mode : undefined);
 }
 
+// A path that was absent before the run is removed only while it holds exactly what the run wrote there, so a
+// folder swapped to another place in the project never makes the rollback delete a file it did not write.
+function stillAsWritten(absolute: string, change: Change | undefined): boolean {
+  if (lstatOrUndefined(absolute) === undefined) return true;
+  const written = change?.data;
+  if (written === null || written === undefined) return false;
+  return readFileBytes(absolute)?.equals(Buffer.from(written)) === true;
+}
+
+function restoreConfined(rootReal: string, saved: SavedPath, change: Change | undefined): void {
+  const absolute = confinedPath(rootReal, saved.relative, 'restored by the rollback');
+  if (saved.saved.type === 'absent' && !stillAsWritten(absolute, change)) {
+    throw new Error('it changed after the run wrote it, so it was left as it is');
+  }
+  restore({ ...saved, absolute });
+}
+
+function stillConfined(rootReal: string, folder: string): boolean {
+  try {
+    confinedPath(
+      rootReal,
+      path.relative(rootReal, folder).split(path.sep).join('/'),
+      'removed by the rollback',
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Only the paths the run reached, the failing one included: a file someone saves meanwhile elsewhere is theirs.
-// Each path is confined again, so a folder swapped for a symlink mid-run is never written or unlinked through.
-function rollBack(rootReal: string, reached: readonly SavedPath[], created: readonly string[]): string[] {
+// Each path and created folder is confined again, so a folder swapped for a symlink mid-run is never written,
+// unlinked or removed through.
+function rollBack(
+  rootReal: string,
+  reached: readonly SavedPath[],
+  changes: readonly Change[],
+  created: readonly string[],
+): string[] {
   const failed: string[] = [];
-  for (const saved of [...reached].reverse()) {
+  for (const [index, saved] of [...reached.entries()].reverse()) {
     try {
-      restore({ ...saved, absolute: confinedPath(rootReal, saved.relative, 'restored by the rollback') });
+      restoreConfined(rootReal, saved, changes[index]);
     } catch (error) {
       failed.push(`${saved.relative} (${reasonOf(error)})`);
     }
   }
-  return [...failed, ...removeFolders(created)];
+  const inside = created.filter((folder) => stillConfined(rootReal, folder));
+  const moved = created
+    .filter((folder) => !inside.includes(folder))
+    .map((folder) => `${path.relative(rootReal, folder)} (moved during the run; left as it is)`);
+  return [...failed, ...moved, ...removeFolders(inside)];
 }
 
 function reasonOf(error: unknown): string {
@@ -232,7 +272,7 @@ export function applyPlan(root: string, plan: Plan, brand: Brand = BRAND): Apply
       applyChange(absolute, change, backup.paths[index], created);
     }
   } catch (error) {
-    const unrestored = rollBack(rootReal, backup.paths.slice(0, reached), created);
+    const unrestored = rollBack(rootReal, backup.paths.slice(0, reached), planned, created);
     throw failure(error, planned[failing], backup, unrestored);
   }
   const run = path.posix.basename(backup.folder);

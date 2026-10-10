@@ -29,6 +29,18 @@ afterEach(() => {
   vi.mocked(fs.closeSync).mockImplementation(realClose);
 });
 
+/** Fails the first rename after the hook script is written, once `swap` has moved a folder on its way. */
+function swapAfterGuard(swap: (hookFolder: string) => void): void {
+  let swapped = false;
+  vi.mocked(fs.renameSync).mockImplementation((from, to) => {
+    if (swapped) throw Object.assign(new Error('injected failure'), { code: 'EIO' });
+    realRename(from, to);
+    if (!String(to).endsWith('guard.mjs')) return;
+    swap(path.dirname(String(to)));
+    swapped = true;
+  });
+}
+
 /** Every file and folder outside the kit's local folder, with each file's exact bytes. */
 function contents(dir: string, relative = ''): Map<string, string> {
   const found = new Map<string, string>();
@@ -206,6 +218,37 @@ describe('a failure in the middle of an apply', () => {
       expect(contents(dir), `after a failure at write ${String(failing)}`).toEqual(before);
     }
   });
+
+  it.runIf(canSymlink())(
+    'never removes folders through a folder swapped for a symlink out of the project',
+    () => {
+      const dir = tempDir();
+      const outside = tempDir();
+      writeFiles(dir, { [`${LOCAL}/.gitignore`]: '*\n' });
+      fs.mkdirSync(path.join(outside, 'hooks', 'acmekit'), { recursive: true });
+      swapAfterGuard(() => {
+        fs.rmSync(path.join(dir, '.claude'), { recursive: true });
+        fs.symlinkSync(outside, path.join(dir, '.claude'), 'dir');
+      });
+      expect(applyError(dir).message).toContain('moved during the run');
+      expect(fs.existsSync(path.join(outside, 'hooks', 'acmekit'))).toBe(true);
+    },
+  );
+
+  it.runIf(canSymlink())(
+    'never deletes a user file that a folder swapped inside the project points the rollback at',
+    () => {
+      const dir = tempDir();
+      writeFiles(dir, { [`${LOCAL}/.gitignore`]: '*\n', 'scripts/acmekit/guard.mjs': 'mine\n' });
+      swapAfterGuard((hookFolder) => {
+        const hooks = path.dirname(hookFolder);
+        fs.rmSync(hooks, { recursive: true });
+        fs.symlinkSync(path.join(dir, 'scripts'), hooks, 'dir');
+      });
+      expect(applyError(dir).message).toContain('it changed after the run wrote it');
+      expect(fs.readFileSync(path.join(dir, 'scripts/acmekit/guard.mjs'), 'utf8')).toBe('mine\n');
+    },
+  );
 
   it('reports the full disk, not a close that failed after it', () => {
     const dir = tempDir();
