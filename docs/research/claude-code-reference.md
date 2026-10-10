@@ -245,6 +245,7 @@ This block belongs in **user** settings only.
 - Syntax: `@path`, for example `@README`, `@docs/guide.md` or `@~/.claude/x.md`. Imports load at launch.
 - Relative imports resolve from the importing file. Maximum depth is 4 hops.
 - Spaces must be backslash-escaped: `@Design\ Docs/api.md`. A **quoted path is not imported**. Imports inside code spans or fenced blocks are skipped.
+- Grammar, read from the Claude Code 2.1.295 binary on 2026-10-10: it strips YAML frontmatter, lexes the file with marked (`gfm: false`; the bundled version matches marked 15.0.7) and matches `/(?:^|\s)@((?:[^\s\\]|\\ )+)/` in text tokens only, so an `@` counts at the start of a text token (after a code span, an emphasis opener, a link's `[`) or after whitespace, never after `(` or `-`. It cuts the path at the first `#`, unescapes `\ `, trims it, and keeps any other trailing character: `@AGENTS.md.` names `AGENTS.md.`. It reads nothing in code blocks (fenced or indented), code spans or HTML other than a closed comment, whose leftover text it reads raw, and drops a path whose extension is not a text extension.
 - The first time a project imports a file outside the working directory, Claude Code shows a one-time approval dialog. The answer persists per project. Imports in user-scope files load without the dialog.
 
 **Size** [src](https://code.claude.com/docs/en/memory):
