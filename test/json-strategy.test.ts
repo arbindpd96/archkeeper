@@ -265,6 +265,16 @@ describe('the json strategy', () => {
     );
   });
 
+  it('leaves a value that is not a list where the kit adds nothing', () => {
+    const outcome = plan({
+      state: file('{ "permissions": { "deny": "none" }, "hooks": { "PreToolUse": "none" } }\n'),
+      removed: ['permissions.deny Read(**/.env)', 'permissions.deny Bash(rm -rf:*)'],
+      script: () => 'other',
+    });
+    expect(outcome.content).toBeUndefined();
+    expect(outcome.ops.every((op) => op.kind === 'skip')).toBe(true);
+  });
+
   it('removes an unchanged entry the kit no longer writes when the current kit could own it', () => {
     const outcome = plan({
       entries: [],

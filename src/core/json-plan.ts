@@ -86,10 +86,18 @@ function record(merge: Merge, kind: OpKind, key: string, reason: string): void {
   merge.ops.push({ kind, path: merge.job.path, entry: key, reason });
 }
 
+// Only an entry the kit may add needs its container: a removed or owned key, or a hook the kit will not register,
+// is never added, so a value there that is not a list or an object stays the user's business.
+function mayAdd(job: JsonJob, key: string): boolean {
+  if (job.isRemoved(key) || job.lock?.has(key) === true) return false;
+  const target = entryKey(key);
+  return target.match !== 'hook' || job.script(target.id) === 'kit';
+}
+
 // Checked on the user's text before any edit, so the line and column point into the file as the user sees it.
 function refuseBadContainers(job: JsonJob, text: string, kit: readonly KitEntry[]): void {
   const root = parseDocument(job.path, text);
-  for (const { key } of kit) {
+  for (const { key } of kit.filter((entry) => mayAdd(job, entry.key))) {
     const blocked = containerProblem(root, entryKey(key));
     if (blocked === undefined) continue;
     throw new MergeError({
