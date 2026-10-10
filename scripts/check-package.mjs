@@ -126,7 +126,7 @@ function binLinkProblems(root, manifest) {
     seen.add(file);
     for (const [, specifier] of readFileSync(file, 'utf8').matchAll(STATIC_IMPORT)) {
       if (specifier.startsWith('.')) pending.push(path.resolve(path.dirname(file), specifier));
-      else problems.push(`${path.relative(root, file)} imports ${specifier}`);
+      else problems.push(`${path.relative(root, file).split(path.sep).join('/')} imports ${specifier}`);
     }
   }
   const fix = 'keep the program behind the dynamic import in src/cli/bin.ts (tsdown.config.mts)';
@@ -142,7 +142,9 @@ function binProblems(root, manifest) {
     if (version !== manifest.version) return [`bin --version printed "${version}", not ${manifest.version}`];
     return help.includes('Usage:') ? [] : ['bin --help printed no usage'];
   } catch (error) {
-    return [`bin ${path.relative(root, bin)} failed: ${String(error.message ?? error)}`];
+    return [
+      `bin ${path.relative(root, bin).split(path.sep).join('/')} failed: ${String(error.message ?? error)}`,
+    ];
   }
 }
 
