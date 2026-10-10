@@ -98,9 +98,10 @@ function applyChange(change: Change, saved: SavedPath | undefined, created: stri
   writeAtomically(change.absolute, change.data, saved?.saved.type === 'file' ? saved.saved.mode : undefined);
 }
 
-function rollBack(backup: Backup, created: readonly string[]): string[] {
+// Only the paths the run reached, the failing one included: a file someone saves meanwhile elsewhere is theirs.
+function rollBack(reached: readonly SavedPath[], created: readonly string[]): string[] {
   const failed: string[] = [];
-  for (const saved of [...backup.paths].reverse()) {
+  for (const saved of [...reached].reverse()) {
     try {
       restore(saved);
     } catch (error) {
@@ -196,7 +197,8 @@ function pruneBackups(rootReal: string, brand: Brand, current: string): string[]
 /**
  * Applies a plan all-or-nothing (#24). Every path it touches is backed up first under
  * `<state dir>/local/backup/<runId>/`; each write goes to a temp sibling renamed into place; any failure restores
- * every path to its earlier content and type and removes the folders the run created; the lock is written last.
+ * each path the run reached to its earlier content and type and removes the folders the run created; the lock is
+ * written last.
  * Base blobs are written only when absent, and unreferenced ones and all but the last 3 backups are removed.
  */
 export function applyPlan(root: string, plan: Plan, brand: Brand = BRAND): ApplyResult {
@@ -209,14 +211,15 @@ export function applyPlan(root: string, plan: Plan, brand: Brand = BRAND): Apply
   refuseChanged(found, plan.expected);
   const backup = beforeChanges(brand, () => backUp(rootReal, found, brand));
   const created: string[] = [];
-  let current: Change | undefined;
+  let reached = 0;
   try {
     for (const [index, change] of pending.entries()) {
-      current = change;
+      reached = index + 1;
       applyChange(change, backup.paths[index], created);
     }
   } catch (error) {
-    throw failure(error, current, backup, rollBack(backup, created));
+    const unrestored = rollBack(backup.paths.slice(0, reached), created);
+    throw failure(error, pending[reached - 1], backup, unrestored);
   }
   const warnings = [
     ...pruneBlobs(rootReal, plan.lock, brand),

@@ -122,6 +122,17 @@ describe('a failure in the middle of an apply', () => {
     );
   });
 
+  it('leaves alone a path the run never reached, such as a file saved meanwhile', () => {
+    const dir = tempDir();
+    writeFiles(dir, { [`${LOCAL}/.gitignore`]: '*\n' });
+    vi.mocked(fs.renameSync).mockImplementationOnce(() => {
+      fs.writeFileSync(path.join(dir, 'CLAUDE.md'), '# Saved meanwhile\n');
+      throw Object.assign(new Error('injected failure'), { code: 'EIO' });
+    });
+    expect(applyError(dir).message).toContain('every file it touched was restored');
+    expect(fs.readFileSync(path.join(dir, 'CLAUDE.md'), 'utf8')).toBe('# Saved meanwhile\n');
+  });
+
   it('changes nothing in the project when the backup itself cannot be made', () => {
     const dir = tempDir();
     writeFiles(dir, { 'CLAUDE.md': '# Mine\n' });
