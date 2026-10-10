@@ -8,6 +8,11 @@ export interface ProjectView {
   readonly list: (folder: string) => readonly string[];
   /** The text of a project file, or undefined when it is absent or not a regular UTF-8 text file. */
   readonly read: (file: string) => string | undefined;
+  /**
+   * The folders above the project, nearest first, up to the root of the git repository that holds it, each read
+   * the same way; only the package manager is looked up there. None when absent.
+   */
+  readonly above?: () => readonly ProjectView[];
 }
 
 /** Languages detection reports, in this order (ADR-0006). */

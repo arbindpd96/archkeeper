@@ -96,12 +96,32 @@ function packageFacts(text: string, warnings: ProblemReport[]): PackageFacts {
   };
 }
 
-// As package-manager-detector's detect() decides it: the manager package.json names, else the first lockfile's.
-function packageManager(names: readonly string[], facts: PackageFacts): string {
-  if (facts.manager !== undefined) return facts.manager;
+// One folder as package-manager-detector's detect() reads it: rush.json means pnpm, then the manager package.json
+// names, then the first lockfile's.
+function managerIn(names: readonly string[], declared: string | undefined): string | undefined {
   if (names.includes('rush.json')) return 'pnpm';
+  if (declared !== undefined) return declared;
   const lock = Object.keys(LOCKS).find((file) => names.includes(file));
-  return (lock === undefined ? undefined : LOCKS[lock]) ?? 'npm';
+  return lock === undefined ? undefined : LOCKS[lock];
+}
+
+function declaredAbove(folder: ProjectView, names: readonly string[]): string | undefined {
+  const text = names.includes(PACKAGE_JSON) ? folder.read(PACKAGE_JSON) : undefined;
+  const parsed = text === undefined ? undefined : parseJson(text);
+  const manifest = parsed?.ok === true ? recordOf(parsed.value) : undefined;
+  return manifest === undefined ? undefined : declaredManager(manifest);
+}
+
+// As detect() walks up: a workspace package with no lockfile of its own uses the workspace root's manager.
+function packageManager(view: ProjectView, names: readonly string[], facts: PackageFacts): string {
+  const own = managerIn(names, facts.manager);
+  if (own !== undefined) return own;
+  for (const folder of view.above?.() ?? []) {
+    const folderNames = folder.list('');
+    const found = managerIn(folderNames, declaredAbove(folder, folderNames));
+    if (found !== undefined) return found;
+  }
+  return 'npm';
 }
 
 function runCommand(manager: string, script: string): string {
@@ -132,7 +152,7 @@ export function nodeSignals(
   if (text === undefined) return undefined;
   const warnings: ProblemReport[] = [];
   const facts = packageFacts(text, warnings);
-  const manager = packageManager(names, facts);
+  const manager = packageManager(view, names, facts);
   const tools = TOOLS.filter(
     ([, pkg, config]) => facts.packages.has(pkg) || names.some((name) => config.test(name)),
   );
