@@ -12,7 +12,7 @@ import { markerIn } from './markers.js';
 import { findSecret } from './secrets.js';
 import { reservedTarget } from './targets.js';
 import { brandScope, renderTemplate, type TemplateScope, unsafeValue } from './template.js';
-import { asLfText } from './text.js';
+import { asLfText, quoted } from './text.js';
 import { whenMismatch } from './when.js';
 
 /** What a render depends on besides the modules and the brand: the stack, option values and template values. */
@@ -85,7 +85,7 @@ function ignoreLine(job: ModuleRender, line: string, index: number): string {
   throw new RenderError({
     file: job.kit.file,
     location,
-    problem: `renders to ${JSON.stringify(rendered)}, which ${problem}`,
+    problem: `renders to ${quoted(rendered)}, which ${problem}`,
     hint: 'fix the template value it uses: a line renders to one pattern, never a comment, blank or ! negation',
   });
 }

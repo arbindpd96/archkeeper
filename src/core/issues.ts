@@ -1,5 +1,6 @@
 import * as z from 'zod/mini';
 import type { Finding } from './errors.js';
+import { escapeUnprintable, quoted } from './text.js';
 
 type Issue = z.core.$ZodIssue;
 type Described = Omit<Finding, 'location'> & { readonly location?: string };
@@ -15,7 +16,7 @@ export function jsonPath(path: readonly PropertyKey[]): string {
     .map((key, index) => {
       if (typeof key === 'number') return `[${String(key)}]`;
       const name = String(key);
-      if (!PLAIN_KEY.test(name)) return `[${JSON.stringify(name)}]`;
+      if (!PLAIN_KEY.test(name)) return `[${quoted(name)}]`;
       return index === 0 ? name : `.${name}`;
     })
     .join('');
@@ -23,7 +24,7 @@ export function jsonPath(path: readonly PropertyKey[]): string {
 
 function show(value: unknown): string {
   if (value === undefined) return 'nothing';
-  const text = JSON.stringify(value);
+  const text = escapeUnprintable(JSON.stringify(value));
   return text.length > MAX_SHOWN ? `${text.slice(0, MAX_SHOWN - 1)}…` : text;
 }
 

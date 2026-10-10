@@ -5,7 +5,7 @@ import { ApplyError, ArchkeeperError, PathSafetyError } from '../core/errors.js'
 import { HASH } from '../core/hash.js';
 import { blobHashes, type Lock, lockFilePath } from '../core/lock.js';
 import type { Plan } from '../core/plan.js';
-import { compareText, toLf } from '../core/text.js';
+import { compareText, quoted, toLf } from '../core/text.js';
 import { ensureFolder, removeFile, removeFolders, writeAtomically } from './atomic-files.js';
 import {
   assertRealStateFolders,
@@ -67,7 +67,7 @@ function refuseUnwritable(paths: readonly SavedPath[]): void {
   if (blocked === undefined) return;
   const what = blocked.saved.type === 'symlink' ? 'a symlink' : 'not a regular file';
   throw new PathSafetyError({
-    file: JSON.stringify(blocked.relative),
+    file: quoted(blocked.relative),
     location: 'written by the plan',
     problem: `is now ${what}, which the kit never writes through or deletes`,
     hint: 'it changed after the plan was made; run again to plan with what is there now',

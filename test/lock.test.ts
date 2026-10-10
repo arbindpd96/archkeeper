@@ -195,6 +195,18 @@ describe('an untrusted lock', () => {
     expect(error.message).toContain('restore lock.json from git');
   });
 
+  it('escapes control characters and bidirectional overrides of a refused path in its message', () => {
+    const csi = String.fromCharCode(0x9b);
+    const override = String.fromCharCode(0x202e);
+    const crafted = `docs/${csi}31mRED${override}txt.md`;
+    const error = lockError(
+      lockText((json) => (json.files = { [crafted]: { module: 'm', strategy: 'owned', base: A } })),
+    );
+    const slash = String.fromCharCode(92);
+    expect(error.location).toBe(`files["docs/${slash}u009b31mRED${slash}u202etxt.md"]`);
+    expect(error.message.includes(csi) || error.message.includes(override)).toBe(false);
+  });
+
   it('refuses text that is not JSON, naming the line', () => {
     expect(lockError('{\n  "lockfileVersion": 1,\n}').location).toBe('line 3, column 1');
   });
