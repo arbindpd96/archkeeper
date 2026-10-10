@@ -7,7 +7,7 @@ import { contentHash } from './hash.js';
 import type { BlockEntry, Removal } from './lock.js';
 import type { OpKind, Ownable, PathOutcome, PathState, PlanOp } from './plan-types.js';
 import type { RenderedEntry } from './render-tree.js';
-import { keptSidecarReason, sidecarAction, sidecarPath } from './sidecar.js';
+import { sidecarAction, sidecarPath } from './sidecar.js';
 import { toLf } from './text.js';
 
 /** Everything the planner knows about one blocks path. */
@@ -192,6 +192,12 @@ function uneditedSidecar(job: BlocksJob, file: BlocksFile, text: string): boolea
   }
 }
 
+// The lock keeps no hash of the whole sidecar, so once the user edits the file outside its blocks, the kit's own
+// sidecar no longer matches and is kept like an edited one, though ADR-0014 would rewrite it (a known gap).
+function keptBlocksSidecarReason(sidecar: string, path: string): string {
+  return `${sidecar} no longer matches ${path} with the kit blocks swapped in, so the kit cannot tell it from one the user edited and leaves it alone; delete it and run again to get the newest kit version`;
+}
+
 function withSidecar(
   job: BlocksJob,
   file: BlocksFile,
@@ -215,7 +221,7 @@ function withSidecar(
       const kept =
         action === 'same'
           ? `${sidecar} already holds the kit version`
-          : keptSidecarReason(job.path, job.brand);
+          : keptBlocksSidecarReason(sidecar, job.path);
       const entry = (action === 'same' ? d.entry : job.lock?.get(d.id)) ?? { base: null };
       return { ...d, op: 'skip', reason: `${d.reason}; ${kept}`, entry };
     }),
