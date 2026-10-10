@@ -181,6 +181,10 @@ describe('memoryImports', () => {
     expect(memoryImports('\uFEFF---\r\nnote: @x.md\r\n---\r\n@AGENTS.md')).toEqual(['AGENTS.md']);
   });
 
+  it('counts nothing in a file over 4 MiB, which Claude Code skips whole', () => {
+    expect(memoryImports(`@AGENTS.md\n${'a'.repeat(4 * MIB)}`)).toEqual([]);
+  });
+
   it('counts nothing in a file whose import holds a NUL, which Claude Code skips whole', () => {
     expect(memoryImports('@AGENTS.md and @a\u0000b.md')).toEqual([]);
   });
