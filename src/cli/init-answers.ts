@@ -96,6 +96,10 @@ const GIT_PROBLEMS: Readonly<Record<Exclude<GitState, 'clean'>, readonly [proble
     'is not a git repository, so git cannot show or undo what init changes',
     'run git init and commit first',
   ],
+  ignored: [
+    'is ignored by its git repository, so git cannot show or undo what init changes',
+    'stop ignoring it and commit it first',
+  ],
   unknown: [
     'could not be checked with git, so init cannot tell whether git can undo its changes',
     'check that git is installed and works here',
