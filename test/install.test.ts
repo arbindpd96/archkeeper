@@ -231,6 +231,25 @@ describe('a plan applied after the project changed', () => {
     writeFiles(dir, { 'CLAUDE.md': '# Mine, written while the plan waited\n' });
     expect(() => applyPlan(dir, plan, TEST_BRAND)).toThrow('CLAUDE.md: changed after the plan was made');
   });
+
+  it('refuses to replace a lock that a newer kit wrote since planning', () => {
+    const dir = tempDir();
+    install(dir, fixtureTree(), OPTIONS);
+    const plan = planProject(dir, fixtureTree(), OPTIONS);
+    const lock = path.join(dir, LOCK);
+    const newer = readFileSync(lock, 'utf8').replace('"version": "1.0.0"', '"version": "9.0.0"');
+    writeFileSync(lock, newer);
+    expect(() => applyPlan(dir, plan, TEST_BRAND)).toThrow(`${LOCK}: changed after the plan was made`);
+    expect(readFileSync(lock, 'utf8')).toBe(newer);
+  });
+
+  it('refuses to replace a lock written where the plan found none', () => {
+    const dir = tempDir();
+    const plan = planProject(dir, fixtureTree(), OPTIONS);
+    writeFiles(dir, { [LOCK]: plan.lockText.replace('"version": "1.0.0"', '"version": "9.0.0"') });
+    expect(() => applyPlan(dir, plan, TEST_BRAND)).toThrow(`${LOCK}: changed after the plan was made`);
+    expect(filesUnder(dir)).toEqual([LOCK]);
+  });
 });
 
 describe('the lock on disk', () => {

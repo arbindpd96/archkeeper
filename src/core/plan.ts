@@ -44,8 +44,9 @@ export interface Plan {
   /** The LF content of every base and pending blob the new lock references and this run can provide, by hash. */
   readonly blobs: ReadonlyMap<string, string>;
   /**
-   * What each path in `writes` held when planned: the sha256 of its exact bytes, or null when it was absent. The
-   * apply refuses to write when a path no longer matches, so an edit made after planning is never overwritten.
+   * What each path in `writes`, and the lock once the caller that read it adds it, held when planned: the sha256
+   * of its exact bytes, or null when it was absent. The apply refuses to write when a path no longer matches, so
+   * an edit made after planning is never overwritten.
    */
   readonly expected: ReadonlyMap<string, string | null>;
 }

@@ -1,7 +1,7 @@
 import { readdirSync, realpathSync } from 'node:fs';
 import { BRAND, type Brand } from '../core/brand.js';
 import { LockError } from '../core/errors.js';
-import { HASH } from '../core/hash.js';
+import { exactHash, HASH } from '../core/hash.js';
 import { type KitId, type Lock, lockFilePath, type LockRead, readLock } from '../core/lock.js';
 import { rebuildLock } from '../core/lock-rebuild.js';
 import { type Plan, planInstall, snapshotPaths } from '../core/plan.js';
@@ -26,10 +26,16 @@ export interface InstallResult {
   readonly applied: ApplyResult;
 }
 
-function readProjectLock(rootReal: string, kit: KitId, brand: Brand): LockRead | undefined {
+interface ProjectLock {
+  readonly read: LockRead | undefined;
+  /** The sha256 of the exact lock text read, or null when there was none. */
+  readonly hash: string | null;
+}
+
+function readProjectLock(rootReal: string, kit: KitId, brand: Brand): ProjectLock {
   const relative = lockFilePath(brand);
   const state = readConfined(rootReal, relative, 'the kit lock');
-  if (state === undefined) return undefined;
+  if (state === undefined) return { read: undefined, hash: null };
   if (state.kind !== 'file') {
     throw new LockError({
       file: relative,
@@ -38,7 +44,7 @@ function readProjectLock(rootReal: string, kit: KitId, brand: Brand): LockRead |
       hint: 'replace it with the lock.json from git',
     });
   }
-  return readLock(state.content, kit, brand);
+  return { read: readLock(state.content, kit, brand), hash: exactHash(state.content) };
 }
 
 function blobNames(rootReal: string, brand: Brand): Set<string> {
@@ -49,25 +55,28 @@ function blobNames(rootReal: string, brand: Brand): Set<string> {
 
 /**
  * Plans an install against the project at `root` without writing anything: reads the lock (rebuilding one that
- * a git merge left with conflict markers), takes a snapshot of every path the plan needs, and plans (#21).
+ * a git merge left with conflict markers), takes a snapshot of every path the plan needs, and plans (#21). The
+ * plan's `expected` also records the lock as read, so an apply refuses a lock that changed since, such as one a
+ * newer kit wrote meanwhile (ADR-0014: a downgrade cannot rewrite a newer install).
  */
 export function planProject(root: string, tree: RenderTree, options: InstallOptions): Plan {
   const brand = options.brand ?? BRAND;
   const rootReal = realpathSync.native(root);
   assertRealStateFolders(rootReal, brand);
-  const read = readProjectLock(rootReal, options.kit, brand);
+  const { read, hash } = readProjectLock(rootReal, options.kit, brand);
   const sides: readonly Lock[] = read === undefined ? [] : read.conflicted ? read.sides : [read.lock];
   const snapshot = readSnapshot(rootReal, snapshotPaths(tree, sides, brand));
   const lock =
     read?.conflicted === true
       ? rebuildLock(read.sides, snapshot, blobNames(rootReal, brand), brand)
       : read?.lock;
-  return planInstall(tree, snapshot, lock, {
+  const plan = planInstall(tree, snapshot, lock, {
     kit: options.kit,
     modules: options.modules,
     brand,
     ...(options.ownable === undefined ? {} : { ownable: options.ownable }),
   });
+  return { ...plan, expected: new Map(plan.expected).set(lockFilePath(brand), hash) };
 }
 
 /** Plans an install against the project at `root` and applies it transactionally (#21–#24). */
