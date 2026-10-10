@@ -3,13 +3,14 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { readKit } from '../src/cli/kit.js';
 import { BRAND } from '../src/core/brand.js';
-import { withoutImportedBlocks } from '../src/core/import-blocks.js';
+import { withoutImportedBlocks, withoutRefusedImports } from '../src/core/import-blocks.js';
 import type { KitModule } from '../src/core/loader.js';
 import { planInstall } from '../src/core/plan.js';
 import { projectValues } from '../src/core/project-values.js';
 import { render, type RenderTree } from '../src/core/render.js';
 import type { StackProfile } from '../src/core/stack-profile.js';
 import { git, REPO_ROOT, tempRepo } from './helpers.js';
+import { blockEntry } from './kit-fixtures.js';
 
 const catalog = readKit(REPO_ROOT);
 
@@ -140,6 +141,7 @@ describe('withoutImportedBlocks', () => {
     ['the import only in a code span', 'Write `@AGENTS.md` to import it.\n'],
     ['the import only in a code span with spaces', 'Write ` @AGENTS.md ` to import it.\n'],
     ['only an address that ends like it', 'Write to ops@AGENTS.md.\n'],
+    ['only an import of the AGENTS.md above the project', '@../AGENTS.md\n'],
     [
       "the import only in the kit's own block",
       `${marker('begin', 'agents-import')}\n@AGENTS.md\n${marker('end', 'agents-import')}\n`,
@@ -149,5 +151,29 @@ describe('withoutImportedBlocks', () => {
       'agents-import',
       'claude-code',
     ]);
+  });
+
+  it("gives a workspace package that imports the workspace's AGENTS.md an import of its own AGENTS.md", () => {
+    const kept = withoutImportedBlocks(tree, (file) =>
+      file === 'CLAUDE.md' ? 'Workspace rules: @../../AGENTS.md\n' : undefined,
+    );
+    const imports = kept.get('CLAUDE.md')?.find((entry) => entry.blockId === 'agents-import');
+    expect(imports?.content).toBe('@AGENTS.md\n');
+  });
+});
+
+describe('withoutRefusedImports', () => {
+  it('leaves out a kit import that may name a file outside the project without asking the refusal', () => {
+    const tree: RenderTree = new Map([['CLAUDE.md', [blockEntry('agents-import', '@../AGENTS.md\n')]]]);
+    const asked: string[] = [];
+    const result = withoutRefusedImports(tree, (target) => {
+      asked.push(target);
+      return undefined;
+    });
+    expect(result.tree.size).toBe(0);
+    expect(result.refused).toEqual([
+      { file: 'CLAUDE.md', target: '../AGENTS.md', reason: 'it may name a file outside the project' },
+    ]);
+    expect(asked).toEqual([]);
   });
 });
