@@ -2,10 +2,11 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
+import { loadCatalog } from '../src/core/loader.js';
 import { fixtureCopy, runCliProcess, tempDir, withEnv, writeFiles } from './helpers.js';
 import { projectText } from './install-helpers.js';
 import { runInit } from './init-helpers.js';
-import { TEST_BRAND } from './kit-fixtures.js';
+import { kitFiles, memoryReader, plainManifest, TEST_BRAND } from './kit-fixtures.js';
 
 const CONFIG = `${TEST_BRAND.stateDir}/config.json`;
 
@@ -128,6 +129,23 @@ describe('init, scripted', () => {
     expect(result.code).toBe(1);
     expect(result.stderr).toContain(message);
     expect(existsSync(path.join(dir, TEST_BRAND.stateDir))).toBe(false);
+  });
+
+  it('suggests /new-feature only when a module writes that skill, which none does yet', async () => {
+    const result = await runInit(fixtureCopy('ts-app').dir, ['--yes']);
+    expect(result.stdout).toContain('Restart Claude Code');
+    expect(result.stdout).not.toContain('/new-feature');
+    const memory = plainManifest('memory', {
+      presets: ['small', 'medium', 'full'],
+      files: [
+        { from: 'skill.md', to: '.claude/skills/new-feature/SKILL.md', strategy: 'owned', target: 'project' },
+      ],
+    });
+    const skill = '---\nname: new-feature\ndescription: Start a feature.\n---\n\nStart it.\n';
+    const files = kitFiles([memory], { 'modules/memory/files/skill.md': skill });
+    const catalog = loadCatalog(['memory'], memoryReader(files));
+    const withSkill = await runInit(fixtureCopy('ts-app').dir, ['--yes'], { catalog });
+    expect(withSkill.stdout).toContain('run /new-feature <name>');
   });
 
   it('re-runs from the config like update, keeping a preset chosen earlier', async () => {
