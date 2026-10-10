@@ -130,6 +130,13 @@ describe('withoutImportedBlocks', () => {
     ['an import with ./', { 'CLAUDE.md': 'Read @./AGENTS.md first.\n' }],
     ['an import in inline markdown', { 'CLAUDE.md': 'Shared rules: **@AGENTS.md** (and @README.md).\n' }],
     ['an import in .claude/CLAUDE.md', { '.claude/CLAUDE.md': 'Rules: @../AGENTS.md\n' }],
+    [
+      'an import in .claude/CLAUDE.md beside a CLAUDE.md that only shows the import in a fence',
+      {
+        'CLAUDE.md': '# Project\n\n```md\n@AGENTS.md\n```\n',
+        '.claude/CLAUDE.md': '@../AGENTS.md\n',
+      },
+    ],
     ['an import of a heading in AGENTS.md', { 'CLAUDE.md': 'Read @AGENTS.md#principles first.\n' }],
     ['an import of a heading in .claude/CLAUDE.md', { '.claude/CLAUDE.md': '@../AGENTS.md#top\n' }],
   ])('drops the import block when the project already has %s', (_name, files) => {
@@ -213,6 +220,17 @@ describe('withoutImportedBlocks', () => {
       ]);
     },
   );
+
+  it('keeps the import block when CLAUDE.md imports a chain that may reach .claude/CLAUDE.md at its last hop', () => {
+    const files = {
+      'CLAUDE.md': '@a.md\n',
+      'a.md': '@b.md\n',
+      'b.md': '@c.md\n',
+      'c.md': '@.claude/CLAUDE.md\n',
+      '.claude/CLAUDE.md': '@../AGENTS.md\n',
+    };
+    expect(keptBlocks(files)).toEqual(['agents-import', 'claude-code']);
+  });
 
   it('keeps the import block when .claude/CLAUDE.md has frontmatter whose paths nest themselves, which Claude Code skips', () => {
     const companion = '---\npaths: &x [*x]\n---\n@../AGENTS.md\n';

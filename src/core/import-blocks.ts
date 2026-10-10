@@ -19,6 +19,7 @@ const OUTSIDE_REASON = 'it may name a file outside the project';
 /** Memory files Claude Code loads together with a file the kit writes (reference §2.1), so their imports count too. */
 const COMPANIONS: Readonly<Record<string, readonly string[]>> = { 'CLAUDE.md': ['.claude/CLAUDE.md'] };
 const PROJECT_SETTINGS = [SETTINGS_FILE, LOCAL_SETTINGS_FILE];
+const AGENTS_IMPORT = /@(?:\.\/)?AGENTS\.md(?=[\s#]|$)/g;
 
 function importLines(entry: RenderedEntry): string[] {
   return entry.content.split('\n').filter((line) => line.trim() !== '');
@@ -113,14 +114,22 @@ function importedPaths(text: string, folder: string): Set<string> {
   );
 }
 
-// An import counts only when the user's text, with the kit's blocks masked, makes it and the file as Claude Code
-// reads it once written makes it too: a block's lines can open HTML or a fence, or end one, where a mask cannot.
-function importsIn(path: string, text: string, entries: readonly RenderedEntry[], brand: Brand): string[] {
-  if (skipsMemoryFile(text)) return [];
+// The texts an import must be made in to count: the user's text with the kit's blocks masked, and the file as Claude
+// Code reads it once written, since a block's lines can open HTML or a fence, or end one, where a mask cannot.
+// Undefined for broken markers, where the kit writes nothing.
+function viewsOf(
+  path: string,
+  text: string,
+  entries: readonly RenderedEntry[],
+  brand: Brand,
+): string[] | undefined {
   const written = entries.length === 0 ? [text] : writtenTexts(path, text, entries, brand);
-  if (written === undefined) return [];
+  return written === undefined ? undefined : [...new Set([userText(text, brand), ...written])];
+}
+
+function importsIn(path: string, views: readonly string[]): string[] {
   let found: string[] | undefined;
-  for (const view of new Set([userText(text, brand), ...written])) {
+  for (const view of views) {
     const paths = importedPaths(view, folderOf(path));
     found = (found ?? [...paths]).filter((target) => paths.has(target));
     if (found.length === 0) return [];
@@ -137,14 +146,21 @@ function namesExcludes(text: string): boolean {
 // Claude Code drops a project memory file that a `claudeMdExcludes` pattern matches before it reads it, so the
 // companions count only while no project settings file sets that key. Its patterns are not matched: counting
 // fewer imports costs at most a redundant import line, while counting one Claude Code drops never loads AGENTS.md.
-function memoryFiles(path: string, read: (path: string) => string | undefined): string[] {
+function companionsOf(path: string, read: (path: string) => string | undefined): readonly string[] {
   const companions = COMPANIONS[path] ?? [];
-  if (companions.length === 0) return [path];
+  if (companions.length === 0) return [];
   const excludes = PROJECT_SETTINGS.some((file) => {
     const text = read(file);
     return text !== undefined && namesExcludes(text);
   });
-  return excludes ? [path] : [path, ...companions];
+  return excludes ? [] : companions;
+}
+
+// Claude Code loads a companion after CLAUDE.md's import chain, and loads a file once, so a chain that reaches the
+// companion at its fourth hop cuts the companion's own imports. A companion counts only when no view holds an `@`
+// but in an AGENTS.md import, which needs no lexing, so a CLAUDE.md the kit gives up on counts no companion either.
+function importsOnlyAgents(view: string): boolean {
+  return !view.replace(AGENTS_IMPORT, '').includes('@');
 }
 
 function importsMade(
@@ -153,22 +169,24 @@ function importsMade(
   read: (path: string) => string | undefined,
   brand: Brand,
 ): Set<string> {
-  const files = memoryFiles(path, read);
-  return new Set(
-    files.flatMap((file) => {
-      const text = read(file);
-      return text === undefined ? [] : importsIn(file, text, file === path ? entries : [], brand);
-    }),
-  );
+  const text = read(path);
+  const views = text === undefined || skipsMemoryFile(text) ? [] : viewsOf(path, text, entries, brand);
+  if (views === undefined) return new Set();
+  const companions = companionsOf(path, read);
+  const companionImports = (views.every(importsOnlyAgents) ? companions : []).flatMap((file) => {
+    const companion = read(file);
+    return companion === undefined || skipsMemoryFile(companion) ? [] : importsIn(file, [companion]);
+  });
+  return new Set([...importsIn(path, views), ...companionImports]);
 }
 
 /**
  * Leaves out each rendered block made only of `@` imports, such as base's `@AGENTS.md`, that its Markdown file, or
- * a memory file loaded with it such as `.claude/CLAUDE.md` while no project settings set `claudeMdExcludes`,
- * already makes outside the kit's blocks, code and HTML comments, and still makes once the kit writes the file, so
- * an import a user wrote is never duplicated (#28). An import that may name a file outside the
- * project, such as `@../../AGENTS.md` in a workspace package, never counts. `read` gives a file's current text, or
- * undefined when it is absent or not a text file.
+ * a memory file loaded with it such as `.claude/CLAUDE.md` while no project settings set `claudeMdExcludes` and
+ * CLAUDE.md holds no `@` but in an AGENTS.md import, already makes outside the kit's blocks, code and HTML comments,
+ * and still makes once the kit writes the file, so an import a user wrote is never duplicated (#28). An import that
+ * may name a file outside the project, such as `@../../AGENTS.md` in a workspace package, never counts. `read`
+ * gives a file's current text, or undefined when it is absent or not a text file.
  */
 export function withoutImportedBlocks(
   tree: RenderTree,
