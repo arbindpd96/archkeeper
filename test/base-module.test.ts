@@ -111,16 +111,18 @@ describe('withoutImportedBlocks', () => {
   const tree = baseTree();
   const marker = (edge: string, id: string): string => `<!-- ${BRAND.markerPrefix}:${edge} ${id} -->`;
 
-  function keptBlocks(claude: string): string[] {
-    const kept = withoutImportedBlocks(tree, (file) => (file === 'CLAUDE.md' ? claude : undefined));
+  function keptBlocks(files: Readonly<Record<string, string>>): string[] {
+    const kept = withoutImportedBlocks(tree, (file) => files[file]);
     return (kept.get('CLAUDE.md') ?? []).map((entry) => entry.blockId ?? '');
   }
 
   it.each([
-    ['an import of its own', '# Notes\n\n@AGENTS.md\n'],
-    ['an import with ./', 'Read @./AGENTS.md first.\n'],
-  ])('drops the import block when CLAUDE.md already has %s', (_name, claude) => {
-    expect(keptBlocks(claude)).toEqual(['claude-code']);
+    ['an import of its own', { 'CLAUDE.md': '# Notes\n\n@AGENTS.md\n' }],
+    ['an import with ./', { 'CLAUDE.md': 'Read @./AGENTS.md first.\n' }],
+    ['an import in inline markdown', { 'CLAUDE.md': 'Shared rules: **@AGENTS.md** (and @README.md).\n' }],
+    ['an import in .claude/CLAUDE.md', { '.claude/CLAUDE.md': 'Rules: @../AGENTS.md\n' }],
+  ])('drops the import block when the project already has %s', (_name, files) => {
+    expect(keptBlocks(files)).toEqual(['claude-code']);
   });
 
   it.each([
@@ -130,13 +132,13 @@ describe('withoutImportedBlocks', () => {
     ['the import only in an HTML comment', '<!-- @AGENTS.md -->\n'],
     ['the import only in a code span', 'Write `@AGENTS.md` to import it.\n'],
     ['the import only in a code span with spaces', 'Write ` @AGENTS.md ` to import it.\n'],
+    ['only an address that ends like it', 'Write to ops@AGENTS.md.\n'],
     [
       "the import only in the kit's own block",
       `${marker('begin', 'agents-import')}\n@AGENTS.md\n${marker('end', 'agents-import')}\n`,
     ],
   ])('keeps the import block when there is %s', (_name, claude) => {
-    const kept = withoutImportedBlocks(tree, () => claude);
-    expect((kept.get('CLAUDE.md') ?? []).map((entry) => entry.blockId)).toEqual([
+    expect(keptBlocks(claude === undefined ? {} : { 'CLAUDE.md': claude })).toEqual([
       'agents-import',
       'claude-code',
     ]);
