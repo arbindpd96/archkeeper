@@ -146,9 +146,15 @@ describe('withoutImportedBlocks', () => {
     ['only an import of the AGENTS.md above the project', '@../AGENTS.md\n'],
     ['only a path that ends in a full stop', 'Shared rules: @AGENTS.md.\n'],
     ['only an @ after a bracket', 'The shared rules (@AGENTS.md) apply.\n'],
+    ['the import only in indented code', '# Notes\n\nTo import a file, write:\n\n    @AGENTS.md\n'],
+    ['the import only in frontmatter', '---\nimports: @AGENTS.md\n---\n'],
     [
       "the import only in the kit's own block",
       `${marker('begin', 'agents-import')}\n@AGENTS.md\n${marker('end', 'agents-import')}\n`,
+    ],
+    [
+      "only an indented import after the kit's own block, which Claude Code reads as code",
+      `Intro\n${marker('begin', 'agents-import')}\n@AGENTS.md\n${marker('end', 'agents-import')}\n    @AGENTS.md\n`,
     ],
   ])('keeps the import block when there is %s', (_name, claude) => {
     expect(keptBlocks(claude === undefined ? {} : { 'CLAUDE.md': claude })).toEqual([
