@@ -148,8 +148,7 @@ function toolCommands(tools: readonly string[], python: PythonManager): Detected
   return [...commands].map(([purpose, command]) => ({ stack: 'python' as const, purpose, command }));
 }
 
-/** Whether a project root holds any Python project, requirements or lock file. */
-export function hasPython(names: readonly string[]): boolean {
+function hasPython(names: readonly string[]): boolean {
   return names.some((name) => PROJECT_FILES.includes(name) || REQUIREMENTS.test(name) || PYLOCK.test(name));
 }
 
