@@ -1,6 +1,6 @@
 import { parseTree } from 'jsonc-parser';
 import type { Brand } from './brand.js';
-import { MergeError } from './errors.js';
+import { MergeError, RenderError } from './errors.js';
 import { contentHash } from './hash.js';
 import {
   containerProblem,
@@ -60,7 +60,7 @@ function moduleEntries(path: string, entry: RenderedEntry): (KitEntry & { offset
   return (entry.keys ?? []).map((key) => {
     const found = root === undefined ? undefined : findEntry(root, entryKey(key));
     if (found === undefined) {
-      throw new MergeError({
+      throw new RenderError({
         file: path,
         location: key,
         problem: `is a key of ${entry.module} with no entry in its rendered JSON`,

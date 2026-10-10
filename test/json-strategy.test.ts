@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MergeError } from '../src/core/errors.js';
+import { MergeError, RenderError } from '../src/core/errors.js';
 import { contentHash } from '../src/core/hash.js';
 import { type JsonJob, planJson, SETTINGS_SCHEMA } from '../src/core/json-plan.js';
 import type { PathState } from '../src/core/plan-types.js';
@@ -248,6 +248,11 @@ describe('the json strategy', () => {
   it('refuses a nested key given twice', () => {
     const text = '{ "permissions": { "deny": [], "deny": ["Bash(*)"] } }\n';
     expect(() => plan({ state: file(text) })).toThrow('line 1, column 32: holds the key "deny" twice');
+  });
+
+  it('reports a module key with no entry in its rendered JSON as a kit bug', () => {
+    const entry = jsonEntry({ permissions: { deny: [] } }, ['permissions.deny Read(x)']);
+    expect(() => plan({ entries: [entry] })).toThrow(RenderError);
   });
 
   it('refuses a file whose root is not an object', () => {
