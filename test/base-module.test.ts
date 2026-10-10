@@ -164,11 +164,33 @@ describe('withoutImportedBlocks', () => {
       'only an import after lone-CR dashes, which Claude Code reads as a rule and an open fence, not frontmatter',
       '---\r```\r---\r@AGENTS.md\r',
     ],
+    [
+      "only an import after a kit block that opens an HTML block, which Claude Code reads as the block's HTML",
+      `${marker('begin', 'claude-code')}\n<details>\n${marker('end', 'claude-code')}\n@AGENTS.md\n`,
+    ],
+    [
+      "only an import in a comment that the kit block's blank line leaves open, which a masked block would close",
+      `<p align="center">\n${marker('begin', 'claude-code')}\n${blockOf(tree, 'CLAUDE.md', 'claude-code')}${marker('end', 'claude-code')}\n<!-- TODO\n\n@AGENTS.md\n`,
+    ],
   ])('keeps the import block when there is %s', (_name, claude) => {
     expect(keptBlocks(claude === undefined ? {} : { 'CLAUDE.md': claude })).toEqual([
       'agents-import',
       'claude-code',
     ]);
+  });
+
+  it('drops the import block when the project imports it below the kit block', () => {
+    const claudeCode = `${marker('begin', 'claude-code')}\n${blockOf(tree, 'CLAUDE.md', 'claude-code')}${marker('end', 'claude-code')}\n`;
+    expect(keptBlocks({ 'CLAUDE.md': `${claudeCode}\n@AGENTS.md\n` })).toEqual(['claude-code']);
+  });
+
+  it("keeps the import block when the kit's new version of another block would hide the project's import", () => {
+    const rendered: RenderTree = new Map([
+      ['CLAUDE.md', [blockEntry('agents-import', '@AGENTS.md\n'), blockEntry('claude-code', '<details>\n')]],
+    ]);
+    const claude = `${marker('begin', 'claude-code')}\nPointers\n${marker('end', 'claude-code')}\n@AGENTS.md\n`;
+    const kept = withoutImportedBlocks(rendered, (file) => (file === 'CLAUDE.md' ? claude : undefined));
+    expect(kept.get('CLAUDE.md')?.map((entry) => entry.blockId)).toEqual(['agents-import', 'claude-code']);
   });
 
   it('reads a CLAUDE.md with a long run after an @ in linear time', () => {
