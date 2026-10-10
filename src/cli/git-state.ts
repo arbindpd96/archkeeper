@@ -4,13 +4,14 @@ import path from 'node:path';
 
 /**
  * What git says about a project folder: nothing to commit, uncommitted changes, no repository, a folder its
- * repository ignores, or no answer.
+ * repository ignores, no answer, or a repository whose own config sets a filter program, which init does not ask.
  */
-export type GitState = 'clean' | 'dirty' | 'not-a-repo' | 'ignored' | 'unknown';
+export type GitState = 'clean' | 'dirty' | 'not-a-repo' | 'ignored' | 'unknown' | 'filters';
 
 // No fsmonitor, so a repository's config cannot start its fsmonitor hook; no optional locks, so git writes nothing.
 const SAFE = ['--no-optional-locks', '-c', 'core.fsmonitor=false'];
 const GIT_FILE = process.platform === 'win32' ? 'git.exe' : 'git';
+const FILTER_PROGRAMS = String.raw`^filter\..*\.(clean|process)$`;
 
 interface GitRun {
   readonly status: number | null;
@@ -85,15 +86,27 @@ function gitRunner(root: string): ((args: readonly string[]) => GitRun) | undefi
   };
 }
 
+// git status runs a filter's clean or process program on a file whose stat data changed, and a repository that
+// arrives with its .git folder, as in a zip, can set one in its own config; global and system config are the user's.
+function setsFilterProgram(git: (args: readonly string[]) => GitRun): boolean | undefined {
+  const config = git(['config', '--show-scope', '--get-regexp', FILTER_PROGRAMS]);
+  if (config.status === 1) return false;
+  if (config.status !== 0) return undefined;
+  return config.stdout.split('\n').some((line) => /^(?:local|worktree)\t/.test(line));
+}
+
 /**
  * Asks git, with no shell and no network, whether it can show and undo what init changes in `root` (#27): the
  * status of that folder alone, so a change elsewhere in a monorepo does not count, and whether the repository
  * ignores the folder, which git then cannot track. Git is found only in absolute PATH folders outside the
- * project. A missing git or any other failure is `unknown`.
+ * project, and is not asked about a repository whose own config sets a filter program (`filters`). A missing git
+ * or any other failure is `unknown`.
  */
 export function gitState(root: string): GitState {
   const git = gitRunner(root);
   if (git === undefined) return 'unknown';
+  const filters = setsFilterProgram(git);
+  if (filters !== false) return filters === true ? 'filters' : 'unknown';
   const status = git(['status', '--porcelain', '--', '.']);
   if (status.status !== 0) return /not a git repository/i.test(status.stderr) ? 'not-a-repo' : 'unknown';
   if (status.stdout.trim() !== '') return 'dirty';
