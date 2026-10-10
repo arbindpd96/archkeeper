@@ -57,9 +57,13 @@ function hookFiles(): string[] {
     .sort();
 }
 
-/** One build per hook keeps every hook bundle self-contained; vitest's global setup runs them before the tests. */
+/**
+ * One build per hook keeps every hook bundle self-contained; vitest's global setup runs them before the tests.
+ * The code stays unminified, but JSDoc is dropped, as `//` comments already are, to keep each bundle in budget.
+ */
 export const hookBuilds: UserConfig[] = hookFiles().map((file): UserConfig => ({
   ...shared,
+  outputOptions: { ...shared.outputOptions, comments: { legal: true, annotation: true, jsdoc: false } },
   entry: { [`hooks/${path.basename(file, '.ts')}`]: `src/hooks/${file}` },
   deps: { onlyBundle: [], onlyImport: [] },
 }));
