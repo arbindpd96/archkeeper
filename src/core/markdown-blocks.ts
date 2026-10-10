@@ -1,15 +1,10 @@
-import { withoutComments } from './imports.js';
-import { htmlBlock, NOT_CLOSED, wholeLine } from './markdown-html.js';
 import {
   BLANK,
   codeAfterMarker,
   COMMENT_START,
   DEFINITION,
-  expanded,
-  FENCE_START,
   HEADING,
   hidesInItem,
-  indentOf,
   INDENTED_CODE,
   isSetextText,
   listMarker,
@@ -27,55 +22,44 @@ import {
   closeItems,
   endsItems,
   enterItem,
+  inItemText,
   itemFence,
   itemsLeft,
   leaveItems,
   type ListLine,
   type ListState,
+  ownerColumn as findOwner,
 } from './markdown-lists.js';
-import { type Line, paragraphStep } from './paragraph-step.js';
+import { type Line, paragraphStep, quoteTakes } from './paragraph-step.js';
+import {
+  type ImportText,
+  readHtml,
+  readOpenLine,
+  type Skipping,
+  startComment,
+  startFence,
+  stop,
+} from './skipped-blocks.js';
 
-const FENCE_CLOSER_TAIL = /^[`~]* *$/;
+const BARE_QUOTE = /^ {0,3}> ?$/;
+const QUOTE_TAB = /^[ \t]*(?:>[ \t]*)*>\t/;
 const SINGLE_MARKER = /^ {0,3}(?:[*+-]|\d{1,9}[.)])(?:[ \t]+|$)/;
 const BARE_DEFINITION = /^ {0,3}\[(?!\s*\])(?:\\.|[^[\]\\])+\]: *$/;
 const TITLE_START = /^[ \t]*["'(]/;
 const DESTINATION = /^[ \t]*(?:[^<\s]\S*|<.*?>)(?: +(?:"[^"]*"|'[^']*'|\([^()]*\)))? *$/;
 
-/** Text Claude Code reads `@` imports in: inline Markdown, or what an HTML comment block leaves, which it reads raw. */
-export interface ImportText {
-  readonly text: string;
-  readonly raw: boolean;
-}
-
-/** A fence or HTML block being skipped: its blockquote depth and indent, and where its last line ends it. */
-interface OpenBlock {
-  readonly depth: number;
-  readonly indent: number;
-  readonly end: (content: string) => number;
-  readonly comment?: string[];
-}
-
 /** The state of one pass over a file's lines. */
-interface Scan extends ListState {
-  readonly texts: ImportText[];
-  paragraph: string[];
+interface Scan extends ListState, Skipping {
   paragraphDepth: number;
   setextable: boolean;
   unsure: boolean;
   textBefore: boolean;
   depth: number;
-  open: OpenBlock | undefined;
   line: number;
   definedAt: number;
   label: string | undefined;
   lastContent: string;
-  stopped: boolean;
-}
-
-/** Reads nothing more, not even the open paragraph, whose rest could have hidden what it holds. */
-function stop(scan: Scan): void {
-  scan.stopped = true;
-  scan.paragraph = [];
+  quoteText: boolean;
 }
 
 /**
@@ -103,61 +87,6 @@ function settle(scan: Scan, closing: Closing): void {
   if (closing === 'stop') stop(scan);
 }
 
-function closeBlock(scan: Scan, block: OpenBlock): void {
-  scan.open = undefined;
-  if (block.comment !== undefined) {
-    scan.texts.push({ text: withoutComments(block.comment.join('\n')), raw: true });
-  }
-}
-
-function fenceEnd(fence: string, column: number): (content: string) => number {
-  return wholeLine((content) => {
-    const spaces = content.length - content.replace(/^ +/, '').length;
-    const code = content.slice(spaces);
-    const closes = code.startsWith(fence) && FENCE_CLOSER_TAIL.test(code.slice(fence.length));
-    return closes && spaces - column <= 3;
-  });
-}
-
-function startFence(scan: Scan, content: string, depth: number, column = 0): boolean {
-  const fence = FENCE_START.exec(expanded(content).slice(column))?.[1];
-  if (fence !== undefined) scan.open = { depth, indent: indentOf(content), end: fenceEnd(fence, column) };
-  return fence !== undefined;
-}
-
-/** An HTML block that a list item or a lazy quote line opens ends with them, so the reader stops at one. */
-function openHtml(scan: Scan, block: OpenBlock, line: Line): void {
-  if (line.inList || line.lazy) stop(scan);
-  else scan.open = block;
-}
-
-function startComment(scan: Scan, content: string, line: Line): void {
-  const from = content.indexOf('<!--') + 4;
-  const ends = (text: string): boolean => text.includes('-->');
-  const block: OpenBlock = {
-    depth: line.depth,
-    indent: indentOf(content),
-    end: wholeLine(ends),
-    comment: [content],
-  };
-  if (/^-?>/.test(content.slice(from)) || ends(content.slice(from))) closeBlock(scan, block);
-  else openHtml(scan, block, line);
-}
-
-/**
- * A `<?…?>`, `<!X …>` or CDATA block ends right after its marker, and the rest of that line starts a new block,
- * which the reader does not follow, so it stops there.
- */
-function readHtml(scan: Scan, content: string, line: Line): boolean {
-  const html = htmlBlock(content);
-  if (html === undefined) return false;
-  const rest = html.from < content.length ? html.end(content.slice(html.from)) : NOT_CLOSED;
-  if (rest === NOT_CLOSED) {
-    openHtml(scan, { depth: line.depth, indent: indentOf(content), end: html.end }, line);
-  } else if (!BLANK.test(content.slice(html.from + rest))) stop(scan);
-  return true;
-}
-
 /**
  * An item whose text is only an empty inner item still has text, so the next line goes on lazily. marked reads
  * a list inside a quote again with the quote's lazy lines, which the reader does not follow, so it stops there.
@@ -170,13 +99,28 @@ function readListItem(scan: Scan, content: string, inner: string, depth: number)
   if (HEADING.test(inner)) endParagraph(scan);
 }
 
-/** An indented line in a list may be the item's own text; the reader stops where that text could hide more. */
+/**
+ * An indented line in a list may be the item's own text; the reader stops where that text could hide more, and
+ * at an item that opens left of the innermost one, in an outer item, which ends the items in between.
+ */
 function readCode(scan: Scan, content: string, line: Line): void {
   const text = content.trimStart();
   const column = line.itemColumn;
   if (!line.inList) return;
-  if (hidesInItem(text) || text.startsWith('[') || column === undefined) stop(scan);
-  else if (!INDENTED_CODE.test(expanded(content).slice(column))) startParagraph(scan, content, line.depth);
+  const outerItem = line.ownerColumn !== column && listMarker(text, true) !== '';
+  if (hidesInItem(text) || text.startsWith('[') || column === undefined || outerItem) stop(scan);
+  else readItemText(scan, inItemText(content, true, column), line.depth);
+}
+
+/**
+ * A line of an item's text, read from the item's column: a heading, a rule, code, an empty inner item, which no
+ * line goes on from lazily, or a paragraph's first line.
+ */
+function readItemText(scan: Scan, text: string, depth: number): void {
+  const marker = listMarker(text, false);
+  if (HEADING.test(text)) scan.texts.push({ text, raw: false });
+  else if (marker !== '' && BLANK.test(text.slice(marker.length))) return;
+  else if (!INDENTED_CODE.test(text) && !THEMATIC_BREAK.test(text)) startParagraph(scan, text, depth);
 }
 
 /** A paragraph on a lazy line may belong to the quote above, and join its next lines, so the reader stops. */
@@ -204,7 +148,7 @@ function readBlock(scan: Scan, content: string, line: Line): void {
   const marker = listMarker(content, line.inList);
   const inner = content.slice(marker.length);
   if (marker !== '') enterItem(scan, marker, inner, line.depth);
-  if (marker.includes('\t')) stop(scan);
+  if (marker.includes('\t') || marker !== listMarker(content, false)) stop(scan);
   else if (codeAfterMarker(marker) && !BLANK.test(inner)) return;
   else if (DEFINITION.test(inner)) readDefinition(scan, content, inner);
   else if (marker !== '') readListItem(scan, content, inner, line.depth);
@@ -213,12 +157,17 @@ function readBlock(scan: Scan, content: string, line: Line): void {
 
 /**
  * marked indents a `===` or `---` line inside a quote by four spaces unless it opens the quote's text; the
- * reader does not tell which, so it stops at one.
+ * reader does not tell which, so it stops at one. It stops too at a block that a quote takes as a lazy line.
  */
+function beyondReader(content: string, line: Line): boolean {
+  const quotedRule = line.depth > 0 && SETEXT_UNDERLINE.test(content);
+  return quotedRule || (line.lazy && line.afterQuoteText && quoteTakes(content, line));
+}
+
 function readBlockStart(scan: Scan, content: string, line: Line): void {
   if (scan.stopped) return;
-  if (itemFence(content, line.itemColumn)) startFence(scan, content, line.depth, line.itemColumn);
-  else if (line.depth > 0 && SETEXT_UNDERLINE.test(content)) stop(scan);
+  if (beyondReader(content, line)) stop(scan);
+  else if (itemFence(content, line.itemColumn)) startFence(scan, content, line.depth, line.itemColumn);
   else if (BLANK.test(content) || THEMATIC_BREAK.test(content)) return;
   else if (INDENTED_CODE.test(content)) readCode(scan, content, line);
   else readBlock(scan, content, line);
@@ -236,25 +185,6 @@ function continuesParagraph(scan: Scan, content: string, line: Line): boolean {
   scan.setextable &&= isSetextText(content);
   if (next === 'continue') scan.paragraph.push(content);
   else stop(scan);
-  return true;
-}
-
-/**
- * A fence or HTML block in a quote ends where the quote does; neither goes on lazily. One that opened indented
- * may sit in a list item, which a line indented less can end, so the reader stops there.
- */
-function readOpenLine(scan: Scan, block: OpenBlock, line: string): boolean {
-  const { depth, content } = unquoted(line, block.depth);
-  if (depth < block.depth) {
-    scan.open = undefined;
-    return false;
-  }
-  scan.stopped = !BLANK.test(content) && indentOf(content) < block.indent;
-  block.comment?.push(content);
-  const ended = scan.stopped ? NOT_CLOSED : block.end(content);
-  if (ended === NOT_CLOSED) return true;
-  closeBlock(scan, block);
-  scan.stopped = !BLANK.test(content.slice(ended));
   return true;
 }
 
@@ -297,17 +227,28 @@ interface Around {
 }
 
 function placeLine(scan: Scan, line: string, previous: string, around: Around): Line {
-  const { depth } = unquoted(line, Infinity);
+  const { depth, content: quoted } = unquoted(line, Infinity);
+  const afterQuoteText = scan.quoteText;
+  scan.quoteText = depth > 0 && !BARE_QUOTE.test(line);
   const textBefore = scan.textBefore || scan.paragraph.length > 0;
   const content = unquoted(line, scan.listDepth).content;
   const afterEmptyItem = scan.emptyItemAt === scan.line - 1;
   scan.textBefore = false;
   updateList(scan, { raw: line, content, previous, afterEmptyItem }, depth, textBefore);
   const { next, setextAhead } = around;
-  const fenceInterrupts = next !== undefined && unquoted(next, depth).depth >= depth;
+  const nextInQuote = next !== undefined && unquoted(next, depth).depth >= depth;
   const inList = scan.inList && (depth === scan.listDepth || (depth < scan.listDepth && textBefore));
   const lazy = depth < scan.depth;
-  return { fenceInterrupts, setextAhead, depth, lazy, inList, itemColumn: scan.items.at(-1)?.column };
+  const itemColumn = scan.items.at(-1)?.column;
+  const inItem = inItemText(quoted, inList, itemColumn);
+  const ownerColumn = inList ? findOwner(scan.items, quoted) : undefined;
+  return { afterQuoteText, nextInQuote, setextAhead, depth, lazy, inList, itemColumn, ownerColumn, inItem };
+}
+
+/** marked reads each tab on an item's later lines as four spaces, so after a quote marker it may make code. */
+function tabAfterQuote(scan: Scan, line: string): boolean {
+  if (scan.inList && QUOTE_TAB.test(line)) stop(scan);
+  return scan.stopped;
 }
 
 function readLine(scan: Scan, line: string, around: Around): void {
@@ -316,7 +257,7 @@ function readLine(scan: Scan, line: string, around: Around): void {
   scan.lastContent = unquoted(line, scan.listDepth).content;
   if (scan.stopped || (scan.open !== undefined && readOpenLine(scan, scan.open, line))) return;
   const { depth, content } = unquoted(line, Infinity);
-  if (readsDefinition(scan, content, depth)) return;
+  if (tabAfterQuote(scan, line) || readsDefinition(scan, content, depth)) return;
   const placed = placeLine(scan, line, previous, around);
   scan.depth = depth;
   if (scan.paragraph.length > 0 && continuesParagraph(scan, content, placed)) return;
@@ -324,6 +265,7 @@ function readLine(scan: Scan, line: string, around: Around): void {
     ...placed,
     inList: placed.inList && scan.inList,
     itemColumn: scan.items.at(-1)?.column,
+    ownerColumn: findOwner(scan.items, content),
   });
 }
 
@@ -346,6 +288,7 @@ export function importTexts(text: string): ImportText[] {
     definedAt: -2,
     label: undefined,
     lastContent: '',
+    quoteText: false,
     stopped: false,
     inList: false,
     listDepth: 0,

@@ -71,6 +71,11 @@ export function enterItem(list: ListState, marker: string, inner: string, depth:
   list.emptyItemAt = empty ? list.line : -2;
 }
 
+/** The bullets that open items on a line in a list; a rule such as `- - -` opens none, and ends the list. */
+function itemMarker(content: string): string {
+  return THEMATIC_BREAK.test(content) ? '' : listMarker(content, true);
+}
+
 /** Whether a line starts a fence, heading, rule or HTML, which ends each item it sits left of. */
 export function endsItems(content: string): boolean {
   return ITEM_ENDS.some((end) => end.test(content));
@@ -87,16 +92,21 @@ function endsItemText(before: string, column: number): boolean {
   return ends.some((end) => end.test(before));
 }
 
-/** The line before as marked reads it for an item: cut at the item's column, or after the bullet that opened it. */
+/** The line before as marked reads it for an item: after the bullet that opened the item, or cut at its column. */
 function itemText(previous: string, column: number): string {
   const marker = listMarker(previous, true);
-  return marker === '' ? expanded(previous).slice(column) : previous.slice(marker.trimEnd().length);
+  const bullets = [...marker.matchAll(BULLETS)];
+  const items = bulletItems(marker, BLANK.test(previous.slice(marker.length)));
+  const bullet = bullets[items.findIndex((item) => item.column === column)];
+  if (bullet === undefined) return expanded(previous).slice(column);
+  return previous.slice(bullet.index + bullet[0].length - (bullet[2] ?? '').length);
 }
 
 /**
  * The items still open at a line. marked ends an empty item at a blank line after it, and an item at a line
  * indented less than it that starts a fence, heading, rule or HTML, once the item had a blank line, or when the
- * line before, cut at the item's column, starts one of those or code; any other line goes on lazily.
+ * line before, cut at the item's column, starts one of those or code; any other line goes on lazily. An outer
+ * item takes its lines before the items in it do, so where it ends, they end too.
  */
 export function itemsLeft(list: ListState, line: ListLine): Item[] {
   const items = [...list.items];
@@ -104,25 +114,24 @@ export function itemsLeft(list: ListState, line: ListLine): Item[] {
     for (const item of items) item.blank = true;
     return line.afterEmptyItem ? items.slice(0, -1) : items;
   }
-  const columns = listMarker(line.content, true) === '' ? columnsOf(line.content) : Infinity;
+  const columns = itemMarker(line.content) === '' ? columnsOf(line.content) : Infinity;
   const startsBlock = endsItems(line.content);
-  for (let top = items.at(-1); top !== undefined && top.column > columns; top = items.at(-1)) {
-    if (!startsBlock && !top.blank && !endsItemText(itemText(line.previous, top.column), top.column)) break;
-    items.pop();
-  }
-  return items;
+  const ends = (item: Item): boolean =>
+    startsBlock || item.blank || endsItemText(itemText(line.previous, item.column), item.column);
+  const first = items.findIndex((item) => item.column > columns && ends(item));
+  return first === -1 ? items : items.slice(0, first);
 }
 
 /**
- * Keeps `items` open. marked reads what follows an inner list in its outer item as top-level text, which the
- * reader does not follow, so it stops where an inner list ends inside its item.
+ * Keeps `items` open; the list itself stays open over a blank line, for a next item. marked reads what follows
+ * an inner list in its outer item as top-level text, which the reader does not follow, so it stops there.
  */
 export function closeItems(list: ListState, items: Item[], content: string): Closing {
   const closed = items.length < list.items.length;
   list.items = items;
-  list.inList &&= items.length > 0;
+  list.inList &&= items.length > 0 || BLANK.test(content) || itemMarker(content) !== '';
   if (!closed) return 'kept';
-  return items.length > 0 && listMarker(content, true) === '' ? 'stop' : 'closed';
+  return items.length > 0 && itemMarker(content) === '' ? 'stop' : 'closed';
 }
 
 /** Closes the items that `content` sits left of. */
@@ -134,6 +143,18 @@ export function leaveItems(list: ListState, content: string): Closing {
   );
 }
 
+/** The line as its list item reads it: from the item's column on, when it sits there or further in. */
+export function inItemText(content: string, inList: boolean, column: number | undefined): string {
+  if (!inList || column === undefined || columnsOf(content) < column) return content;
+  return expanded(content).slice(column);
+}
+
+/** The column of the innermost open item that `content` sits in: at that item's column or right of it. */
+export function ownerColumn(items: readonly Item[], content: string): number | undefined {
+  const indent = columnsOf(content);
+  return items.findLast((item) => item.column <= indent)?.column;
+}
+
 /** Whether `content` opens a fence in the item at `column`, such as `    ```bash` under `- Run:`. */
 export function itemFence(content: string, column: number | undefined): boolean {
   if (column === undefined) return false;
@@ -142,7 +163,7 @@ export function itemFence(content: string, column: number | undefined): boolean 
 
 /** Whether a block that interrupts an item's text from left of the item's column ends the item. */
 export function leavesList(content: string, column: number | undefined): boolean {
-  return endsItems(content) && columnsOf(content) < (column ?? 1) && listMarker(content, true) === '';
+  return endsItems(content) && columnsOf(content) < (column ?? 1) && itemMarker(content) === '';
 }
 
 /**
@@ -150,10 +171,23 @@ export function leavesList(content: string, column: number | undefined): boolean
  * item interrupts its text. A link definition may take the next line as its destination, and a line that may sit
  * in the item or end it, which the reader cannot tell, makes the reader stop.
  */
-export function inListItem(content: string, column: number | undefined): Continuation {
+export function inListItem(
+  content: string,
+  column: number | undefined,
+  owner: number | undefined,
+): Continuation {
   if (MAYBE_DEFINITION.test(content)) return 'stop';
-  if (isBlock(content) || listMarker(content, true) !== '' || itemFence(content, column)) return 'interrupt';
+  if (isBlock(content) || startsItem(content, owner) || itemFence(content, column)) return 'interrupt';
   return outsideItem(content, column);
+}
+
+/**
+ * Whether `content` opens an item, in this list or in one nested less than four columns into the item it sits in,
+ * at `owner`. A line four columns in but left of every item goes on lazily, as code that cannot interrupt text.
+ */
+function startsItem(content: string, owner: number | undefined): boolean {
+  const nested = owner !== undefined && columnsOf(content) - owner < 4;
+  return itemMarker(content) !== '' || (nested && itemMarker(content.trimStart()) !== '');
 }
 
 function outsideItem(content: string, column: number | undefined): Continuation {

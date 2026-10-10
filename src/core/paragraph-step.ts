@@ -16,14 +16,20 @@ import { type Continuation, inListItem, leavesList } from './markdown-lists.js';
 const SPACES_ONLY = /^ *$/;
 const INTERRUPTING_ITEM = /^ {0,3}(?:[*+-]|1[.)]) /;
 
-/** Where a line sits: its quote depth, whether a fence or an underline may end a paragraph there, and its list. */
+/**
+ * Where a line sits: its quote depth, whether a fence or an underline may end a paragraph there, its list, the
+ * innermost item and the one it sits in, and the line as its list item reads it, from the item's column.
+ */
 export interface Line {
-  readonly fenceInterrupts: boolean;
+  readonly afterQuoteText: boolean;
+  readonly nextInQuote: boolean;
   readonly setextAhead: boolean;
   readonly depth: number;
   readonly lazy: boolean;
   readonly inList: boolean;
   readonly itemColumn: number | undefined;
+  readonly ownerColumn: number | undefined;
+  readonly inItem: string;
 }
 
 /** What ending the open paragraph depends on: whether all its lines may be setext heading text, and its depth. */
@@ -51,28 +57,46 @@ function lazyLine(content: string): Continuation {
 /** marked ends a paragraph at a fence only when another line of the same quote follows it. */
 function interrupts(content: string, line: Line): boolean {
   return (
-    HEADING.test(content) ||
-    (FENCE_START.test(content) && line.fenceInterrupts) ||
+    HEADING.test(line.inItem) ||
+    (FENCE_START.test(content) && line.nextInQuote) ||
     INTERRUPTING_ITEM.test(content) ||
     htmlInterrupts(content)
   );
 }
 
-/** A list item ends at a fence either way, so the reader stops at a fence that does not end the paragraph. */
-function continuation(content: string, line: Line): Continuation {
+/**
+ * Whether a quote takes `content` as a lazy line. After a quote's line of text, marked reads every line up to one
+ * that would end a paragraph as the quote's own, and as a new block there.
+ */
+export function quoteTakes(content: string, line: Line): boolean {
+  const ends = SPACES_ONLY.test(content) || THEMATIC_BREAK.test(content) || interrupts(content, line);
+  return !ends;
+}
+
+/**
+ * A list item ends at a fence either way, so the reader stops at a fence that does not end the paragraph. A
+ * quote's paragraph in an item takes lazy lines as a paragraph does outside lists, so where an item's text would
+ * end there, the reader stops.
+ */
+function continuation(content: string, line: Line, paragraph: OpenParagraph): Continuation {
   if (interrupts(content, line)) {
     return line.inList && leavesList(content, line.itemColumn) ? 'leave' : 'interrupt';
   }
   if (FENCE_START.test(content)) return 'stop';
   const lazy = line.lazy ? lazyLine(content) : 'continue';
-  return lazy === 'continue' && line.inList ? inListItem(content, line.itemColumn) : lazy;
+  if (lazy !== 'continue' || !line.inList) return lazy;
+  const step = inListItem(content, line.itemColumn, line.ownerColumn);
+  return step !== 'continue' && line.depth < paragraph.depth ? 'stop' : step;
 }
 
-/** An underline ends only a top-level paragraph that may be heading text; in a list, a bullet is an item. */
+/**
+ * An underline ends only a top-level paragraph that may be heading text; in a list, a bullet left of the item's
+ * text is a new item, and one in the item's text an underline.
+ */
 function isUnderline(content: string, line: Line, paragraph: OpenParagraph): boolean {
-  const item = line.inList && listMarker(content, true) !== '';
+  const item = line.inList && line.inItem === content && listMarker(content, true) !== '';
   const text = paragraph.setextable && paragraph.depth === 0;
-  return SETEXT_UNDERLINE.test(content) && !item && text && !line.lazy;
+  return SETEXT_UNDERLINE.test(line.inItem) && !item && text && !line.lazy;
 }
 
 /** marked indents a `===` or `---` line inside a quote by four spaces, so there it is text, not a rule. */
@@ -80,10 +104,20 @@ function isRule(content: string, line: Line): boolean {
   return THEMATIC_BREAK.test(content) && !(SETEXT_UNDERLINE.test(content) && line.depth > 0);
 }
 
+/**
+ * A quote's last line of spaces ends no paragraph for marked, which reads it without a line break after it. A
+ * `===` or `---` line in a quote may underline a heading, end a quote nested deeper, or go on as text.
+ */
+function quoteBeyondReader(content: string, line: Line): boolean {
+  const lastSpaces = content !== '' && SPACES_ONLY.test(content) && !line.nextInQuote;
+  return line.depth > 0 && (lastSpaces || SETEXT_UNDERLINE.test(content));
+}
+
 function paragraphEnd(content: string, line: Line, paragraph: OpenParagraph): ParagraphStep['end'] {
-  if (SPACES_ONLY.test(content) || (line.inList && BLANK.test(content))) return 'blank';
+  const text = line.inItem;
+  if (SPACES_ONLY.test(text) || (line.inList && BLANK.test(text))) return 'blank';
   if (isUnderline(content, line, paragraph)) return 'underline';
-  return isRule(content, line) ? 'rule' : undefined;
+  return isRule(text, line) ? 'rule' : undefined;
 }
 
 /**
@@ -92,10 +126,15 @@ function paragraphEnd(content: string, line: Line, paragraph: OpenParagraph): Pa
  * join them, so it stops there.
  */
 export function paragraphStep(content: string, line: Line, paragraph: OpenParagraph): ParagraphStep {
+  if (quoteBeyondReader(content, line)) return { end: undefined, next: 'stop', leaves: false };
   const end = paragraphEnd(content, line, paragraph);
-  const found = end !== undefined || line.depth > paragraph.depth ? 'interrupt' : continuation(content, line);
-  const heading = line.setextAhead && end !== 'blank' && end !== 'underline';
-  const next = found !== 'continue' && heading ? 'stop' : found;
+  const found =
+    end !== undefined || line.depth > paragraph.depth ? 'interrupt' : continuation(content, line, paragraph);
+  const next = found !== 'continue' && headingGoesOn(line, end) ? 'stop' : found;
   const ruleLeaves = isRule(content, line) && line.inList && leavesList(content, line.itemColumn);
   return { end, next, leaves: next === 'leave' || ruleLeaves };
+}
+
+function headingGoesOn(line: Line, end: ParagraphStep['end']): boolean {
+  return line.setextAhead && end !== 'blank' && end !== 'underline';
 }
