@@ -226,11 +226,11 @@ The first contact with existing user files loses nothing.
 
 **M3: Stack detection and `init` with the base module.** `init` works end to end. It detects the stack, shows the plan, writes CLAUDE.md and AGENTS.md without touching user content, and runs non-interactively in CI.
 
-- [ ] feat(core): stack detection for TS/JS and Python
-- [ ] feat(cli): bin entry, global flags and error output
-- [ ] feat(cli): `init` command with interactive and scripted modes
-- [ ] feat(modules): base module for CLAUDE.md, AGENTS.md, ignore rules and settings
-- [ ] test: per-module snapshots, preset × stack golden trees and always-on context budget
+- [x] feat(core): stack detection for TS/JS and Python
+- [x] feat(cli): bin entry, global flags and error output
+- [x] feat(cli): `init` command with interactive and scripted modes
+- [x] feat(modules): base module for CLAUDE.md, AGENTS.md, ignore rules and settings
+- [x] test: per-module snapshots, preset × stack golden trees and always-on context budget
 
 **M4: Safety: hook runtime, guards and native deny rules.** Claude is blocked from destructive commands and from writing secrets, with prefix deny rules as a second layer.
 
