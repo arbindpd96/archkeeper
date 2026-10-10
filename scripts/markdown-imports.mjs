@@ -4,7 +4,7 @@ import { Lexer } from 'marked';
 // on the same marked from node_modules (docs/decisions.md says why a script may import it). It has no lexing
 // budget: the budget counts every import Claude Code loads, and its gate reads only the kit's own output.
 const MEMORY_FILE_BYTES = 4_194_304;
-const BYTE_ORDER_MARK = '﻿';
+const BYTE_ORDER_MARK = '\uFEFF';
 const FRONTMATTER = /^---\s*\n([\s\S]*?)---\s*\n?/;
 const IMPORT = /(?:^|\s)@((?:[^\s\\]|\\ )+)/g;
 const SYMBOLS_ONLY = /^[#%^&*()]+/;

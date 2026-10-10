@@ -51,6 +51,7 @@ const CASES: readonly (readonly [text: string, imports: boolean])[] = [
   ['Read\n    @AGENTS.md', true],
   ['---\nx: @AGENTS.md\n---', false],
   ['---\nname: rules\n---\n@AGENTS.md', true],
+  ['﻿---\nnote: @AGENTS.md\n---\n@README.md', false],
   ['<div>\n@AGENTS.md\n</div>', false],
   ['<!--\n@AGENTS.md', false],
   ['<!-- note --> @AGENTS.md', true],
