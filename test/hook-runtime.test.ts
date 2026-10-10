@@ -31,6 +31,7 @@ function capture(argv: readonly string[] = [], input: HookInput = { payload: {} 
     argv,
     input: () => input,
     context: () => ({ projectDir: '/p', home: '/home/u' }),
+    sampleContext: () => ({ projectDir: '/samples', home: '/home/u' }),
     streams: {
       stdout: (text) => {
         out.stdout += text;
@@ -178,6 +179,20 @@ describe('hook launch and failure policy (ADR-0015)', () => {
     const wrong: HookModule = { ...asking, samples: [{ name: 'safe', payload: {}, expect: 'deny' }] };
     expect(await launch('guard-bash', () => Promise.resolve(wrong), io)).toBe(1);
     expect(out.stdout).toContain('FAIL guard-bash: safe: expected deny, got allow');
+  });
+
+  it("runs the samples where no project config applies, so a project's options cannot fail them", async () => {
+    const { io } = capture(['--self-test']);
+    const seen: string[] = [];
+    const watching: HookModule = {
+      answer: (_input, context) => {
+        seen.push(context.projectDir);
+        return noAnswer();
+      },
+      samples: [{ name: 'any', payload: {}, expect: 'allow' }],
+    };
+    await launch('guard-bash', () => Promise.resolve(watching), io);
+    expect(seen).toEqual(['/samples']);
   });
 
   it('exits 1 from --self-test when the hook cannot load', async () => {
