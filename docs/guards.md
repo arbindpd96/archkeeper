@@ -72,6 +72,9 @@ The guards are a safety net, not a sandbox.
 - It checks the `GIT_*` variables through which git runs a program, but not the generic `EDITOR`, `VISUAL` and `PAGER` that git falls back on, since so many other tools read them.
 - A value from a variable is checked only where it decides something security-relevant, so `git commit $X` with `X=-n` passes.
 - Interpreters outside its list (`deno run -`, `bun`, `Rscript -`, `lua`, `pwsh`, `julia`) are not read, `awk '{print | "sh"}'` fed by a download only asks, and a downloaded file run directly (`curl -o i.sh … && chmod +x i.sh && ./i.sh`) or through a descriptor (`exec 3< <(curl …); sh <&3`) passes.
+- Inline code for an interpreter it knows (`python3 -c`, `node -e`, `perl -e`) is checked only for downloads, so `shutil.rmtree`, `fs.rmSync` or `system("rm -rf …")` there passes, and GNU `parallel` is not unwrapped (`parallel rm -rf ::: /` passes). The `Bash(rm -rf:*)` rule does not match these either.
+- `blockAiAttribution` matches the whole command line, not the parsed message arguments, so it also denies a line that commits and writes an attribution elsewhere, and it never reads a message file (`git commit -F msg.txt`).
+- Secrets files are `.env`, `.env.*` and `.envrc`; other spellings such as `.env-local`, `.env_local`, `prod.env` or `secrets.env` get no ask from either guard and no Read deny rule.
 - A `find` filter that the starting folder already satisfies, such as `find ~ -path '*Users*' -delete`, counts as narrowing.
 - It follows `cd` and `pushd` for the commands after them, but not the folder `env -C`, `sudo -D` or `CDPATH` picks, and a `cd` inside a loop is followed once.
 - guard-secrets cannot tell a hardlink's other names, so a hardlink to a `.env` file passes the name check; making one through the shell asks in guard-bash. Shell writes such as `printf … >> a.ts` never reach guard-secrets.
