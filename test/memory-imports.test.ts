@@ -181,6 +181,17 @@ describe('memoryImports', () => {
     expect(memoryImports('\uFEFF---\r\nnote: @x.md\r\n---\r\n@AGENTS.md')).toEqual(['AGENTS.md']);
   });
 
+  it.each([
+    'paths: &x [*x]',
+    'paths: [&a [*a]]',
+    'x: &a [*a]\npaths: *a',
+    '"pa\\x74hs": [[x]]',
+    'paths: ["src/*.ts"]',
+  ])('counts nothing under frontmatter %j, where Claude Code expands paths and may skip the file', (yaml) => {
+    expect(memoryImports(`---\n${yaml}\n---\n@AGENTS.md`)).toEqual([]);
+    expect(memoryImports(`---\nname: rules\n---\n@AGENTS.md`)).toEqual(['AGENTS.md']);
+  });
+
   it('counts nothing in a file over 4 MiB, which Claude Code skips whole', () => {
     expect(memoryImports(`@AGENTS.md\n${'a'.repeat(4 * MIB)}`)).toEqual([]);
   });

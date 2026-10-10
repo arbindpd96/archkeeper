@@ -4,7 +4,10 @@ import { BYTE_ORDER_MARK } from './text.js';
 
 /** Claude Code 2.1.295 skips a memory file larger than this many bytes, imports and all (reference §2.1). */
 const MEMORY_FILE_BYTES = 4_194_304;
-const FRONTMATTER = /^(---\s*\n[\s\S]*?---)\s*\n?/;
+const FRONTMATTER = /^(---\s*\n([\s\S]*?)---)\s*\n?/;
+// Claude Code expands a frontmatter's `paths` recursively, so a self-referential value, which takes a YAML alias, or
+// a deeply nested one overflows its stack and it skips the file. A backslash escape could spell either in a key.
+const SKIPPED_FRONTMATTER = /paths|[*\\]/;
 const IMPORT = /(?:^|\s)@((?:[^\s\\]|\\ )+)/g;
 const SYMBOLS_ONLY = /^[#%^&*()]+/;
 const PATH_START = /^[a-zA-Z0-9._-]/;
@@ -42,11 +45,15 @@ export function frontmatterEnd(body: string): number {
   return frontmatterIn(body)?.[1]?.length ?? 0;
 }
 
-/** The text after a leading byte-order mark and YAML frontmatter, or the text unchanged when it has none. */
-function withoutFrontmatter(text: string): string {
+/**
+ * The text after a leading byte-order mark and YAML frontmatter, the text unchanged when it has none, or undefined
+ * when the frontmatter may make Claude Code skip the file.
+ */
+function withoutFrontmatter(text: string): string | undefined {
   const body = text.startsWith(BYTE_ORDER_MARK) ? text.slice(1) : text;
   const frontmatter = frontmatterIn(body);
-  return frontmatter === null ? text : body.slice(frontmatter[0].length);
+  if (frontmatter === null) return text;
+  return SKIPPED_FRONTMATTER.test(frontmatter[2] ?? '') ? undefined : body.slice(frontmatter[0].length);
 }
 
 function importable(path: string): boolean {
@@ -93,12 +100,13 @@ function walk(tokens: readonly WalkedToken[], found: Set<string>): void {
  * 2.1.295 binary; reference §2.1): drop a leading byte-order mark and YAML frontmatter, lex with marked 15.0.6
  * (the version it bundles) without GFM, and match `(?:^|\s)@((?:[^\s\\]|\\ )+)` in every text token and in what
  * a closed HTML comment token leaves, skipping code. Path checks are left to the caller. It lists none for a
- * text Claude Code skips (over 4 MiB, a marked error, a NUL in a path) or that takes more work than the kit
- * spends on it (see bounded-lexer.ts).
+ * text Claude Code skips (over 4 MiB, a marked error, a NUL in a path), for one whose frontmatter names `paths`
+ * or holds a `*` or a `\`, which Claude Code skips when the value it expands nests itself or too deeply, and for
+ * one that takes more work than the kit spends on it (see bounded-lexer.ts).
  */
 export function memoryImports(text: string): string[] {
-  if (skipsMemoryFile(text) || !text.includes('@')) return [];
-  const tokens: readonly WalkedToken[] | undefined = lexedTokens(withoutFrontmatter(text));
+  const body = skipsMemoryFile(text) || !text.includes('@') ? undefined : withoutFrontmatter(text);
+  const tokens: readonly WalkedToken[] | undefined = body === undefined ? undefined : lexedTokens(body);
   if (tokens === undefined) return [];
   const found = new Set<string>();
   try {

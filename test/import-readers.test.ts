@@ -66,6 +66,14 @@ const CASES: readonly (readonly [text: string, imports: boolean])[] = [
   ['@..\\docs/../AGENTS.md', false],
 ];
 
+// Texts the readers read differently on purpose, each on its own safe side: the kit counts no import where Claude
+// Code may skip the file, and the budget counts every import Claude Code may load. Claude Code skips the first
+// file, whose `paths` nests itself, and reads AGENTS.md from the others.
+const SAFE_SIDES: readonly (readonly [name: string, text: string])[] = [
+  ['frontmatter whose paths nest themselves', '---\npaths: &x [*x]\n---\n@AGENTS.md'],
+  ['frontmatter with a paths glob', '---\npaths: ["src/*.ts"]\n---\n@AGENTS.md'],
+];
+
 function kitLeavesOutItsImport(text: string): boolean {
   const tree: RenderTree = new Map([['CLAUDE.md', [blockEntry('agents-import', '@AGENTS.md')]]]);
   const read = (file: string): string | undefined => (file === 'CLAUDE.md' ? text : undefined);
@@ -76,6 +84,11 @@ describe('the @ import readers of the kit and of the context budget', () => {
   it.each(CASES)('agree on whether %j imports AGENTS.md', (text, imports) => {
     expect(importsOf(text).includes('AGENTS.md')).toBe(imports);
     expect(kitLeavesOutItsImport(text)).toBe(imports);
+  });
+
+  it.each(SAFE_SIDES)('differ on %s: the kit counts no import there, the budget counts it', (_name, text) => {
+    expect(importsOf(text).includes('AGENTS.md')).toBe(true);
+    expect(kitLeavesOutItsImport(text)).toBe(false);
   });
 
   it('read unclosed comments after a closed one within a second', () => {
