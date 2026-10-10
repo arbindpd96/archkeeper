@@ -1,4 +1,5 @@
 import { homedir } from 'node:os';
+import path from 'node:path';
 import {
   type Answer,
   type HookInput,
@@ -48,6 +49,8 @@ export interface LaunchIo {
   readonly argv: readonly string[];
   readonly input: () => HookInput;
   readonly context: () => HookContext;
+  /** Where `--self-test` runs the samples: no project config there, so a project's options cannot change them. */
+  readonly sampleContext: () => HookContext;
   readonly streams: HookStreams;
 }
 
@@ -65,6 +68,7 @@ export function processIo(): LaunchIo {
     argv: process.argv.slice(2),
     input: readInput,
     context: () => ({ projectDir: projectDirOf(process.env, process.cwd()), home: homeFolder() }),
+    sampleContext: () => ({ projectDir: path.dirname(process.argv[1] ?? '.'), home: homeFolder() }),
     streams: {
       stdout: (text) => process.stdout.write(text),
       stderr: (text) => process.stderr.write(text),
@@ -84,7 +88,7 @@ export function outcomeOf(answer: Answer): Outcome {
 }
 
 function selfTest(name: string, hook: HookModule, io: LaunchIo): number {
-  const context = io.context();
+  const context = io.sampleContext();
   const failures = hook.samples.flatMap((sample) => {
     const got = outcomeOf(hook.answer({ payload: sample.payload }, context));
     return got === sample.expect ? [] : [`${name}: ${sample.name}: expected ${sample.expect}, got ${got}`];

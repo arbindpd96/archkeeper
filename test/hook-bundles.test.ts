@@ -4,7 +4,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { FAILURE_POLICY } from '../src/hooks/runtime/launch.js';
-import { REPO_ROOT, tempDir, withEnv } from './helpers.js';
+import { BRAND } from '../src/core/brand.js';
+import { REPO_ROOT, tempDir, withEnv, writeFiles } from './helpers.js';
 
 const HOOK_SOURCES = readdirSync(path.join(REPO_ROOT, 'src/hooks'))
   .filter((file) => file.endsWith('.ts'))
@@ -43,9 +44,8 @@ function run(
   script: string,
   input: string,
   args: readonly string[] = [],
-  preload: readonly string[] = [],
+  { preload = [], project = tempDir() }: { preload?: readonly string[]; project?: string } = {},
 ): Run {
-  const project = tempDir();
   const result = spawnSync(process.execPath, [...preload, script, ...args], {
     cwd: project,
     input,
@@ -100,9 +100,18 @@ describe('hook bundles (#30, ADR-0015)', () => {
   it.each(HOOK_SOURCES)('%s reaches for no network while it answers its samples', (hook) => {
     const stub = path.join(tempDir(), 'stub-network.mjs');
     writeFileSync(stub, NETWORK_STUB);
-    const result = run(isolatedCopy(hook), '', ['--self-test'], ['--import', pathToFileURL(stub).href]);
+    const result = run(isolatedCopy(hook), '', ['--self-test'], {
+      preload: ['--import', pathToFileURL(stub).href],
+    });
     expect(result.stderr).not.toContain('NETWORK');
     expect(result.status).toBe(0);
+  });
+
+  it("passes its self-test in a project whose options would deny a sample's command", () => {
+    const project = tempDir();
+    const options = { options: { safety: { denyCommands: ['npm test'], blockNoVerify: true } } };
+    writeFiles(project, { [`${BRAND.stateDir}/config.json`]: JSON.stringify(options) });
+    expect(run(isolatedCopy('guard-bash'), '', ['--self-test'], { project }).status).toBe(0);
   });
 
   it('denies a force-push given on stdin, as Claude Code sends it', () => {
