@@ -3,6 +3,10 @@
   "tarball": { "maxBytes": 300000 },
   "runtimeDependencies": { "max": 0 },
   "hookBundle": { "maxBytes": 30000 },
+  "warmInit": {
+    "$comment": "The slowest warm run of the built CLI's init --yes, as scripts/context-budget.mjs times it on each preset and fixture after the first run (ADR-0017).",
+    "maxMs": 2000
+  },
   "alwaysOnContext": {
     "$comment": "Tokens (characters / 4) Claude Code loads in every session per preset, with SessionStart output counted at its cap (ADR-0017). scripts/context-budget.mjs and test/context-budget.test.ts enforce it; init shows it.",
     "small": 1500,

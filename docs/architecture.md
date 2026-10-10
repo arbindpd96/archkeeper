@@ -177,7 +177,7 @@ Every module is marked `internal` until its milestone ships its README section a
 | `scripts/demo-rules.mjs`                                                                                    | Demo rule for modules (#18) and commands (#26): exactly one of `demo` or `internal`; a demo has its tape, GIF and README section                                    |
 | `scripts/ts-resolve.mjs`                                                                                    | A Node.js resolve hook mapping `./x.js` imports to `.ts`, so plain Node runs `src/` without a build (build-schemas, CLI tests)                                      |
 | `scripts/context-rules.mjs` (+ `.d.mts`)                                                                    | Always-on context of a project (ADR-0017): CLAUDE.md and its imports, rules without `paths:`, model-invocable skill descriptions, the SessionStart cap; chars / 4   |
-| `scripts/context-budget.mjs`                                                                                | `npm run context`: runs the built CLI's `init --yes` per preset on ts-app, py-app and mixed and fails over `budgets.json` `alwaysOnContext`                         |
+| `scripts/context-budget.mjs`                                                                                | `npm run context`: the built CLI's `init --yes` per preset on ts-app, py-app and mixed against `budgets.json` `alwaysOnContext` and `warmInit`                      |
 | `scripts/render-tapes.mjs`                                                                                  | Fills `{{brand.*}}` in `docs/media/tapes/*.tape`, installs the packed CLI, runs pinned VHS in a fixture copy                                                        |
 | `scripts/tape-rules.mjs`                                                                                    | Tape checks with a VHS-faithful tokenizer: refused commands anywhere on a line, Set-only settings, brand placeholders                                               |
 | `scripts/pull-gifs.mjs`                                                                                     | `npm run gifs:pull -- <run-id>`: copies a demo-gifs run's feature GIFs into `docs/media/` for the maintainer to commit                                              |
@@ -235,7 +235,7 @@ Every bundle may import only `node:` built-ins (tsdown `deps.onlyImport`), so th
 
 CI also runs `npm publish --dry-run` and installs the packed tarball under a path with a space on ubuntu, macOS and Windows.
 
-`npm run context` (`scripts/context-budget.mjs`, after the build in `npm run check` and in the CI `Package checks` job) holds each preset's always-on context to `budgets.json` `alwaysOnContext`: small 1,500, medium 3,000 and full 4,500 tokens (ADR-0017), SessionStart counted at its cap. `test/context-budget.test.ts` checks the same in-process.
+`npm run context` (`scripts/context-budget.mjs`, after the build in `npm run check` and in the CI `Package checks` job) holds each preset's always-on context to `budgets.json` `alwaysOnContext`: small 1,500, medium 3,000 and full 4,500 tokens (ADR-0017), SessionStart counted at its cap. It also times each of those inits and holds the slowest after the first, the warm init, to `budgets.json` `warmInit.maxMs` (2,000 ms, ADR-0017's "warm `init` under 2 s"). `test/context-budget.test.ts` checks the same in-process.
 
 ## In a user's project
 
