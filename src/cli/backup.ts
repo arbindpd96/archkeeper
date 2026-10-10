@@ -11,7 +11,7 @@ import {
 } from 'node:fs';
 import path from 'node:path';
 import type { Brand } from '../core/brand.js';
-import { PathSafetyError } from '../core/errors.js';
+import { ApplyError, PathSafetyError } from '../core/errors.js';
 import { exactHash } from '../core/hash.js';
 import type { PathState } from '../core/plan-types.js';
 import { compareText, quoted, toLf } from '../core/text.js';
@@ -132,9 +132,25 @@ function held(absolute: string): Saved {
   return { type: 'file', blob: exactHash(bytes), mode: stats.mode & 0o777, bytes };
 }
 
-/** What each path an apply will touch holds now, read without following a symlink and without writing anything. */
+function readable({ relative, absolute }: { relative: string; absolute: string }): Saved {
+  try {
+    return held(absolute);
+  } catch (error) {
+    throw new ApplyError({
+      file: relative,
+      location: 'read before the backup',
+      problem: `could not be read (${(error as NodeJS.ErrnoException).code ?? String(error)}), so the kit wrote nothing`,
+      hint: 'make it readable to you, or move it out of the way, and run again',
+    });
+  }
+}
+
+/**
+ * What each path an apply will touch holds now, read without following a symlink and without writing anything.
+ * A path the kit cannot read throws ApplyError naming it.
+ */
 export function currentPaths(targets: readonly { relative: string; absolute: string }[]): SavedPath[] {
-  return targets.map((target) => ({ ...target, saved: held(target.absolute) }));
+  return targets.map((target) => ({ ...target, saved: readable(target) }));
 }
 
 function writeBlob(folder: string, saved: Saved): void {

@@ -200,7 +200,7 @@ export function applyPlan(root: string, plan: Plan, brand: Brand = BRAND): Apply
   assertRealStateFolders(rootReal, brand);
   const planned = changes(rootReal, plan, brand);
   if (planned.length === 0) return { changed: false, warnings: [] };
-  const current = beforeChanges(brand, () => currentPaths(planned));
+  const current = currentPaths(planned);
   refuseUnwritable(current);
   refuseChanged(current, plan.expected);
   const backup = beforeChanges(brand, () => backUp(rootReal, current, brand));
