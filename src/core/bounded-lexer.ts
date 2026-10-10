@@ -4,7 +4,7 @@ import { Lexer, type Token, type Tokens, type TokensList, Tokenizer } from 'mark
  * The most lexing work, in estimated nanoseconds, the kit spends on one memory file before it gives up and
  * counts no import. marked is superlinear on some texts (a paragraph of `*a `, a list item of many lazy lines,
  * deep nesting), where Claude Code itself would take seconds; on the maintainer's Mac a file at the limit lexes
- * in at most about 100 ms, and every real Markdown file tried, up to 250 kB, stays below it.
+ * in at most about 100 ms, and every real Markdown file tried, up to 150 kB, stays below it.
  */
 const MAX_WORK = 100_000_000;
 /** marked recurses once per nested list, quote, emphasis or link; past this depth the kit counts nothing. */
@@ -127,8 +127,8 @@ class BoundedTokenizer extends Tokenizer {
 
 /**
  * marked's Lexer, which counts its work before each call that lexes blocks or inline text and refuses past the
- * budget or the depth. Inline text without an `@` is left unlexed: it can hold no import, and without GFM one
- * text's inline tokens change nothing in another's.
+ * budget or the depth. It lexes inline text without an `@` too: such text holds no import, but Claude Code lexes
+ * it, and nesting deep enough there overflows its stack and makes it skip the whole file.
  */
 class BoundedLexer extends Lexer {
   readonly #budget: WorkBudget;
@@ -147,7 +147,6 @@ class BoundedLexer extends Lexer {
   }
 
   override inlineTokens(src: string, tokens: Token[] = []): Token[] {
-    if (!src.includes('@')) return tokens;
     this.#budget.spend(CALL.inline + CALL.perChar * src.length);
     this.#budget.spend(inlineWork(src));
     return this.#budget.nested(() => super.inlineTokens(src, tokens));

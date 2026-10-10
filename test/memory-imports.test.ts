@@ -205,6 +205,13 @@ describe('memoryImports', () => {
     expect(memoryImports(`${'> '.repeat(65)}@AGENTS.md`)).toEqual([]);
   });
 
+  it('counts nothing where text without an @ nests past the depth limit or takes more work than the kit spends', () => {
+    const emphasis = (run: number): string => `${'*'.repeat(run)}x${'*'.repeat(run)}\n\n@AGENTS.md\n`;
+    expect(memoryImports(emphasis(60))).toEqual(['AGENTS.md']);
+    expect(memoryImports(emphasis(200))).toEqual([]);
+    expect(memoryImports(emphasis(25_000))).toEqual([]);
+  });
+
   it('counts nothing in a text that takes more lexing work than the kit spends', () => {
     expect(memoryImports(`@AGENTS.md ${'*a '.repeat(500)}`)).toEqual(['AGENTS.md']);
     expect(memoryImports(`@AGENTS.md ${'*a '.repeat(20_000)}`)).toEqual([]);

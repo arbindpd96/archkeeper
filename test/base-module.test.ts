@@ -222,6 +222,14 @@ describe('withoutImportedBlocks', () => {
     ]);
   });
 
+  it('keeps the import block when .claude/CLAUDE.md has emphasis deep enough to overflow Claude Code, which skips it', () => {
+    const companion = `${'*'.repeat(25_000)}x${'*'.repeat(25_000)}\n\n@../AGENTS.md\n`;
+    expect(keptBlocks({ 'CLAUDE.md': '# Project\n', '.claude/CLAUDE.md': companion })).toEqual([
+      'agents-import',
+      'claude-code',
+    ]);
+  });
+
   it('reads a CLAUDE.md with a long run after an @ in linear time', () => {
     const started = performance.now();
     withoutImportedBlocks(tree, (file) => (file === 'CLAUDE.md' ? `@${'.'.repeat(200_000)}x\n` : undefined));
