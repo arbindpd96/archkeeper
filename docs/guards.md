@@ -22,7 +22,9 @@ A relative delete target is judged from the session's folder and from every fold
 
 ## guard-secrets
 
-guard-secrets runs before every Write, Edit, MultiEdit and NotebookEdit. It denies a likely secret, such as a cloud, GitHub, Anthropic, OpenAI, Slack, Stripe, Google or npm key, a private key, a JWT or a URL with a password, and names the rule and the file but never the value. It asks before any edit to a `.env`, `.env.*` or `.envrc` file, templates such as `.env.example` aside.
+guard-secrets runs before every Write, Edit, MultiEdit and NotebookEdit. It denies a likely secret, such as a cloud, GitHub, Anthropic, OpenAI, Slack, Stripe, Google or npm key, a private key, a JWT, a URL with a password, or a random-looking value assigned to a name such as `API_KEY`, `*_SECRET`, `*_TOKEN` or `*PASSWORD`, and names the rule and the file but never the value. It asks before any edit to a `.env`, `.env.*` or `.envrc` file, templates such as `.env.example` aside.
+
+The assignment rule needs at least 20 characters (32 for a hex value) with letters, digits and enough entropy. It skips values that hold a placeholder word such as `example`, `test`, `your` or `here`, and names such as `key`, `integrity` or `checksum`, so placeholders and lockfile hashes pass.
 
 An edit is judged by the lines it leaves in the file: guard-secrets replays it on the file, so changing only the token on a line is caught. A test fixture that needs a token-like value takes `archkeeper:allow-secret` on its line; you confirm each new marked line once, and later edits that keep the line pass.
 

@@ -24,6 +24,21 @@ describe('findSecret', () => {
     expect(findSecret(`# Notes\nconst value = '${secret}';\n`), name).toMatchObject({ line: 2 });
   });
 
+  it('finds a high-entropy value assigned to a secret name', () => {
+    const value = ['Zx9Qw7Lm3Np8', 'Rt2Vb6Yc4Hk1Jd5Fg0Sa'].join('');
+    expect(findSecret(`A=1\nAPI_KEY="${value}"\n`)).toEqual({
+      name: 'high-entropy value assigned to a key, secret, token or password',
+      line: 2,
+    });
+  });
+
+  it('scans a long line of names and values in linear time', () => {
+    const line = `${'API_KEY'.repeat(50_000)}${' a_KEY= b_TOKEN:'.repeat(50_000)}`;
+    const started = performance.now();
+    expect(findSecret(line)).toBeUndefined();
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
   it.each(LOOKALIKE_SAMPLES)('finds nothing in a %s, which the guard-secrets hook allows', (_name, text) => {
     expect(findSecret(text)).toBeUndefined();
   });
