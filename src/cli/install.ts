@@ -102,8 +102,15 @@ export function planProject(root: string, tree: RenderTree, options: InstallOpti
   return { ...plan, expected: new Map(plan.expected).set(lockFilePath(brand), hash) };
 }
 
-/** Plans an install against the project at `root` and applies it transactionally (#21–#24). */
-export function install(root: string, tree: RenderTree, options: InstallOptions): InstallResult {
-  const plan = planProject(root, tree, options);
+/**
+ * Applies a plan of the project at `root` transactionally (#21–#24): the given one, such as the plan init showed
+ * before asking, or a new one. The apply refuses a plan that is stale, because a path or the lock changed since.
+ */
+export function install(
+  root: string,
+  tree: RenderTree,
+  options: InstallOptions,
+  plan: Plan = planProject(root, tree, options),
+): InstallResult {
   return { plan, applied: applyPlan(root, plan, options.brand ?? BRAND) };
 }

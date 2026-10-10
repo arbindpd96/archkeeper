@@ -7,14 +7,17 @@ import type { Catalog } from '../core/loader.js';
 import { escapeUnprintable } from '../core/text.js';
 import { COMMANDS } from './commands.js';
 import type { CliContext, CommandSetup, GlobalFlags, PackageInfo, Session } from './context.js';
+import { gitState } from './git-state.js';
+import { setupInit } from './init.js';
 import { packageRoot, readKit } from './kit.js';
 import { PROCESS_OUTPUT, printError, styled } from './output.js';
+import { CLACK_PROMPTER } from './prompts.js';
 
 export type { PackageInfo } from './context.js';
 export type { CliOutput } from './output.js';
 
 /** The options and action of each command in the registry, by name. */
-const SETUPS: ReadonlyMap<string, CommandSetup> = new Map();
+const SETUPS: ReadonlyMap<string, CommandSetup> = new Map([['init', setupInit]]);
 
 // Every run registers every command, so a registry entry without a setup fails the first test that runs main.
 function setupOf(name: string): CommandSetup {
@@ -42,6 +45,12 @@ export function readPackageInfo(fromUrl: string = import.meta.url): PackageInfo 
   return { version, description };
 }
 
+/** Whether the environment says it is CI, as most CI services set `CI`; `false` and `0` say it is not. */
+export function inCi(env: NodeJS.ProcessEnv): boolean {
+  const ci = env.CI?.trim().toLowerCase();
+  return ci !== undefined && ci !== '' && ci !== 'false' && ci !== '0';
+}
+
 function defaultContext(): CliContext {
   return {
     output: PROCESS_OUTPUT,
@@ -49,6 +58,10 @@ function defaultContext(): CliContext {
     loadKit: readKit,
     brand: BRAND,
     cwd: process.cwd(),
+    // A clack prompt on a stdin that is not a terminal never resolves (reference §7.1), so prompts need both ends.
+    interactive: process.stdin.isTTY && process.stdout.isTTY && !inCi(process.env),
+    prompter: CLACK_PROMPTER,
+    gitState,
   };
 }
 
@@ -84,6 +97,7 @@ function programOf(context: CliContext, info: PackageInfo): Command {
     .option('--json', 'Print the result as JSON and run without prompts')
     .option('--debug', 'Print the stack trace of an error')
     .showHelpAfterError(`Try: ${brand.binName} --help`)
+    .configureHelp({ showGlobalOptions: true })
     .exitOverride()
     .configureOutput({
       writeOut: (text) => {
@@ -96,7 +110,7 @@ function programOf(context: CliContext, info: PackageInfo): Command {
         write(`${styled(output, 'red', escapeUnprintable(text.trimEnd()), 'stderr')}\n`);
       },
     })
-    .addHelpText('after', `\n${EXIT_CODES}\n\n${brand.disclaimer}\n`);
+    .addHelpText('afterAll', `\n${EXIT_CODES}\n\n${brand.disclaimer}\n`);
 }
 
 /**

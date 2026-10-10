@@ -17,4 +17,10 @@ export interface CommandInfo {
 }
 
 /** Every command the CLI has; `main` registers exactly these, and check-demos holds each to the demo rule. */
-export const COMMANDS: readonly CommandInfo[] = [];
+export const COMMANDS: readonly CommandInfo[] = [
+  {
+    name: 'init',
+    summary: 'Detect the stack, show the plan and set up Claude Code in this project',
+    internal: true,
+  },
+];
