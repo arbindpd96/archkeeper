@@ -34,8 +34,10 @@ const RATE = {
 const BLANK = /^[ \t]*$/;
 const QUOTE = /^ {0,3}>/;
 const TILDE_FENCE = /^ {0,3}~~~/;
+// A list opener indented 1 to 3 spaces also breaks a paragraph off, but marked's setext lookahead stops only at a
+// bullet in column 0, so each such paragraph rescans the rest of the run as well.
 const PARAGRAPH_BREAK =
-  /^ {0,3}(?:(?:(?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})$|<(?:!--|script|pre|style|textarea))/i;
+  /^(?: {0,3}(?:(?:(?:-[\t ]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})$|<(?:!--|script|pre|style|textarea))| {1,3}(?:[*+-]|1[.)]) )/i;
 
 /** Thrown inside the lexer when a text would take more work than the kit spends on it. */
 class WorkRefused extends Error {}
