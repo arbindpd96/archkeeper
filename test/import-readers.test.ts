@@ -6,8 +6,9 @@ import { blockEntry, TEST_BRAND } from './kit-fixtures.js';
 
 // The kit's reader and the context budget's each port Claude Code 2.1.295's extractor on marked 15.0.6 without
 // GFM, the budget's as a script (docs/decisions.md says why it may import marked); one table keeps them equal.
-// Each row says what Claude Code imports, checked by running the extractor and marked copied out of its binary.
-// The rows after the first are the security review's texts that the budget's old reader under-counted.
+// Each row says what Claude Code imports, checked by running the extractor and marked copied out of its binary,
+// and the byte-order-mark row by its frontmatter step as reference §2.1 records it. The five rows after the first
+// are the security review's texts that the budget's old reader under-counted.
 const CASES: readonly (readonly [text: string, imports: boolean])[] = [
   ['@AGENTS.md', true],
   ['- a\n\n    @AGENTS.md', true],
