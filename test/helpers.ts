@@ -105,7 +105,7 @@ export function runScript(
 
 /**
  * Runs the CLI from its TypeScript sources in a child Node.js, the way a user runs the bin: `scripts/ts-resolve.mjs`
- * maps its `.js` imports to the `.ts` files. stdin is closed unless `input` is given, so nothing waits on a prompt.
+ * maps its `.js` imports to the `.ts` files. stdin is closed, so nothing waits on a prompt.
  */
 export function runCliProcess(
   args: readonly string[],
