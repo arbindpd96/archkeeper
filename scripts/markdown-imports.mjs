@@ -9,6 +9,7 @@ const FRONTMATTER = /^---\s*\n([\s\S]*?)---\s*\n?/;
 const IMPORT = /(?:^|\s)@((?:[^\s\\]|\\ )+)/g;
 const SYMBOLS_ONLY = /^[#%^&*()]+/;
 const PATH_START = /^[a-zA-Z0-9._-]/;
+const LEADING_SEPARATOR = /^[\\/]/;
 const SKIPPED_TYPES = new Set(['code', 'codespan']);
 
 /** Thrown where Claude Code's path expansion throws, which makes it skip the whole memory file. */
@@ -30,7 +31,12 @@ function addImports(text, found) {
   for (const match of text.matchAll(IMPORT)) {
     const path = (match[1] ?? '').split('#', 1)[0].replaceAll('\\ ', ' ');
     if (path === '' || !importable(path)) continue;
-    if (path.includes('\0')) throw new SkippedFile('a NUL in an import path');
+    if (path.includes('\0')) {
+      // Claude Code's path guard (ZP) drops some paths with a leading separator, such as UNC and device paths,
+      // before its path expansion throws on a NUL, so only a NUL in a path without one surely skips the file.
+      if (LEADING_SEPARATOR.test(path)) continue;
+      throw new SkippedFile('a NUL in an import path');
+    }
     found.add(path.trim());
   }
 }

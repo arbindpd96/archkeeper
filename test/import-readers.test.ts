@@ -64,6 +64,7 @@ const CASES: readonly (readonly [text: string, imports: boolean])[] = [
   ['@~/../AGENTS.md', false],
   ['@C:/../AGENTS.md', false],
   ['@..\\docs/../AGENTS.md', false],
+  ['@AGENTS.md and @a\u0000b.md', false],
 ];
 
 // Texts the readers read differently on purpose, each on its own safe side: the kit counts no import where Claude
@@ -72,6 +73,7 @@ const CASES: readonly (readonly [text: string, imports: boolean])[] = [
 const SAFE_SIDES: readonly (readonly [name: string, text: string])[] = [
   ['frontmatter whose paths nest themselves', '---\npaths: &x [*x]\n---\n@AGENTS.md'],
   ['frontmatter with a paths glob', '---\npaths: ["src/*.ts"]\n---\n@AGENTS.md'],
+  ['a NUL in a UNC path, which Claude Code drops before it expands it', '@//\u0000\n@AGENTS.md'],
 ];
 
 function kitLeavesOutItsImport(text: string): boolean {
