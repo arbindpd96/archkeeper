@@ -9,7 +9,6 @@ export const CHARS_PER_TOKEN = 4;
 
 // Claude Code follows imports up to four hops deep (reference §2.1).
 const MAX_IMPORT_DEPTH = 4;
-const COMMENT_LINE = /^\s*<!--.*-->\s*$/;
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
 const MISSING = new Set(['ENOENT', 'ENOTDIR']);
 
@@ -28,12 +27,28 @@ function readText(file) {
   }
 }
 
-/** The text Claude Code keeps of an instruction file: block-level HTML comments, such as markers, cost nothing. */
+/**
+ * The text Claude Code keeps of an instruction file: block-level HTML comments, such as markers, cost nothing,
+ * including one that spans lines. A comment that starts mid-line is text, and an unclosed one is kept.
+ */
 function loadedText(text) {
-  return text
-    .split(/\r?\n/)
-    .filter((line) => !COMMENT_LINE.test(line))
-    .join('\n');
+  const kept = [];
+  const lines = text.split(/\r?\n/);
+  for (let index = 0; index < lines.length; index += 1) {
+    const end = lines[index].trimStart().startsWith('<!--') ? commentEnd(lines, index) : undefined;
+    if (end === undefined) kept.push(lines[index]);
+    else index = end;
+  }
+  return kept.join('\n');
+}
+
+// The line index where a block comment that opens on `start` closes, if nothing but blanks follows its -->.
+function commentEnd(lines, start) {
+  for (let index = start; index < lines.length; index += 1) {
+    const close = lines[index].indexOf('-->', index === start ? lines[index].indexOf('<!--') + 4 : 0);
+    if (close !== -1) return lines[index].slice(close + 3).trim() === '' ? index : undefined;
+  }
+  return undefined;
 }
 
 function inside(root, file) {
