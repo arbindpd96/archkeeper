@@ -55,19 +55,60 @@ export function writeAtomically(absolute: string, data: Buffer | string, mode?: 
     `.${path.basename(absolute)}.${randomBytes(6).toString('hex')}.tmp`,
   );
   const descriptor = openSync(temp, EXCLUSIVE_WRITE, mode ?? 0o666);
+  const failure = writeAndClose(descriptor, data, mode) ?? renameError(temp, absolute);
+  if (failure === undefined) return;
+  // A failed write, such as ENOSPC, must not leave a copy of the content, which can hold a token, in the project.
+  removeWithRetry(temp);
+  throw failure;
+}
+
+// The first error wins, so a close that fails after a full disk does not hide the ENOSPC.
+function writeAndClose(
+  descriptor: number,
+  data: Buffer | string,
+  mode: number | undefined,
+): Error | undefined {
+  let failure: Error | undefined;
   try {
-    try {
-      writeFileSync(descriptor, data);
-      if (mode !== undefined) fchmodSync(descriptor, mode);
-      fsyncSync(descriptor);
-    } finally {
-      closeSync(descriptor);
-    }
-    renameWithRetry(temp, absolute);
+    writeFileSync(descriptor, data);
+    if (mode !== undefined) fchmodSync(descriptor, mode);
+    fsyncSync(descriptor);
   } catch (error) {
-    // A failed write, such as ENOSPC, must not leave a copy of the content, which can hold a token, in the project.
-    rmSync(temp, { force: true });
-    throw error;
+    failure = asError(error);
+  }
+  try {
+    closeSync(descriptor);
+  } catch (error) {
+    failure ??= asError(error);
+  }
+  return failure;
+}
+
+function renameError(temp: string, absolute: string): Error | undefined {
+  try {
+    renameWithRetry(temp, absolute);
+    return undefined;
+  } catch (error) {
+    return asError(error);
+  }
+}
+
+function asError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+// Windows holds a just-written file briefly for scanning; a cleanup that still fails leaves the caller's error
+// to report, since that names the real cause.
+function removeWithRetry(file: string): void {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      rmSync(file, { force: true });
+      return;
+    } catch (error) {
+      const delay = BACKOFF_MS[attempt];
+      if (delay === undefined || !RETRIED.has((error as NodeJS.ErrnoException).code ?? '')) return;
+      pause(delay);
+    }
   }
 }
 
