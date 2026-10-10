@@ -232,6 +232,8 @@ This block belongs in **user** settings only.
 ### 2.1 CLAUDE.md loading
 **Load order** [src](https://code.claude.com/docs/en/memory): managed policy → user `~/.claude/CLAUDE.md` → project `./CLAUDE.md` or `./.claude/CLAUDE.md` → local `./CLAUDE.local.md`. Files in parent directories load before files in the working directory.
 
+**Both project files load.** When `./CLAUDE.md` and `./.claude/CLAUDE.md` both exist, Claude Code loads both, `./CLAUDE.md` first. The memory page lists `CLAUDE.md` and `.claude/CLAUDE.md` among the files a directory loads [src](https://code.claude.com/docs/en/memory), and on 2026-10-10 Claude Code 2.1.295's `/context` listed both. In the same check, a file that both import (`@AGENTS.md` and `@../AGENTS.md`) loaded once, and on macOS's case-insensitive file system `@AGENTS.MD` loaded `AGENTS.md` and counted as the same file.
+
 **Managed CLAUDE.md paths.** These cannot be excluded [src](https://code.claude.com/docs/en/memory):
 - macOS: `/Library/Application Support/ClaudeCode/CLAUDE.md`
 - Linux/WSL: `/etc/claude-code/CLAUDE.md`
