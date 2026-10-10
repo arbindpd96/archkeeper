@@ -46,7 +46,7 @@ export function importsOf(text) {
   for (const line of text.split('\n')) {
     if (FENCE.test(line)) fenced = !fenced;
     else if (!fenced) {
-      for (const match of line.replace(CODE_SPAN, '').matchAll(IMPORT)) {
+      for (const match of line.replace(CODE_SPAN, ' ').matchAll(IMPORT)) {
         found.push(match[1].replace(MARKDOWN_CLOSE, '').replaceAll('\\ ', ' '));
       }
     }
