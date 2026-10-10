@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import type { Brand } from '../core/brand.js';
 import { contentHash } from '../core/hash.js';
@@ -19,11 +18,6 @@ export function compressed(bytes: Buffer | string): Buffer {
   const gzip = gzipSync(bytes, { level: 9 });
   gzip[GZIP_OS_BYTE] = UNKNOWN_OS;
   return gzip;
-}
-
-/** The sha256 in hex of exact bytes, which names a backup blob. */
-export function bytesHash(bytes: Buffer): string {
-  return createHash('sha256').update(bytes).digest('hex');
 }
 
 /**
