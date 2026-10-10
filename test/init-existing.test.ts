@@ -2,29 +2,18 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { loadCatalog } from '../src/core/loader.js';
-import { fixtureCopy, writeFiles } from './helpers.js';
+import { fixtureCopy } from './helpers.js';
 import { projectText } from './install-helpers.js';
-import { runInit } from './init-helpers.js';
+import { existingClaudeSetup as existingSetup, runInit, USER_SETUP } from './init-helpers.js';
 import { kitFiles, memoryReader, plainManifest, TEST_BRAND } from './kit-fixtures.js';
 
-const USER_CLAUDE = '# Billing service\r\n\r\nRun make test before pushing.\r\n\r\n@AGENTS.md\r\n';
-const USER_AGENTS = '# Billing service\n\nNever log card numbers.\n';
-const USER_SETTINGS = '{\n  // Reviewed in PRs.\n  "permissions": { "deny": ["Read(**/.env)"] },\n}\n';
-const USER_SKILL = '---\nname: why\ndescription: My own notes on past decisions.\n---\n\nAsk Ada.\n';
+const USER_CLAUDE = USER_SETUP['CLAUDE.md'];
+const USER_AGENTS = USER_SETUP['AGENTS.md'];
+const USER_SETTINGS = USER_SETUP['.claude/settings.json'];
+const USER_SKILL = USER_SETUP['.claude/skills/why/SKILL.md'];
 
 function read(dir: string, file: string): string {
   return readFileSync(path.join(dir, file), 'utf8');
-}
-
-function existingSetup(): string {
-  const { dir } = fixtureCopy('ts-app');
-  writeFiles(dir, {
-    'CLAUDE.md': USER_CLAUDE,
-    'AGENTS.md': USER_AGENTS,
-    '.claude/settings.json': USER_SETTINGS,
-    '.claude/skills/why/SKILL.md': USER_SKILL,
-  });
-  return dir;
 }
 
 describe('init on a project with its own Claude Code setup', () => {

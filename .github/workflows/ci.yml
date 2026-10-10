@@ -157,6 +157,8 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run build
+      - name: Always-on context per preset on the built CLI (budgets.json, ADR-0017)
+        run: npm run context
       - name: Integrity and lightness budgets (publint, pack snapshot, budgets.json)
         run: npm run package
       - name: Publish dry run

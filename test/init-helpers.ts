@@ -4,8 +4,28 @@ import { readKit } from '../src/cli/kit.js';
 import { main } from '../src/cli/main.js';
 import type { Prompter } from '../src/cli/prompts.js';
 import type { Catalog } from '../src/core/loader.js';
-import { REPO_ROOT } from './helpers.js';
+import { fixtureCopy, REPO_ROOT, writeFiles } from './helpers.js';
 import { TEST_BRAND } from './kit-fixtures.js';
+
+/** The Claude Code setup a user had before init: CLAUDE.md with CRLF and its own import, AGENTS.md, settings, a skill. */
+export const USER_SETUP = {
+  'CLAUDE.md': '# Billing service\r\n\r\nRun make test before pushing.\r\n\r\n@AGENTS.md\r\n',
+  'AGENTS.md': '# Billing service\n\nNever log card numbers.\n',
+  '.claude/settings.json':
+    '{\n  // Reviewed in PRs.\n  "model": "opus",\n  "permissions": { "deny": ["Read(**/.env)"] },\n}\n',
+  '.claude/skills/why/SKILL.md':
+    '---\nname: why\ndescription: My own notes on past decisions.\n---\n\nAsk Ada.\n',
+} as const;
+
+/**
+ * The `existing-claude-setup` fixture: a copy of examples/ts-app plus {@link USER_SETUP}. It is built here rather
+ * than kept in examples/, where Claude Code would load its CLAUDE.md and skill in this repository's own sessions.
+ */
+export function existingClaudeSetup(): string {
+  const { dir } = fixtureCopy('ts-app');
+  writeFiles(dir, USER_SETUP);
+  return dir;
+}
 
 /** The kit as this repository ships it, loaded once. */
 export const KIT = readKit(REPO_ROOT);
