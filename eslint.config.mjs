@@ -158,6 +158,8 @@ export default defineConfig(
     rules: {
       ...readability,
       ...commentPolicy,
+      // An invisible character in a string reads like none, and an editor may drop it; write it as an escape.
+      'no-irregular-whitespace': ['error', { skipStrings: false }],
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/explicit-module-boundary-types': 'error',
     },
