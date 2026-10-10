@@ -56,15 +56,16 @@ export function writeAtomically(absolute: string, data: Buffer | string, mode?: 
   );
   const descriptor = openSync(temp, EXCLUSIVE_WRITE, mode ?? 0o666);
   try {
-    writeFileSync(descriptor, data);
-    if (mode !== undefined) fchmodSync(descriptor, mode);
-    fsyncSync(descriptor);
-  } finally {
-    closeSync(descriptor);
-  }
-  try {
+    try {
+      writeFileSync(descriptor, data);
+      if (mode !== undefined) fchmodSync(descriptor, mode);
+      fsyncSync(descriptor);
+    } finally {
+      closeSync(descriptor);
+    }
     renameWithRetry(temp, absolute);
   } catch (error) {
+    // A failed write, such as ENOSPC, must not leave a copy of the content, which can hold a token, in the project.
     rmSync(temp, { force: true });
     throw error;
   }

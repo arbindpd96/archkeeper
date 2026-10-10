@@ -10,14 +10,16 @@ import { TEST_BRAND } from './kit-fixtures.js';
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof fs>();
-  return { ...actual, renameSync: vi.fn(actual.renameSync) };
+  return { ...actual, renameSync: vi.fn(actual.renameSync), writeFileSync: vi.fn(actual.writeFileSync) };
 });
 
 const realRename = vi.mocked(fs.renameSync).getMockImplementation() ?? fs.renameSync;
+const realWrite = vi.mocked(fs.writeFileSync).getMockImplementation() ?? fs.writeFileSync;
 const LOCAL = `${TEST_BRAND.stateDir}/local`;
 
 afterEach(() => {
   vi.mocked(fs.renameSync).mockImplementation(realRename);
+  vi.mocked(fs.writeFileSync).mockImplementation(realWrite);
 });
 
 /** Every file and folder outside the kit's local folder, with each file's exact bytes. */
@@ -34,6 +36,20 @@ function contents(dir: string, relative = ''): Map<string, string> {
     }
   }
   return found;
+}
+
+// Fails the `failing`th write through a file descriptor, as a full disk would.
+function failDescriptorWriteAt(failing: number): void {
+  let calls = 0;
+  vi.mocked(fs.writeFileSync).mockImplementation((file, data, options) => {
+    if (typeof file === 'number') calls += 1;
+    if (calls === failing) throw Object.assign(new Error('no space left'), { code: 'ENOSPC' });
+    realWrite(file, data, options);
+  });
+}
+
+function tempFiles(dir: string): string[] {
+  return fs.readdirSync(dir, { recursive: true, encoding: 'utf8' }).filter((file) => file.endsWith('.tmp'));
 }
 
 function failRenameAt(failing: number): void {
@@ -147,6 +163,23 @@ describe('a failure in the middle of an apply', () => {
       expect(fs.readdirSync(outside)).toEqual([]);
     },
   );
+
+  it('leaves no temp file and no change behind when any write fails, such as on a full disk', () => {
+    const dir = tempDir();
+    writeFiles(dir, { 'CLAUDE.md': '# Mine\n', [`${LOCAL}/.gitignore`]: '*\n' });
+    const before = contents(dir);
+    for (let failing = 1; ; failing += 1) {
+      failDescriptorWriteAt(failing);
+      try {
+        install(dir, fixtureTree(), OPTIONS);
+        break;
+      } catch (error) {
+        expect(error, `failure at write ${String(failing)}`).toBeInstanceOf(ApplyError);
+      }
+      expect(tempFiles(dir), `after a failure at write ${String(failing)}`).toEqual([]);
+      expect(contents(dir), `after a failure at write ${String(failing)}`).toEqual(before);
+    }
+  });
 
   it('changes nothing in the project when the backup itself cannot be made', () => {
     const dir = tempDir();
