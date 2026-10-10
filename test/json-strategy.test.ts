@@ -73,12 +73,13 @@ describe('the json strategy', () => {
       permissions: { deny: ['Read(**/.env)', 'Bash(rm -rf:*)'] },
     });
     expect(written(outcome)).toMatch(/^\{\n {2}"\$schema"/);
-    expect([...(outcome.json?.keys() ?? [])]).toEqual([
+    expect(outcome.ops.map((op) => op.entry)).toEqual([
       '$schema',
       HOOK_KEY,
       'permissions.deny Read(**/.env)',
       'permissions.deny Bash(rm -rf:*)',
     ]);
+    expect(new Set(outcome.json?.keys())).toEqual(new Set(outcome.ops.map((op) => op.entry)));
     expect(outcome.json?.get('permissions.deny Read(**/.env)')).toBe(hashOf('Read(**/.env)'));
     expect(outcome.json?.get(HOOK_KEY)).toBe(hashOf(hookGroup));
   });
@@ -136,6 +137,20 @@ describe('the json strategy', () => {
     expect(outcome.ops.find((op) => op.entry === HOOK_KEY)).toMatchObject({ kind: 'skip' });
     expect(written(outcome)).not.toContain('hooks');
     expect(outcome.json?.has(HOOK_KEY)).toBe(false);
+  });
+
+  it('adds no $schema to a file where the kit owns no other entry', () => {
+    const hookOnly = jsonEntry({ hooks: { PreToolUse: [hookGroup] } }, [HOOK_KEY]);
+    const outcome = plan({ entries: [hookOnly], script: () => 'other' });
+    expect(outcome.content).toBeUndefined();
+    expect(outcome.ops).toMatchObject([
+      {
+        kind: 'skip',
+        entry: '$schema',
+        reason: 'the kit owns no other entry in this file, so it adds no $schema',
+      },
+      { kind: 'skip', entry: HOOK_KEY },
+    ]);
   });
 
   it('adds a kit hook next to a user hook on the same event', () => {
