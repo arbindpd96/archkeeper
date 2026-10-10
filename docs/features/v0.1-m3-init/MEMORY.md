@@ -47,6 +47,8 @@ v0.1 milestone M3 (issues #25, #26, #27, #28, #29): `npx <bin> init` works end t
 
 - 2026-10-10 (third review): init also leaves out a kit import whose target is a link, even one inside the project, and one whose importing file is a link to its target, each with a warning that says which. Why: Claude Code follows a link and loads project imports with no prompt and no Read deny rule, so `AGENTS.md -> .env` (committed by a hostile repository, then filled in by the user) put the secrets in every session's context; the kit writes through no link, so it imports through none, which also covers `CLAUDE.local.md`, `settings.local.json` and any file the private-name list does not know. A CLAUDE.md linked to AGENTS.md (reference §2.3) loads it already, and following its sidecar's `@AGENTS.md` would have made AGENTS.md import itself.
 
+- 2026-10-10 (third review): init also refuses the user's Claude Code folder, `~/.claude` by real path, as the project. Why: its CLAUDE.md is the user's memory for every project, so a `--cwd ~/.claude` by mistake added the kit's blocks and an `@AGENTS.md` import to every session, the same reason that refuses the home folder.
+
 ## Measured sizes (ADR-0017)
 
 | Item                       | Before M3               | After M3                                     | Budget |

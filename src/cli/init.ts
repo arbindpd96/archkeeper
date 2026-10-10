@@ -42,12 +42,18 @@ function isFolder(absolute: string): boolean {
   }
 }
 
-// CLAUDE.md in the home folder or a file system root loads in every project below it, and the settings later
-// modules write would merge into the user's own ~/.claude/settings.json.
+function realFolder(folder: string): string | undefined {
+  return isFolder(folder) ? realpathSync.native(folder) : undefined;
+}
+
+// CLAUDE.md in the home folder or a file system root loads in every project below it, ~/.claude/CLAUDE.md in every
+// project of the user, and the settings later modules write would merge into the user's own ~/.claude/settings.json.
 function sharedRootProblem(rootReal: string, home: string): string | undefined {
   if (rootReal === path.parse(rootReal).root) return 'is a file system root, above every project';
-  const homeReal = isFolder(home) ? realpathSync.native(home) : undefined;
-  return rootReal === homeReal ? 'is your home folder, above every project of yours' : undefined;
+  if (rootReal === realFolder(home)) return 'is your home folder, above every project of yours';
+  return rootReal === realFolder(path.join(home, '.claude'))
+    ? 'is your Claude Code user folder, whose CLAUDE.md loads in every project of yours'
+    : undefined;
 }
 
 function refuseRoot(root: string, problem: string): never {

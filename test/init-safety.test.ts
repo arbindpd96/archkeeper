@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fixtureCopy } from './helpers.js';
@@ -113,6 +113,16 @@ describe('init and the folders above every project', () => {
     expect(result.code).toBe(1);
     expect(result.stderr).toContain('is your home folder');
     expect(existsSync(path.join(dir, 'CLAUDE.md'))).toBe(false);
+  });
+
+  it('refuses the Claude Code user folder, whose CLAUDE.md loads in every project, and writes nothing', async () => {
+    const home = fixtureCopy('ts-app').dir;
+    const user = path.join(home, '.claude');
+    mkdirSync(user);
+    const result = await runInit(user, ['--yes'], { home });
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('is your Claude Code user folder');
+    expect(readdirSync(user)).toEqual([]);
   });
 
   it('refuses a file system root before reading anything there', async () => {
