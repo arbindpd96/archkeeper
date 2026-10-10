@@ -258,7 +258,7 @@ This block belongs in **user** settings only.
 **Tooling** [src](https://code.claude.com/docs/en/memory):
 - `/context` lists the loaded memory files.
 - `/memory` opens an editor for CLAUDE.md, CLAUDE.local.md, rules and auto memory.
-- `claudeMdExcludes` (paths or globs) skips irrelevant ancestor CLAUDE.md files in monorepos.
+- `claudeMdExcludes` (paths or globs) skips irrelevant ancestor CLAUDE.md files in monorepos. It drops project files too: Claude Code 2.1.295 filters `./CLAUDE.md` and `./.claude/CLAUDE.md` through it before reading them, matching each pattern with picomatch against the absolute path (read from the binary in a review on 2026-10-10, not run end to end).
 - `/init` migrates `.cursor/rules`, `.cursorrules` and `.github/copilot-instructions.md`. With `CLAUDE_CODE_NEW_INIT=1` it also migrates AGENTS.md, `.devin/rules/`, `.windsurf/rules/` and `.clinerules`, and runs a multi-phase interview. `/import` does a one-time migration.
 
 **Not enforced.** Neither CLAUDE.md nor auto memory is enforced. Guaranteed behaviour requires hooks [src](https://code.claude.com/docs/en/memory).
