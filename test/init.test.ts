@@ -96,6 +96,13 @@ describe('init, scripted', () => {
     expect(json.plan.map((entry) => [entry.path, entry.group])).toContainEqual(['CLAUDE.md', 'create']);
   });
 
+  it('names --json as what keeps it from asking for a yes on a terminal', async () => {
+    const { dir } = fixtureCopy('mixed');
+    const result = await runInit(dir, ['--json'], { interactive: true });
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('--json runs without questions');
+  });
+
   it('keeps --stack and --modules in the config', async () => {
     const { dir } = fixtureCopy('mixed');
     const result = await runInit(dir, ['--yes', '--stack', 'python', '--modules', '-knowledge,+stop-check']);
