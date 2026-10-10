@@ -14,7 +14,8 @@ import { gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { removeFile, renameWithRetry } from '../src/cli/atomic-files.js';
 import { compressed, MAX_BLOB_BYTES, readBlob } from '../src/cli/blob-store.js';
-import { install } from '../src/cli/install.js';
+import { applyPlan } from '../src/cli/apply.js';
+import { install, planProject } from '../src/cli/install.js';
 import { confinedPath } from '../src/cli/project-files.js';
 import { ApplyError, LockError, PathSafetyError } from '../src/core/errors.js';
 import { contentHash } from '../src/core/hash.js';
@@ -147,6 +148,19 @@ describe('write targets on disk (#23)', () => {
     const run = (): unknown => install(dir, fixtureTree(), OPTIONS);
     expect(run).toThrow(ApplyError);
     expect(run).toThrow('AGENTS.md: read for the plan: could not be read (EACCES), so the kit wrote nothing');
+    expect(filesUnder(dir)).toEqual(['AGENTS.md']);
+  });
+
+  it.runIf(UNREADABLE)('names a path that became unreadable after planning, and writes nothing', () => {
+    const dir = tempDir();
+    writeFiles(dir, { 'AGENTS.md': '# Mine\n' });
+    const plan = planProject(dir, fixtureTree(), OPTIONS);
+    chmodSync(path.join(dir, 'AGENTS.md'), 0o000);
+    const run = (): unknown => applyPlan(dir, plan, TEST_BRAND);
+    expect(run).toThrow(ApplyError);
+    expect(run).toThrow(
+      'AGENTS.md: read before the backup: could not be read (EACCES), so the kit wrote nothing',
+    );
     expect(filesUnder(dir)).toEqual(['AGENTS.md']);
   });
 
