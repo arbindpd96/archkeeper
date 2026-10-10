@@ -25,26 +25,27 @@ The `Commit authors` CI job checks every commit in a PR. It fails on a bot autho
 
 ## What CI checks
 
-| Gate           | Command                      | What it enforces                                                                               |
-| -------------- | ---------------------------- | ---------------------------------------------------------------------------------------------- |
-| Formatting     | `npm run format:check`       | Prettier, 110 columns, single quotes                                                           |
-| Lint           | `npm run lint`               | typescript-eslint strict, readability limits, JSDoc, layer boundaries (ADR-0011)               |
-| Types          | `npm run typecheck`          | TypeScript strict, `noUncheckedIndexedAccess`                                                  |
-| Comment policy | `npm run comments`           | See [Comments](#comments)                                                                      |
-| Brand          | `npm run brand`              | The product slug appears only in `src/core/brand.ts`; `package.json` `name` and `bin` match it |
-| Schemas        | `npm run schema:check`       | `schema/*.json` match the zod schemas in `src/core`; `npm run schema` rewrites them            |
-| Demo GIFs      | `npm run demos`              | GIFs come from tapes within 2 MB and 20 s (30 s hero); each module declares a demo or internal |
-| Tests          | `npm test`                   | Vitest: Linux on Node 22/24/26, macOS + Windows on 24                                          |
-| Build          | `npm run build`              | tsdown bundle in `dist/`, licenses of inlined code; CI checks that two builds are identical    |
-| Package        | `npm run package`            | publint, pack snapshot, 0 runtime deps, no install scripts, budgets; CI adds publish dry run   |
-| Release        | CI only                      | Dry run: release guards (reported), prepare strip, release package checks, `npm stage publish` |
-| Install smoke  | CI only                      | The packed tarball installs under a path with a space and runs on ubuntu, macOS and Windows    |
-| Node.js gate   | CI only                      | The built bin rejects Node.js 18, 20, 22.17.0 and 23 and runs on 22.17.1                       |
-| Commits        | commitlint                   | Conventional Commits, no AI attribution trailers                                               |
-| Commit authors | CI only                      | No bot or AI-tool authors or co-authors (Dependabot only on its own PRs), no AI attribution    |
-| Changeset      | CI only                      | A PR touching a published folder adds a changeset, unless it is labelled `no-release`          |
-| PR title       | action-semantic-pull-request | Conventional Commits title (it becomes the squash message)                                     |
-| Security       | CodeQL, dependency review    | Code scanning; no new dependency with a known vulnerability of moderate severity or higher     |
+| Gate           | Command                      | What it enforces                                                                                           |
+| -------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Formatting     | `npm run format:check`       | Prettier, 110 columns, single quotes                                                                       |
+| Lint           | `npm run lint`               | typescript-eslint strict, readability limits, JSDoc, layer boundaries (ADR-0011)                           |
+| Types          | `npm run typecheck`          | TypeScript strict, `noUncheckedIndexedAccess`                                                              |
+| Comment policy | `npm run comments`           | See [Comments](#comments)                                                                                  |
+| Brand          | `npm run brand`              | The product slug appears only in `src/core/brand.ts`; `package.json` `name` and `bin` match it             |
+| Schemas        | `npm run schema:check`       | `schema/*.json` match the zod schemas in `src/core`; `npm run schema` rewrites them                        |
+| Demo GIFs      | `npm run demos`              | GIFs come from tapes within 2 MB and 20 s (30 s hero); each module and command declares a demo or internal |
+| Tests          | `npm test`                   | Vitest: Linux on Node 22/24/26, macOS + Windows on 24                                                      |
+| Build          | `npm run build`              | tsdown bundle in `dist/`, licenses of inlined code; CI checks that two builds are identical                |
+| Context budget | `npm run context`            | Each preset's always-on context, from the built CLI's `init`, stays within `budgets.json` (ADR-0017)       |
+| Package        | `npm run package`            | publint, pack snapshot, 0 runtime deps, no install scripts, budgets; CI adds publish dry run               |
+| Release        | CI only                      | Dry run: release guards (reported), prepare strip, release package checks, `npm stage publish`             |
+| Install smoke  | CI only                      | The packed tarball installs under a path with a space and runs on ubuntu, macOS and Windows                |
+| Node.js gate   | CI only                      | The built bin rejects Node.js 18, 20, 22.17.0 and 23 and runs on 22.17.1                                   |
+| Commits        | commitlint                   | Conventional Commits, no AI attribution trailers                                                           |
+| Commit authors | CI only                      | No bot or AI-tool authors or co-authors (Dependabot only on its own PRs), no AI attribution                |
+| Changeset      | CI only                      | A PR touching a published folder adds a changeset, unless it is labelled `no-release`                      |
+| PR title       | action-semantic-pull-request | Conventional Commits title (it becomes the squash message)                                                 |
+| Security       | CodeQL, dependency review    | Code scanning; no new dependency with a known vulnerability of moderate severity or higher                 |
 
 The pre-commit hook runs Prettier, ESLint and the comment check on staged files, and commit-msg runs commitlint. Types and tests run in CI (and in `npm run check`), not in the hook, to keep commits fast.
 
