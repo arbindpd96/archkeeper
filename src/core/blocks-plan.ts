@@ -7,7 +7,7 @@ import { contentHash } from './hash.js';
 import type { BlockEntry, Removal } from './lock.js';
 import type { OpKind, Ownable, PathOutcome, PathState, PlanOp } from './plan-types.js';
 import type { RenderedEntry } from './render-tree.js';
-import { sidecarAction, sidecarPath } from './sidecar.js';
+import { settledOp, sidecarAction, sidecarPath } from './sidecar.js';
 import { toLf } from './text.js';
 
 /** Everything the planner knows about one blocks path. */
@@ -143,19 +143,12 @@ function decide(job: BlocksJob, file: BlocksFile): Decision[] {
   return decisions;
 }
 
-function entryText(entry: BlockEntry | undefined): string {
-  return entry === undefined ? '' : JSON.stringify([entry.base, entry.pending]);
-}
-
-// A skip that still moves the lock entry, such as a resolved sidecar, is reported as an adoption.
 function settled(job: BlocksJob, decision: Decision): Decision {
+  const moved = `records the kit version that ${sidecarPath(job.path, job.brand)} already holds`;
   const before = job.lock?.get(decision.id);
-  if (decision.op !== 'skip' || entryText(before) === entryText(decision.entry)) return decision;
-  const resolved = before?.pending !== undefined && job.sidecar === undefined;
-  const reason = resolved
-    ? 'its sidecar is gone, so the kit version it held now counts as seen'
-    : `records the kit version that ${sidecarPath(job.path, job.brand)} already holds`;
-  return { ...decision, op: 'adopt', reason };
+  const change = { before, after: decision.entry, sidecar: job.sidecar, moved };
+  const { kind, reason } = settledOp(decision.op, decision.reason, change);
+  return { ...decision, op: kind, reason };
 }
 
 function edits(decisions: readonly Decision[], withSidecar: boolean): BlockEdits {
