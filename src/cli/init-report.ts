@@ -1,8 +1,11 @@
 import type { Brand } from '../core/brand.js';
+import { configPath } from '../core/config.js';
+import { lockFilePath } from '../core/lock.js';
 import type { OpKind } from '../core/plan-types.js';
 import type { PathSummary, PlanGroup } from '../core/plan-summary.js';
 import type { Language, StackProfile } from '../core/stack-profile.js';
 import { escapeUnprintable } from '../core/text.js';
+import { baseFolder } from './blob-store.js';
 import { type CliOutput, type StyleFormat, styled } from './output.js';
 
 /** What init prints: lines on stdout unless --json is set, warnings on stderr always. */
@@ -108,6 +111,20 @@ export function planLines(summaries: readonly PathSummary[], paint: Reporter['pa
     const label = paint(GROUP_STYLE[summary.group], summary.group.padEnd(8));
     return `  ${label}  ${escapeUnprintable(`${summary.path}${detail(summary)}`)}`;
   });
+}
+
+/** The line after the plan naming the kit's own files in `written`, the apply's writes: config, lock, base blobs. */
+export function stateLines(written: readonly string[], brand: Brand): string[] {
+  const blobs = `${baseFolder(brand)}/`;
+  const names = [
+    ...(written.includes(configPath(brand)) ? [configPath(brand)] : []),
+    ...(written.includes(lockFilePath(brand)) ? ['the lock'] : []),
+    ...(written.some((file) => file.startsWith(blobs)) ? ['the base blobs'] : []),
+  ];
+  if (names.length === 0) return [];
+  const listed =
+    names.length === 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1) ?? ''}`;
+  return [`  and ${escapeUnprintable(listed)}`];
 }
 
 const DIFF_STYLE: readonly [prefix: string, format: StyleFormat][] = [

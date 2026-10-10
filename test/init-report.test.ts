@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { diffLines, planLines } from '../src/cli/init-report.js';
+import { diffLines, planLines, stateLines } from '../src/cli/init-report.js';
 import type { PathSummary } from '../src/core/plan-summary.js';
+import { TEST_BRAND } from './kit-fixtures.js';
 
 const RLO = String.fromCharCode(0x202e);
 const paint = (format: unknown, text: string): string => `<${String(format)}>${text}`;
@@ -31,5 +32,27 @@ describe('planLines', () => {
       ops: [{ kind: 'sidecar', path: `docs/${RLO}evil.md`, reason: 'kept\u0007' }],
     };
     expect(planLines([summary], paint)).toEqual(['  <red>conflict  docs/\\u202eevil.md: kept\\u0007']);
+  });
+});
+
+describe('stateLines', () => {
+  const config = `${TEST_BRAND.stateDir}/config.json`;
+  const lock = `${TEST_BRAND.stateDir}/lock.json`;
+  const blob = `${TEST_BRAND.stateDir}/base/${'a'.repeat(64)}`;
+
+  it('names only the kit files the apply writes', () => {
+    expect(stateLines(['CLAUDE.md', lock], TEST_BRAND)).toEqual(['  and the lock']);
+    expect(stateLines([blob], TEST_BRAND)).toEqual(['  and the base blobs']);
+    expect(stateLines([config, 'CLAUDE.md'], TEST_BRAND)).toEqual([`  and ${config}`]);
+  });
+
+  it('lists several with commas and a final and', () => {
+    expect(stateLines([blob, config, lock], TEST_BRAND)).toEqual([
+      `  and ${config}, the lock and the base blobs`,
+    ]);
+  });
+
+  it('prints nothing when the apply writes none of them', () => {
+    expect(stateLines(['AGENTS.md'], TEST_BRAND)).toEqual([]);
   });
 });

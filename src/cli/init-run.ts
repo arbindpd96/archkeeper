@@ -4,7 +4,6 @@ import type { Plan } from '../core/plan.js';
 import type { RenderTree } from '../core/render.js';
 import type { Stack } from '../core/schema-parts.js';
 import type { StackProfile } from '../core/stack-profile.js';
-import { plannedWrites } from './apply.js';
 import type { Session } from './context.js';
 import type { Asking } from './init-answers.js';
 import type { ExistingConfig, NextConfig } from './init-config.js';
@@ -40,20 +39,15 @@ export interface Planned {
   readonly tree: RenderTree;
   /** The install plan, the config included when it changes. */
   readonly plan: Plan;
-  /** Whether applying the plan writes anything: a file, the config, the lock or a base blob. */
-  readonly writes: boolean;
+  /**
+   * The project paths applying the plan writes, from the apply's own list (`plannedWrites`): files, the config, the
+   * lock when its text changes and missing base blobs. Any of them needs a yes (#27).
+   */
+  readonly written: readonly string[];
 }
 
 /** A project file's text, or undefined when it is absent or not a regular text file. */
 export function textAt(rootReal: string, file: string): string | undefined {
   const state = readConfined(rootReal, file, 'read for the plan');
   return state?.kind === 'file' ? state.content : undefined;
-}
-
-/**
- * Whether applying `plan` writes anything, decided from the same list the apply writes: a file or the config, the
- * lock when its text changes, as after a kit upgrade, or a base blob that is missing. Any write needs a yes (#27).
- */
-export function writesAnything(rootReal: string, plan: Plan, brand: Brand): boolean {
-  return plannedWrites(rootReal, plan, brand).length > 0;
 }
