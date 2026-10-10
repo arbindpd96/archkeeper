@@ -13,6 +13,7 @@ import { git, REPO_ROOT, tempRepo } from './helpers.js';
 import { blockEntry } from './kit-fixtures.js';
 
 const catalog = readKit(REPO_ROOT);
+const MIB = 1_048_576;
 
 function baseModule(): KitModule {
   const base = catalog.modules.get('base');
@@ -171,6 +172,10 @@ describe('withoutImportedBlocks', () => {
     [
       "only an import in a comment that the kit block's blank line leaves open, which a masked block would close",
       `<p align="center">\n${marker('begin', 'claude-code')}\n${blockOf(tree, 'CLAUDE.md', 'claude-code')}${marker('end', 'claude-code')}\n<!-- TODO\n\n@AGENTS.md\n`,
+    ],
+    [
+      'only an import in a CLAUDE.md over 4 MiB, which Claude Code skips whole',
+      `@AGENTS.md\n${'a'.repeat(4 * MIB)}`,
     ],
   ])('keeps the import block when there is %s', (_name, claude) => {
     expect(keptBlocks(claude === undefined ? {} : { 'CLAUDE.md': claude })).toEqual([
