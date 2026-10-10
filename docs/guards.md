@@ -59,6 +59,8 @@ Set them under `options.safety` in `.archkeeper/config.json`; the repository pol
 
 `--modules -safety` leaves the whole module out.
 
+While an option has the wrong type, or a `denyCommands` entry names no command, guard-bash asks before every command and names the config, so a typo never silently drops a rule.
+
 ## Known limits
 
 The guards are a safety net, not a sandbox.
