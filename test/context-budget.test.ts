@@ -1,4 +1,4 @@
-import { chmodSync } from 'node:fs';
+import { chmodSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it, onTestFinished } from 'vitest';
 import budgets from '../budgets.json' with { type: 'json' };
@@ -25,6 +25,19 @@ describe('alwaysOnContext', () => {
     const claude = '@AGENTS.md\nSee `@docs/skip.md` and @../outside.md\n'.length;
     const agents = 'Rules.\n@docs/more.md\n@CLAUDE.md\n'.length;
     expect(alwaysOnContext(dir, 0).instructions).toBe(claude + agents + 'More.\n'.length);
+  });
+
+  it('reads the imports of a file within 4 MiB on disk whose bytes that are not UTF-8 decode longer', () => {
+    const dir = tempDir();
+    const head = Buffer.from('@AGENTS.md\n\n');
+    const claude = Buffer.concat([
+      head,
+      Buffer.alloc(8, 0xff),
+      Buffer.alloc(4_194_295 - head.length - 8, 'a'),
+    ]);
+    writeFiles(dir, { 'AGENTS.md': 'Rules.\n' });
+    writeFileSync(path.join(dir, 'CLAUDE.md'), claude);
+    expect(alwaysOnContext(dir, 0).instructions).toBe(claude.toString('utf8').length + 'Rules.\n'.length);
   });
 
   it('counts rules without paths and the descriptions of skills Claude may invoke', () => {

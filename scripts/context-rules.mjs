@@ -18,13 +18,18 @@ function absentOr(error, fallback) {
   throw error;
 }
 
-/** Reads a regular file as text, or returns undefined when it is absent, a link or a folder. */
-function readText(file) {
+/** Reads a regular file's bytes, or returns undefined when it is absent, a link or a folder. */
+function readBytes(file) {
   try {
-    return lstatSync(file).isFile() ? readFileSync(file, 'utf8') : undefined;
+    return lstatSync(file).isFile() ? readFileSync(file) : undefined;
   } catch (error) {
     return absentOr(error, undefined);
   }
+}
+
+/** Reads a regular file as text, or returns undefined when it is absent, a link or a folder. */
+function readText(file) {
+  return readBytes(file)?.toString('utf8');
 }
 
 /**
@@ -62,12 +67,13 @@ function instructionChars(root) {
   let chars = 0;
   const visit = (file, depth) => {
     if (seen.has(file) || depth > MAX_IMPORT_DEPTH || !inside(root, file)) return;
-    const text = readText(file);
-    if (text === undefined) return;
+    const bytes = readBytes(file);
+    if (bytes === undefined) return;
     seen.add(file);
-    const kept = loadedText(text);
-    chars += kept.length;
-    for (const target of importsOf(text)) visit(path.resolve(path.dirname(file), target), depth + 1);
+    const text = bytes.toString('utf8');
+    chars += loadedText(text).length;
+    const folder = path.dirname(file);
+    for (const target of importsOf(text, bytes.length)) visit(path.resolve(folder, target), depth + 1);
   };
   for (const entry of ['CLAUDE.md', '.claude/CLAUDE.md']) visit(path.join(root, entry), 0);
   return chars;
