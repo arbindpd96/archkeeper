@@ -73,6 +73,17 @@ export function emptyLock(kit: KitId, modules: readonly string[] = []): Lock {
   };
 }
 
+/**
+ * Every hash a lock keeps a base blob for (ADR-0014): each base and pending of an owned file or a block. A
+ * create-only file and a JSON entry keep none, so the planner provides and the apply prunes by this one set.
+ */
+export function blobHashes(lock: Lock): Set<string> {
+  const owned = [...lock.files.values()].filter((entry) => entry.strategy === 'owned');
+  const blocks = [...lock.blocks.values()].flatMap((entries) => [...entries.values()]);
+  const hashes = [...owned, ...blocks].flatMap(({ base, pending }) => [base, pending]);
+  return new Set(hashes.filter((hash): hash is string => typeof hash === 'string'));
+}
+
 function mapOf<Value, Result>(
   record: Readonly<Record<string, Value>>,
   convert: (value: Value) => Result,

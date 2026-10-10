@@ -6,6 +6,7 @@ import { contentHash, exactHash } from './hash.js';
 import { planJson } from './json-plan.js';
 import {
   type BlockEntry,
+  blobHashes,
   emptyLock,
   type FileEntry,
   type KitId,
@@ -190,7 +191,6 @@ function uniqueRemovals(removals: readonly Removal[]): Removal[] {
   return [...seen.values()];
 }
 
-// Owned files and blocks keep a blob of each base and pending; create-only files and JSON entries keep none.
 function blobContents(tree: RenderTree, lock: Lock): Map<string, string> {
   const kit = new Map<string, string>();
   for (const entries of tree.values()) {
@@ -198,12 +198,7 @@ function blobContents(tree: RenderTree, lock: Lock): Map<string, string> {
       if (strategy === 'owned' || strategy === 'blocks') kit.set(contentHash(content), content);
     }
   }
-  const owned = [...lock.files.values()].filter((entry) => entry.strategy === 'owned');
-  const entries: readonly (FileEntry | BlockEntry)[] = [
-    ...owned,
-    ...[...lock.blocks.values()].flatMap((blocks) => [...blocks.values()]),
-  ];
-  const referenced = entries.flatMap(({ base, pending }) => [base ?? '', pending ?? '']);
+  const referenced = [...blobHashes(lock)];
   return new Map(referenced.flatMap((hash) => (kit.has(hash) ? [[hash, kit.get(hash) ?? '']] : [])));
 }
 
