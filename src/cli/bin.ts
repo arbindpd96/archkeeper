@@ -7,7 +7,8 @@ if (problem !== undefined) {
   process.exit(1);
 }
 
-// The dynamic import defers the program's own code until the check passes. Bundled node: imports are still
-// hoisted above the check, so the CI node-gate job runs dist/cli.mjs on old Node.js to prove it is reached.
+// The dynamic import defers the program, and the node: built-ins it links, until the check passes: the build
+// emits it as its own chunk, check-package fails a bin that links a built-in statically, and the CI node-gate
+// job runs dist/cli.mjs on old Node.js to prove the check is reached.
 const { main } = await import('./main.js');
 process.exitCode = await main(process.argv.slice(2));

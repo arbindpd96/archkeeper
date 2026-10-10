@@ -64,7 +64,12 @@ const hookBuilds = hookFiles().map((file): UserConfig => ({
   deps: { onlyBundle: [], onlyImport: [] },
 }));
 
-export default defineConfig([
-  { ...shared, entry: { cli: 'src/cli/bin.ts' }, deps: { onlyImport: [] } },
-  ...hookBuilds,
-]);
+// Node.js links static imports before code runs, so the program is a chunk behind the bin's version check.
+const cliBuild = {
+  ...shared,
+  entry: { cli: 'src/cli/bin.ts' },
+  deps: { onlyImport: [] },
+  outputOptions: { codeSplitting: true, chunkFileNames: '[name].mjs' },
+} satisfies UserConfig;
+
+export default defineConfig([cliBuild, ...hookBuilds]);

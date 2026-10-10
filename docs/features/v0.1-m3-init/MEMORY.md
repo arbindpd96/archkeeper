@@ -43,25 +43,28 @@ v0.1 milestone M3 (issues #25, #26, #27, #28, #29): `npx <bin> init` works end t
 - 2026-10-10 (second review): init refuses the home folder and a file system root (`CliContext.home`, so tests never use the real one); warns, and on a terminal asks with a default of no, when `modules.remove` leaves out the safety guards; leaves out a kit import whose target, such as an AGENTS.md link, resolves outside the project, with a warning (`withoutRefusedImports`); decides the yes from the apply's own list of writes (`plannedWrites`); suggests `/new-feature` only when the tree holds that skill; names `--json` when it is what keeps init from asking; and says no commands were detected "for the stacks this setup covers" when the stack filters detected ones out. Why: the second review's findings.
 - 2026-10-10 (second review): `COMPANIONS` stays: reference §2.1 now records, from Claude Code 2.1.295's `/context`, that `./CLAUDE.md` and `./.claude/CLAUDE.md` both load and that a file both import loads once. Known gap, documented rather than fixed: a user import written `@AGENTS.MD` is not recognised, so on a case-insensitive file system the kit adds its own `@AGENTS.md` block; Claude Code loads the file once (verified), so the cost is one redundant line, while on a case-sensitive one `@AGENTS.MD` names another file and a case-insensitive match would hide AGENTS.md.
 - 2026-10-10: No new ADR. Why: every choice refines ADR-0006, 0011, 0014, 0015, 0017 or 0018 without changing them; `docs/decisions.md` lists the larger ones.
+- 2026-10-10 (third review): The CLI build splits code (`codeSplitting: true`, `chunkFileNames: '[name].mjs'`): `dist/cli.mjs` holds only the bin and its version check, the program is `dist/main.mjs` behind the bin's dynamic import, and rolldown puts `src/core/brand.ts`, which both use, in `dist/brand.mjs`, so the program never imports the bin while its top-level await is pending. `npm run package` fails a bin that, directly or through a chunk it imports statically, imports a built-in. Why: Node.js links every static import before a module runs, and since #26's colour (`styleText`, not in Node.js 18's `node:util`) the one-file bundle failed on Node.js 18 with a SyntaxError before the check, so CI's node-gate and #26's "the Node version guard still runs first" failed. This revises runway-r1's "dist/ stays one file", whose reason (old Node.js reached the gate) no longer held.
 
 ## Measured sizes (ADR-0017)
 
-| Item                       | Before M3               | After M3                  | Budget |
-| -------------------------- | ----------------------- | ------------------------- | ------ |
-| `dist/cli.mjs`             | 134.5 kB (33.3 kB gzip) | 533.7 kB (135.5 kB gzip)  | none   |
-| of which `src/`            | about 51 kB             | about 250 kB              |        |
-| of which commander         | 0                       | 102.5 kB                  |        |
-| of which zod (`zod/mini`)  | 59.0 kB                 | 60.3 kB                   |        |
-| of which jsonc-parser      | 24.2 kB                 | 42.4 kB (`modify` now in) |        |
-| of which smol-toml         | 0                       | 36.1 kB                   |        |
-| of which clack (with deps) | 0                       | 32.3 kB                   |        |
-| of which pm-detector       | 0                       | 10.2 kB                   |        |
-| Tarball                    | 42.5 kB                 | 146.7 kB                  | 300 kB |
-| Unpacked                   | 179.5 kB                | 592.8 kB                  |        |
-| Files in the package       | 16                      | 19 (base templates)       |        |
-| Runtime dependencies       | 0                       | 0                         | 0      |
+| Item                       | Before M3               | After M3                                     | Budget |
+| -------------------------- | ----------------------- | -------------------------------------------- | ------ |
+| `dist/cli.mjs` (the bin)   | 134.5 kB (33.3 kB gzip) | 1.6 kB (0.8 kB gzip)                         | none   |
+| `dist/main.mjs`            | none                    | 516.9 kB (132.9 kB gzip)                     | none   |
+| `dist/brand.mjs`           | none                    | 0.7 kB (0.4 kB gzip)                         | none   |
+| of which `src/`            | about 51 kB             | about 241 kB                                 |        |
+| of which commander         | 0                       | 99.6 kB                                      |        |
+| of which zod (`zod/mini`)  | 59.0 kB                 | 56.0 kB                                      |        |
+| of which jsonc-parser      | 24.2 kB                 | 41.8 kB (`modify` now in)                    |        |
+| of which smol-toml         | 0                       | 34.7 kB                                      |        |
+| of which clack (with deps) | 0                       | 29.8 kB                                      |        |
+| of which pm-detector       | 0                       | 9.3 kB                                       |        |
+| Tarball                    | 42.5 kB                 | 145.3 kB                                     | 300 kB |
+| Unpacked                   | 179.5 kB                | 578.4 kB                                     |        |
+| Files in the package       | 16                      | 21 (base templates, `main.mjs`, `brand.mjs`) |        |
+| Runtime dependencies       | 0                       | 0                                            | 0      |
 
-Region sizes are the unminified `//#region` sums; the second review's fixes added about 7.6 kB of `src/`. Most of the growth is M2's engine reaching the bundle for the first time (M2 predicted about 26 kB of gzip) and commander, whose unminified source is mostly JSDoc. The bundle still parses as ES2022, and with `process.versions.node` faked to 18.20.8 the built bin prints the upgrade message and exits 1 before any library code runs.
+Region sizes are the unminified `//#region` sums over the three chunks, re-measured after the third review split the bin from the program; the split also shrank zod and commander a little, since the program chunk exports only `main` and rolldown drops the namespace objects a single file kept. Most of the growth is M2's engine reaching the bundle for the first time (M2 predicted about 26 kB of gzip) and commander, whose unminified source is mostly JSDoc. (Corrected after the third review) The earlier claim here, that the bin printed the upgrade message with `process.versions.node` faked to 18.20.8, was wrong: faking the version never links the bundle on an old Node.js, and a real Node.js 18.20.8 failed with `SyntaxError: ... does not provide an export named 'styleText'` before the check ran. With the split, a real Node.js 18.20.8 binary prints the upgrade message and exits 1, and Node.js 26 prints the version.
 
 Always-on context measured by `npm run context` (largest of ts-app, py-app and mixed; mixed here): small 610 of 1,500 tokens, medium 1,060 of 3,000, full 1,310 of 4,500. CLAUDE.md with AGENTS.md is 1,239 characters; the rest is each preset's SessionStart cap.
 

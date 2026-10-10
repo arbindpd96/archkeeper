@@ -148,6 +148,28 @@ describe('check-package', () => {
     expect(result.stderr).toContain('bin --version printed "9.9.9", not 1.0.0');
   });
 
+  it('fails when a chunk the bin imports statically imports a built-in before the version check', () => {
+    const files = {
+      'dist/cli.mjs': BIN.replace('\n', '\nimport { name } from "./shared.mjs";\n'),
+      'dist/shared.mjs': 'import { styleText } from "node:util";\nexport const name = styleText;\n',
+      'scripts/package-files.txt': 'dist/cli.mjs\ndist/shared.mjs\npackage.json\n',
+    };
+    const result = checkPackage(fixture({}, files));
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('dist/shared.mjs imports node:util before the Node.js version check');
+  });
+
+  it('passes a bin that reaches its built-ins only through a dynamic import', () => {
+    const files = {
+      'dist/cli.mjs': `${BIN}if (process.argv.includes('--never')) await import("./main.mjs");\n`,
+      'dist/main.mjs': 'import { styleText } from "node:util";\nexport const main = styleText;\n',
+      'scripts/package-files.txt': 'dist/cli.mjs\ndist/main.mjs\npackage.json\n',
+    };
+    const result = checkPackage(fixture({}, files));
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+  });
+
   it('fails when a hook bundle is over its budget', () => {
     const hook = `export const padding = '${'x'.repeat(200)}';\n`;
     const snapshot = 'dist/cli.mjs\ndist/hooks/stop.mjs\npackage.json\n';
