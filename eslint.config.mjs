@@ -67,6 +67,12 @@ const PROCESS_AND_NETWORK_MODULES = [
 const HOOKS_ARE_STANDALONE =
   'Hooks are self-contained bundles (ADR-0011): import only node: built-ins and ./runtime/.';
 const RUNTIME_HAS_NO_PACKAGES = 'The hook runtime imports no npm package (ADR-0011): use node: built-ins.';
+const HOOKS_STAY_OFFLINE = 'Hooks never touch the network (ADR-0018): no network module and no fetch.';
+const NETWORK_MODULES = ['net', 'http', 'https', 'http2', 'tls', 'dgram', 'dns'].flatMap((name) => [
+  `node:${name}`,
+  name,
+]);
+const offlinePaths = NETWORK_MODULES.map((name) => ({ name, message: HOOKS_STAY_OFFLINE }));
 
 /** Layer boundaries from ADR-0011; test/layer-boundaries.test.ts proves each one with a fixture. */
 const layerBoundaries = [
@@ -117,7 +123,10 @@ const layerBoundaries = [
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: [{ regex: String.raw`^(?!node:|\./runtime/)`, message: HOOKS_ARE_STANDALONE }] },
+        {
+          paths: offlinePaths,
+          patterns: [{ regex: String.raw`^(?!node:|\./runtime/)`, message: HOOKS_ARE_STANDALONE }],
+        },
       ],
     },
   },
@@ -126,7 +135,22 @@ const layerBoundaries = [
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: [{ regex: String.raw`^(?![./]|node:)`, message: RUNTIME_HAS_NO_PACKAGES }] },
+        {
+          paths: offlinePaths,
+          patterns: [{ regex: String.raw`^(?![./]|node:)`, message: RUNTIME_HAS_NO_PACKAGES }],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/hooks/**/*.ts'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        ...['fetch', 'WebSocket', 'XMLHttpRequest', 'EventSource'].map((name) => ({
+          name,
+          message: HOOKS_STAY_OFFLINE,
+        })),
       ],
     },
   },

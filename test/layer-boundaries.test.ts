@@ -55,6 +55,16 @@ describe('layer boundaries (ADR-0011)', () => {
     });
   });
 
+  it.each([
+    ['src/hooks/imports-https.ts', 'no-restricted-imports'],
+    ['src/hooks/runtime/uses-fetch.ts', 'no-restricted-globals'],
+  ])('%s breaks %s, since hooks stay offline', async (file, ruleId) => {
+    expect(await boundaryViolations(file)).toContainEqual({
+      ruleId,
+      message: expect.stringContaining('ADR-0018') as string,
+    });
+  });
+
   it.each(['src/hooks/allowed.ts', 'src/hooks/runtime/allowed.ts'])(
     '%s imports only what its layer allows',
     async (file) => {
