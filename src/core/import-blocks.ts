@@ -2,10 +2,11 @@ import { BRAND, type Brand } from './brand.js';
 import { memoryImports, skipsMemoryFile } from './memory-imports.js';
 import { markerPattern, markerStyle, parseMarker } from './markers.js';
 import type { RenderedEntry, RenderTree } from './render-tree.js';
-import { toLf } from './text.js';
+import { BYTE_ORDER_MARK } from './text.js';
 
 const IMPORT_LINE = /^@\S+$/;
 const KIT_LINE = '<!-- -->';
+const LINE_END = /\r?\n$/;
 const OUTSIDE_START = /^(?:[~/\\]|[A-Za-z]:)/;
 const OUTSIDE_REASON = 'it may name a file outside the project';
 /** Memory files Claude Code loads together with a file the kit writes (reference §2.1), so their imports count too. */
@@ -39,18 +40,23 @@ function resolved(folder: string, target: string): string | undefined {
 }
 
 // The user's own text, where each line of the kit's managed blocks reads as an empty comment, as their markers do.
+// Its byte-order mark and line endings stay, since Claude Code finds frontmatter only before an LF; markers are
+// read as the block parser reads them, after the mark and without the line ending.
 function userText(text: string, brand: Brand): string {
   const pattern = markerPattern(brand);
+  const bom = text.startsWith(BYTE_ORDER_MARK) ? BYTE_ORDER_MARK : '';
   let inBlock = false;
-  const lines = toLf(text)
-    .split('\n')
+  const lines = text
+    .slice(bom.length)
+    .split(/(?<=\n)/)
     .map((line) => {
-      const marker = pattern.test(line) ? parseMarker(line, 'html', brand) : undefined;
+      const bare = line.replace(LINE_END, '');
+      const marker = pattern.test(bare) ? parseMarker(bare, 'html', brand) : undefined;
       const kit = inBlock || marker !== undefined;
       if (marker !== undefined) inBlock = marker.edge === 'begin';
-      return kit ? KIT_LINE : line;
+      return kit ? KIT_LINE + line.slice(bare.length) : line;
     });
-  return lines.join('\n');
+  return bom + lines.join('');
 }
 
 function importsIn(text: string, folder: string, brand: Brand): string[] {

@@ -156,6 +156,14 @@ describe('withoutImportedBlocks', () => {
       "only an indented import after the kit's own block, which Claude Code reads as code",
       `Intro\n${marker('begin', 'agents-import')}\n@AGENTS.md\n${marker('end', 'agents-import')}\n    @AGENTS.md\n`,
     ],
+    [
+      "the import only in the kit's own block, first after a byte-order mark",
+      `\uFEFF${marker('begin', 'agents-import')}\r\n@AGENTS.md\r\n${marker('end', 'agents-import')}\r\n`,
+    ],
+    [
+      'only an import after lone-CR dashes, which Claude Code reads as a rule and an open fence, not frontmatter',
+      '---\r```\r---\r@AGENTS.md\r',
+    ],
   ])('keeps the import block when there is %s', (_name, claude) => {
     expect(keptBlocks(claude === undefined ? {} : { 'CLAUDE.md': claude })).toEqual([
       'agents-import',
