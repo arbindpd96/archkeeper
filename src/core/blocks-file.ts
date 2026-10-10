@@ -36,6 +36,7 @@ export interface BlocksFile {
 
 interface OpenBlock {
   readonly id: string;
+  readonly prefix: string;
   readonly begin: string;
   readonly line: number;
   body: string;
@@ -80,7 +81,7 @@ function openBlock(state: ParseState, marker: Marker, raw: string, line: number)
   }
   if (state.text !== '') state.parts.push({ kind: 'text', text: state.text });
   state.text = '';
-  state.open = { id: marker.id, begin: raw, line, body: '' };
+  state.open = { id: marker.id, prefix: marker.prefix, begin: raw, line, body: '' };
 }
 
 function closeBlock(state: ParseState, marker: Marker, raw: string, line: number): void {
@@ -91,6 +92,14 @@ function closeBlock(state: ParseState, marker: Marker, raw: string, line: number
       path,
       line,
       `closes block "${marker.id}" while block "${open.id}" from line ${String(open.line)} is open`,
+    );
+  }
+  if (open.prefix !== marker.prefix) {
+    const opened = `${open.prefix}:begin on line ${String(open.line)}`;
+    throw malformed(
+      path,
+      line,
+      `closes block "${open.id}" with ${marker.prefix}:end, but it opens with ${opened}`,
     );
   }
   state.parts.push({ kind: 'block', id: open.id, begin: open.begin, body: open.body, end: raw });
@@ -121,8 +130,8 @@ function readLine(state: ParseState, raw: string, line: number): void {
 
 /**
  * Splits a blocks file into user text and managed blocks (ADR-0014). Every line that holds a marker of the brand
- * or a legacy slug, in any case, must be a whole marker line in the file's style, and the markers must pair up
- * with each id once; anything else throws MergeError naming the line, before any write.
+ * or a legacy slug, in any case, must be a whole marker line in the file's style, and the markers must pair up,
+ * each id once and each end under its begin's prefix; anything else throws MergeError naming the line.
  */
 export function parseBlocks(path: string, text: string, brand: MarkerBrand): BlocksFile {
   const bom = text.startsWith(BYTE_ORDER_MARK);
