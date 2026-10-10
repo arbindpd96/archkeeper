@@ -1,6 +1,7 @@
 import type { Brand } from './brand.js';
 import { type BlockEdits, editBlocks } from './blocks-edit.js';
 import { blockParts, type BlocksFile, emptyBlocks, parseBlocks } from './blocks-file.js';
+import { planUnwritableBlocks } from './blocks-unwritable.js';
 import { MergeError } from './errors.js';
 import { contentHash } from './hash.js';
 import type { BlockEntry, Removal } from './lock.js';
@@ -247,32 +248,6 @@ function outcome(job: BlocksJob, file: BlocksFile, decided: Decision[]): PathOut
   };
 }
 
-function unwritable(job: BlocksJob, what: string): PathOutcome {
-  const kept = { removed: [], ...(job.lock === undefined ? {} : { blocks: job.lock }) };
-  const insert = job.entries
-    .filter((entry) => !job.isRemoved(entry.blockId ?? ''))
-    .map((entry) => ({ id: entry.blockId ?? '', body: entry.content }));
-  if (insert.length === 0) return { ops: [], ...kept };
-  const text = editBlocks(
-    emptyBlocks(job.path),
-    { replace: new Map(), remove: new Set(), insert },
-    job.brand.markerPrefix,
-  );
-  const action = sidecarAction(job.sidecar, text, () => false);
-  const sidecar = sidecarPath(job.path, job.brand);
-  const why = `is ${what}, which the kit never writes through`;
-  if (action === 'write') {
-    return {
-      ops: [{ kind: 'sidecar', path: job.path, reason: `${why}; its blocks go to ${sidecar}` }],
-      sidecar: text,
-      ...kept,
-    };
-  }
-  const reason =
-    action === 'same' ? `${sidecar} already holds the kit blocks` : keptSidecarReason(job.path, job.brand);
-  return { ops: [{ kind: 'skip', path: job.path, reason: `${why}; ${reason}` }], ...kept };
-}
-
 /**
  * Plans a blocks file (#22, ADR-0014): the kit owns only the regions between its markers, and every byte outside
  * them stays as it is. Blocks are judged one by one against their base: an unchanged block is replaced in place,
@@ -282,7 +257,8 @@ function unwritable(job: BlocksJob, what: string): PathOutcome {
 export function planBlocks(job: BlocksJob): PathOutcome {
   const { state } = job;
   if (state !== undefined && state.kind !== 'file') {
-    return unwritable(job, state.kind === 'symlink' ? 'a symlink' : 'not a regular text file');
+    const what = state.kind === 'symlink' ? 'a symlink' : 'not a regular text file';
+    return planUnwritableBlocks(job, resolvedLock(job), what);
   }
   const file = state === undefined ? emptyBlocks(job.path) : parseBlocks(job.path, state.content, job.brand);
   return outcome(job, file, decide(job, file));

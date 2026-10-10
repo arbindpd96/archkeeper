@@ -120,6 +120,44 @@ describe('the blocks strategy', () => {
     expect(outcome.ops[0]?.reason).toContain('is a symlink');
   });
 
+  it('records the blocks it offers beside a symlink as pending', () => {
+    const outcome = plan([blockEntry('a', 'A.\n')], { state: { kind: 'symlink' } });
+    expect(outcome.ops).toMatchObject([{ kind: 'sidecar' }]);
+    expect(outcome.blocks?.get('a')).toEqual({ base: null, pending: contentHash('A.\n') });
+  });
+
+  it('rewrites the sidecar it wrote beside a symlink when the kit content changes again', () => {
+    const outcome = plan([blockEntry('a', 'B.\n')], {
+      state: { kind: 'symlink' },
+      sidecar: file(block('a', 'A.\n')),
+      lock: { a: { base: null, pending: contentHash('A.\n') } },
+    });
+    expect(outcome.ops).toMatchObject([{ kind: 'sidecar' }]);
+    expect(outcome.sidecar).toBe(block('a', 'B.\n'));
+    expect(outcome.blocks?.get('a')).toEqual({ base: null, pending: contentHash('B.\n') });
+  });
+
+  it('never overwrites a sidecar beside a symlink that the user edited', () => {
+    const outcome = plan([blockEntry('a', 'B.\n')], {
+      state: { kind: 'symlink' },
+      sidecar: file(`${block('a', 'A.\n')}my notes\n`),
+      lock: { a: { base: null, pending: contentHash('A.\n') } },
+    });
+    expect(outcome.ops).toMatchObject([{ kind: 'skip' }]);
+    expect(outcome.sidecar).toBeUndefined();
+    expect(outcome.blocks?.get('a')).toEqual({ base: null, pending: contentHash('A.\n') });
+  });
+
+  it('counts the blocks beside a symlink as seen once the user deletes their sidecar', () => {
+    const outcome = plan([blockEntry('a', 'A.\n')], {
+      state: { kind: 'symlink' },
+      lock: { a: { base: null, pending: contentHash('A.\n') } },
+    });
+    expect(outcome.ops).toMatchObject([{ kind: 'adopt' }]);
+    expect(outcome.sidecar).toBeUndefined();
+    expect(outcome.blocks?.get('a')).toEqual(base('A.\n'));
+  });
+
   it('removes an unchanged block the kit no longer writes when the current kit could own it', () => {
     const outcome = plan([], {
       state: file(`mine\n${block('old', 'Old.\n')}`),

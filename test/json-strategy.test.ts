@@ -239,4 +239,16 @@ describe('the json strategy', () => {
     expect(outcome.content).toBeUndefined();
     expect(JSON.parse(outcome.sidecar ?? '')).toMatchObject({ $schema: SETTINGS_SCHEMA });
   });
+
+  it('keeps a different sidecar beside a symlink and says how to get the current entries', () => {
+    const outcome = plan({ state: { kind: 'symlink' }, sidecar: file('{ "model": "opus" }\n') });
+    expect(outcome.sidecar).toBeUndefined();
+    expect(outcome.ops).toMatchObject([
+      {
+        kind: 'skip',
+        reason: expect.stringContaining('cannot tell whether the user edited it') as string,
+      },
+    ]);
+    expect(outcome.ops[0]?.reason).toContain('delete it to get the current entries');
+  });
 });
