@@ -129,11 +129,9 @@ function decide(job: BlocksJob, file: BlocksFile): Decision[] {
   const decisions = job.entries.map((entry): Decision => {
     const block = kitBlock(entry, lock.get(entry.blockId ?? ''));
     if (job.isRemoved(block.id)) {
-      return {
-        id: block.id,
-        op: 'respectRemoval',
-        reason: 'the user deleted it earlier; the kit never adds it back',
-      };
+      // Only a lock entry left beside the removal, as a rebuilt lock can hold, still changes the lock.
+      const op = lock.has(block.id) ? 'respectRemoval' : 'skip';
+      return { id: block.id, op, reason: 'the user deleted it earlier; the kit never adds it back' };
     }
     const found = current.get(block.id);
     return found === undefined ? missingBlock(block) : presentBlock(block, found);

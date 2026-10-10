@@ -180,7 +180,10 @@ function mergeEntry(merge: Merge, entry: KitEntry): void {
   const { key } = entry;
   const { job, owned } = merge;
   if (job.isRemoved(key)) {
-    record(merge, 'respectRemoval', key, 'the user deleted it earlier; the kit never adds it back');
+    // Only an owned key left beside the removal, as a rebuilt lock can hold, still changes the lock.
+    const disowned = owned.delete(key);
+    const reason = 'the user deleted it earlier; the kit never adds it back';
+    record(merge, disowned ? 'respectRemoval' : 'skip', key, reason);
     return;
   }
   if (unregisteredHook(merge, key)) return;

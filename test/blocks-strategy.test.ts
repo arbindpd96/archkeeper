@@ -88,10 +88,20 @@ describe('the blocks strategy', () => {
     expect(outcome.blocks?.has('a')).toBe(false);
   });
 
-  it('respects an earlier removal', () => {
+  it('skips a removal recorded earlier, so a later run changes nothing', () => {
     const outcome = plan([blockEntry('a', 'A.\n')], { state: file('mine\n'), removed: ['a'] });
-    expect(outcome.ops[0]?.kind).toBe('respectRemoval');
+    expect(outcome.ops[0]?.kind).toBe('skip');
     expect(outcome.content).toBeUndefined();
+  });
+
+  it('drops a lock entry left beside an earlier removal', () => {
+    const outcome = plan([blockEntry('a', 'A.\n')], {
+      state: file(block('a', 'A.\n')),
+      lock: { a: base('A.\n') },
+      removed: ['a'],
+    });
+    expect(outcome.ops[0]?.kind).toBe('respectRemoval');
+    expect(outcome.blocks?.has('a')).toBe(false);
   });
 
   it('adopts a block found with the kit content on first contact', () => {
