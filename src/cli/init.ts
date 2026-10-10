@@ -79,7 +79,7 @@ function startRun(session: Session, flags: InitFlags): InitRun {
     rootReal,
     brand: context.brand,
     kit: { name: context.brand.npmName, version: info.version },
-    asking: { interactive, yes, prompter: context.prompter, report },
+    asking: { interactive, yes, json, prompter: context.prompter, report },
     json,
   };
 }

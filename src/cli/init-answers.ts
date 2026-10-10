@@ -13,6 +13,8 @@ export interface Asking {
   /** Prompts may run: a terminal, no CI, no --yes and no --json. */
   readonly interactive: boolean;
   readonly yes: boolean;
+  /** --json is set, which runs without questions even on a terminal. */
+  readonly json: boolean;
   readonly prompter: Prompter;
   readonly report: Reporter;
 }
@@ -186,7 +188,9 @@ export async function confirmApply(asking: Asking): Promise<boolean> {
     throw new UsageError({
       file: 'init',
       location: '',
-      problem: 'needs a yes to write, and there is no terminal to ask on',
+      problem: asking.json
+        ? 'needs a yes to write, and --json runs without questions'
+        : 'needs a yes to write, and there is no terminal to ask on',
       hint: 'pass --yes to apply the plan, or --dry-run to see it without writing',
     });
   }
