@@ -87,6 +87,14 @@ your-project/
 
 The budget caps what Claude Code loads in every session: CLAUDE.md with its imports, rules without `paths:`, the descriptions of skills Claude may invoke, and the SessionStart output counted at its cap. CI holds each preset to it, and `init` shows it when it asks for the preset.
 
+## Safety
+
+Two guard hooks check each Bash call and file write before it runs: guard-bash denies destructive commands such as `rm -rf ~`, `git push origin main -f` and `curl … | sh` and asks before irreversible ones, and guard-secrets denies likely secrets in written files and asks before `.env` edits.
+
+Native deny rules back them and still apply when a hook cannot run, such as without Node.js. They match on prefix only, so `Bash(rm -rf:*)` denies every `rm -rf`, safe ones such as `rm -rf dist` included, and `Read(**/.env.*)` also blocks reading `.env.example` with the Read tool.
+
+Options such as `blockNoVerify`, `denyCommands` and `optOut`, and the known limits, are in [docs/guards.md](docs/guards.md).
+
 ## Works with
 
 **Claude Code** gets the full setup: hooks, skills, rules and memory. **Codex, Cursor, Gemini CLI and GitHub Copilot** read the same rules from `AGENTS.md`. archkeeper also composes with workflow tools such as [Superpowers](https://github.com/obra/superpowers) and [Spec Kit](https://github.com/github/spec-kit) instead of replacing them.
