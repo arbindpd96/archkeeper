@@ -13,6 +13,8 @@ const INSTALL_SCRIPTS = ['preinstall', 'install', 'postinstall', 'prepare'];
 // manifest with --release, so local and PR runs allow it.
 const DEV_ONLY_SCRIPTS = new Set(['prepare']);
 const HOOK_BUNDLE = /^dist\/hooks\/[^/]+\.mjs$/;
+// A bundle's static imports, one per line as tsdown writes them; a dynamic import() does not match.
+const STATIC_IMPORT = /^import\s(?:[^'"]*\sfrom\s*)?["']([^"']+)["']/gm;
 const BUDGET_KEYS = [
   ['tarball', 'maxBytes'],
   ['runtimeDependencies', 'max'],
@@ -108,9 +110,32 @@ function measure(pack, runtime, budgets) {
   return { rows, problems };
 }
 
+const binPath = (root, manifest) => path.join(root, Object.values(manifest.bin ?? {})[0] ?? '');
+
+/**
+ * Fails when the bin, or a chunk it imports statically, imports a module that is not a chunk: Node.js links
+ * those before the bin's version check runs, so an export an old Node.js lacks fails with a SyntaxError instead.
+ */
+function binLinkProblems(root, manifest) {
+  const pending = [binPath(root, manifest)];
+  const seen = new Set();
+  const problems = [];
+  while (pending.length > 0) {
+    const file = pending.pop();
+    if (seen.has(file) || !existsSync(file)) continue;
+    seen.add(file);
+    for (const [, specifier] of readFileSync(file, 'utf8').matchAll(STATIC_IMPORT)) {
+      if (specifier.startsWith('.')) pending.push(path.resolve(path.dirname(file), specifier));
+      else problems.push(`${path.relative(root, file)} imports ${specifier}`);
+    }
+  }
+  const fix = 'keep the program behind the dynamic import in src/cli/bin.ts (tsdown.config.mts)';
+  return problems.map((problem) => `${problem} before the Node.js version check; ${fix}`);
+}
+
 /** Runs the built bin with --version and --help, the way a user would after installing. */
 function binProblems(root, manifest) {
-  const bin = path.join(root, Object.values(manifest.bin ?? {})[0] ?? '');
+  const bin = binPath(root, manifest);
   try {
     const version = execFileSync(process.execPath, [bin, '--version'], { encoding: 'utf8' }).trim();
     const help = execFileSync(process.execPath, [bin, '--help'], { encoding: 'utf8' });
@@ -168,6 +193,7 @@ const problems = [
   ...(args.includes('--release') ? publishSettingsProblems(root, manifest) : []),
   ...snapshotProblems(root, files, args.includes('--update')),
   ...budgetProblems,
+  ...binLinkProblems(root, manifest),
   ...binProblems(root, manifest),
   ...(await publintProblems(root)),
 ];

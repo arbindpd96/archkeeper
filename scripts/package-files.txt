@@ -1,7 +1,9 @@
 LICENSE
 README.md
 dist/THIRD_PARTY_LICENSES.md
+dist/brand.mjs
 dist/cli.mjs
+dist/main.mjs
 modules/architecture-map/module.json
 modules/base/files/agents.md
 modules/base/files/claude-code.md

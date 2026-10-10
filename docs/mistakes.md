@@ -4,6 +4,7 @@ Record approaches that failed, so no session repeats them. Newest first.
 
 Format: `- YYYY-MM-DD — <what we tried> → <what went wrong> → <what to do instead>`
 
+- 2026-10-10 — Proving the bin's Node.js version check by faking `process.versions.node` on a new Node.js → the bundle still linked on the new Node.js, while a real Node.js 18 failed to link `styleText` from `node:util` before the check ran → run the built bin on a real old Node.js binary, and keep every `node:` import out of the bin's static graph (code splitting; `npm run package` checks it).
 - 2026-10-10 — Spawning a bare `git` with the project folder as cwd → on Windows libuv looks in the child's working folder before PATH, and on POSIX an empty or `.` PATH entry means that folder, so a `git.exe` or `git` the project ships ran before any yes → find the program in absolute PATH folders outside the project, spawn it by absolute path, and give it only those folders as PATH.
 - 2026-10-10 — Turning off fsmonitor and calling a repository's git config harmless → `git status` still runs a filter's clean or process program from `.git/config` on files whose stat data changed → look for a local filter program first and do not run `git status` when one is set.
 - 2026-10-10 — Keying init's `/new-feature` next step on the feature-memory module being installed → that module writes nothing yet in M3, so the step pointed at a skill no module writes → key it on the planned tree holding the skill itself.
