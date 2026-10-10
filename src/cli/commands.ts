@@ -21,6 +21,6 @@ export const COMMANDS: readonly CommandInfo[] = [
   {
     name: 'init',
     summary: 'Detect the stack, show the plan and set up Claude Code in this project',
-    internal: true,
+    demo: { tape: 'init', section: 'Quick start' },
   },
 ];
