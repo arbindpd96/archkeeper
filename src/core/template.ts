@@ -3,6 +3,7 @@ import { RenderError } from './errors.js';
 import { importProblem } from './imports.js';
 import { markerIn, type MarkerBrand } from './markers.js';
 import { hasControlCharacter, relativePathProblem } from './paths.js';
+import { quoted } from './text.js';
 
 /** The values a template can read, nested in plain objects: `{{brand.hookDir}}` reads `scope.brand.hookDir`. */
 export interface TemplateScope {
@@ -122,7 +123,7 @@ export function toImport(path: string): string {
     relativePathProblem(path) ?? (path.startsWith('~') ? 'starts with ~, the home folder' : privateFile);
   if (problem !== undefined) {
     throw new RenderError({
-      file: JSON.stringify(path),
+      file: quoted(path),
       location: '',
       problem: `cannot be written as an @import: it ${problem}`,
       hint: 'pass a path inside the project with forward slashes, such as docs/api.md',

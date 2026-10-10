@@ -12,6 +12,7 @@ import path from 'node:path';
 import { ApplyError, PathSafetyError } from '../core/errors.js';
 import { assertSafePath, pathSafetyProblem } from '../core/path-safety.js';
 import type { PathState, Snapshot } from '../core/plan-types.js';
+import { quoted } from '../core/text.js';
 
 // Windows has neither flag; there the lstat check before opening is what keeps a symlink from being followed.
 const optional: Partial<typeof constants> = constants;
@@ -48,7 +49,7 @@ function deepestExisting(absolute: string): string {
 
 function refused(relative: string, source: string, problem: string, hint = UNLINK_HINT): PathSafetyError {
   return new PathSafetyError({
-    file: JSON.stringify(relative),
+    file: quoted(relative),
     location: source,
     problem: `is refused as a write or delete target: it ${problem}`,
     hint,

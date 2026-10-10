@@ -1,5 +1,6 @@
 import { PathSafetyError } from './errors.js';
 import { relativePathProblem, targetPathProblem } from './paths.js';
+import { quoted } from './text.js';
 
 const UNC_PREFIX = /^(?:\\\\|\/\/)/;
 // Windows opens `.git` by its 8.3 short name too, such as GIT~1.
@@ -36,7 +37,7 @@ export function assertSafePath(path: string, source: string): void {
   const problem = pathSafetyProblem(path);
   if (problem === undefined) return;
   throw new PathSafetyError({
-    file: JSON.stringify(path),
+    file: quoted(path),
     location: source,
     problem: `is refused as a write or delete target: it ${problem}`,
     hint:

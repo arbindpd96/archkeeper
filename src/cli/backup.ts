@@ -14,7 +14,7 @@ import type { Brand } from '../core/brand.js';
 import { PathSafetyError } from '../core/errors.js';
 import { exactHash } from '../core/hash.js';
 import type { PathState } from '../core/plan-types.js';
-import { compareText, toLf } from '../core/text.js';
+import { compareText, quoted, toLf } from '../core/text.js';
 import { ensureFolder, writeAtomically } from './atomic-files.js';
 import { baseFolder, compressed } from './blob-store.js';
 import { confinedPath, lstatOrUndefined, readConfined, SAFE_READ } from './project-files.js';
@@ -49,7 +49,7 @@ export function backupsFolder(brand: Brand): string {
 }
 
 function stateRefused(relative: string, problem: string, hint: string): PathSafetyError {
-  return new PathSafetyError({ file: JSON.stringify(relative), location: STATE_SOURCE, problem, hint });
+  return new PathSafetyError({ file: quoted(relative), location: STATE_SOURCE, problem, hint });
 }
 
 function stateFolders(brand: Brand): string[] {

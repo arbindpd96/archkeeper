@@ -10,6 +10,24 @@ export function compareText(left: string, right: string): number {
  */
 export const UNPRINTABLE = String.raw`\p{Cc}\u2028\u2029\u200E\u200F\u202A-\u202E\u2066-\u2069`;
 
+const UNPRINTABLE_CHARACTER = new RegExp(`[${UNPRINTABLE}]`, 'gu');
+
+/** Writes each {@link UNPRINTABLE} character as a JSON `\u` escape, so the text prints as one plain line. */
+export function escapeUnprintable(text: string): string {
+  return text.replace(UNPRINTABLE_CHARACTER, (character) => {
+    const code = character.charCodeAt(0).toString(16).padStart(4, '0');
+    return `\\u${code}`;
+  });
+}
+
+/**
+ * Quotes a path, key or value read from a file or the lock for a message: JSON quoting with every
+ * {@link UNPRINTABLE} character escaped, so a crafted value cannot move, erase or disguise what a terminal prints.
+ */
+export function quoted(text: string): string {
+  return escapeUnprintable(JSON.stringify(text));
+}
+
 /** The text that starts a file with a byte-order mark. */
 export const BYTE_ORDER_MARK = String.fromCodePoint(0xfeff);
 

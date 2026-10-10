@@ -19,7 +19,7 @@ import { foldedPath } from './paths.js';
 import type { Ownable, PathOutcome, PathState, PlanOp, ScriptState, Snapshot } from './plan-types.js';
 import type { RenderedEntry, RenderTree, Strategy } from './render-tree.js';
 import { sidecarPath } from './sidecar.js';
-import { compareText } from './text.js';
+import { compareText, quoted } from './text.js';
 
 /** What a plan depends on besides the tree, the snapshot and the lock. */
 export interface PlanContext {
@@ -114,7 +114,7 @@ function assertPlannable(path: string, rendered: boolean, brand: Brand): void {
   const folded = foldedPath(path);
   if (rendered || (folded !== state && !folded.startsWith(`${state}/`))) return;
   throw new PathSafetyError({
-    file: JSON.stringify(path),
+    file: quoted(path),
     location: 'listed in the lock',
     problem: `is refused: it is inside ${brand.stateDir}, which only the kit manages`,
     hint: 'restore lock.json from git; no lock entry names the kit state folder',

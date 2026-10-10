@@ -60,6 +60,21 @@ describe('assertSafePath', () => {
     expect(refuse).toThrow('restore lock.json from git');
   });
 
+  it('escapes control characters and bidirectional overrides in the path it echoes', () => {
+    const csi = String.fromCharCode(0x9b);
+    const override = String.fromCharCode(0x202e);
+    const message = ((): string => {
+      try {
+        assertSafePath(`docs/${csi}31mRED${override}txt.md`, 'listed in the lock');
+      } catch (error) {
+        return (error as Error).message;
+      }
+      return 'not refused';
+    })();
+    expect(message).toMatch(/^"docs\/\\u009b31mRED\\u202etxt\.md": listed in the lock/);
+    expect(message.includes(csi) || message.includes(override)).toBe(false);
+  });
+
   it('accepts a safe path', () => {
     expect(() => {
       assertSafePath('docs/notes.md', 'rendered by the kit');
