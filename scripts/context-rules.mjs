@@ -9,15 +9,25 @@ const MAX_IMPORT_DEPTH = 4;
 const FENCE = /^ {0,3}(?:`{3,}|~{3,})/;
 const COMMENT_LINE = /^\s*<!--.*-->\s*$/;
 const CODE_SPAN = /`[^`]*`/g;
-const IMPORT = /(?:^|\s)@((?:\\ |[^\s])+)/g;
+// Claude Code reads an `@path` after a space or right after inline markdown, such as **@AGENTS.md**, never inside
+// a word such as an email address, and the path ends where that markdown closes (reference §2.1).
+const IMPORT = /(?<![\w@])@((?:\\ |[^\s])+)/g;
+const MARKDOWN_CLOSE = /[*_~)\],.;:!?]+$/;
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/;
+const MISSING = new Set(['ENOENT', 'ENOTDIR']);
+
+/** Returns `fallback` for a path that does not exist and rethrows any other error, which must not lower a count. */
+function absentOr(error, fallback) {
+  if (MISSING.has(error?.code)) return fallback;
+  throw error;
+}
 
 /** Reads a regular file as text, or returns undefined when it is absent, a link or a folder. */
 function readText(file) {
   try {
     return lstatSync(file).isFile() ? readFileSync(file, 'utf8') : undefined;
-  } catch {
-    return undefined;
+  } catch (error) {
+    return absentOr(error, undefined);
   }
 }
 
@@ -29,7 +39,7 @@ function loadedText(text) {
     .join('\n');
 }
 
-/** The `@path` imports of Markdown text, outside code fences and code spans, with escaped spaces read back. */
+/** The `@path` imports of Markdown text (after a space or inline markdown), outside code fences and spans. */
 export function importsOf(text) {
   const found = [];
   let fenced = false;
@@ -37,7 +47,7 @@ export function importsOf(text) {
     if (FENCE.test(line)) fenced = !fenced;
     else if (!fenced) {
       for (const match of line.replace(CODE_SPAN, '').matchAll(IMPORT)) {
-        found.push(match[1].replaceAll('\\ ', ' '));
+        found.push(match[1].replace(MARKDOWN_CLOSE, '').replaceAll('\\ ', ' '));
       }
     }
   }
@@ -71,8 +81,8 @@ function markdownFiles(folder) {
   let entries;
   try {
     entries = readdirSync(folder, { withFileTypes: true, recursive: true });
-  } catch {
-    return [];
+  } catch (error) {
+    return absentOr(error, []);
   }
   return entries
     .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
