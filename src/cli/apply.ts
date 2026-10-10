@@ -198,22 +198,22 @@ function pruneBackups(rootReal: string, brand: Brand, current: string): string[]
 export function applyPlan(root: string, plan: Plan, brand: Brand = BRAND): ApplyResult {
   const rootReal = realpathSync.native(root);
   assertRealStateFolders(rootReal, brand);
-  const pending = changes(rootReal, plan, brand);
-  if (pending.length === 0) return { changed: false, warnings: [] };
-  const found = beforeChanges(brand, () => currentPaths(pending));
-  refuseUnwritable(found);
-  refuseChanged(found, plan.expected);
-  const backup = beforeChanges(brand, () => backUp(rootReal, found, brand));
+  const planned = changes(rootReal, plan, brand);
+  if (planned.length === 0) return { changed: false, warnings: [] };
+  const current = beforeChanges(brand, () => currentPaths(planned));
+  refuseUnwritable(current);
+  refuseChanged(current, plan.expected);
+  const backup = beforeChanges(brand, () => backUp(rootReal, current, brand));
   const created: string[] = [];
   let reached = 0;
   try {
-    for (const [index, change] of pending.entries()) {
+    for (const [index, change] of planned.entries()) {
       reached = index + 1;
       applyChange(change, backup.paths[index], created);
     }
   } catch (error) {
     const unrestored = rollBack(backup.paths.slice(0, reached), created);
-    throw failure(error, pending[reached - 1], backup, unrestored);
+    throw failure(error, planned[reached - 1], backup, unrestored);
   }
   const warnings = [
     ...pruneBlobs(rootReal, plan.lock, brand),
