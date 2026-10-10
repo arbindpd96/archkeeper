@@ -101,6 +101,40 @@ describe('init beside an AGENTS.md linked elsewhere', () => {
       expect(result.stderr).toContain('AGENTS.md resolves outside the project');
     },
   );
+
+  it.skipIf(!canSymlink())(
+    'imports no AGENTS.md linked to a private file inside the project, such as .env, and says so',
+    async () => {
+      const { dir } = fixtureCopy('ts-app');
+      writeFiles(dir, { '.env': 'API_TOKEN=from-the-env-file\n' });
+      symlinkSync('.env', path.join(dir, 'AGENTS.md'));
+      const result = await runInit(dir, ['--yes']);
+      expect(result.code).toBe(2);
+      expect(read(dir, 'CLAUDE.md')).not.toContain('@AGENTS.md');
+      expect(result.stderr).toContain('since AGENTS.md is a link');
+      expect(read(dir, '.env')).toBe('API_TOKEN=from-the-env-file\n');
+    },
+  );
+});
+
+describe('init beside a CLAUDE.md linked to AGENTS.md', () => {
+  it.skipIf(!canSymlink())(
+    'leaves the links alone, adds the agent rules and keeps AGENTS.md from importing itself',
+    async () => {
+      const { dir } = fixtureCopy('ts-app');
+      writeFiles(dir, { 'AGENTS.md': 'Shared rules.\n' });
+      symlinkSync('AGENTS.md', path.join(dir, 'CLAUDE.md'));
+      const result = await runInit(dir, ['--yes']);
+      expect(result.code).toBe(2);
+      expect(result.stderr).toContain('CLAUDE.md is a link to AGENTS.md, which it loads already');
+      const agents = read(dir, 'AGENTS.md');
+      expect(agents.startsWith('Shared rules.\n')).toBe(true);
+      expect(agents).toContain(`<!-- ${TEST_BRAND.markerPrefix}:begin agent-rules -->`);
+      const sidecar = read(dir, `CLAUDE.md${TEST_BRAND.sidecarSuffix}`);
+      expect(sidecar).toContain(`<!-- ${TEST_BRAND.markerPrefix}:begin claude-code -->`);
+      expect(sidecar).not.toContain('@AGENTS.md');
+    },
+  );
 });
 
 describe('init on Windows-shaped projects', () => {

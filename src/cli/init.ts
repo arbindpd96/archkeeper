@@ -92,32 +92,41 @@ function memoryText(rootReal: string, file: string): string | undefined {
   return textAt(rootReal, file);
 }
 
-// Claude Code follows a link, so AGENTS.md linked to a private file elsewhere would load it in every session; render
-// refuses an outside @ import in a value the same way. A link whose target cannot be resolved counts as outside.
-function resolvesOutside(rootReal: string, target: string): boolean {
-  const absolute = path.join(rootReal, ...target.split('/'));
-  if (lstatOrUndefined(absolute) === undefined) return false;
+function realRelative(rootReal: string, file: string): string | undefined {
   try {
-    const relative = path.relative(rootReal, realpathSync.native(absolute));
-    return relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative);
+    return path.relative(rootReal, realpathSync.native(path.join(rootReal, ...file.split('/'))));
   } catch {
-    return true;
+    return undefined;
   }
 }
 
+// Claude Code follows a link, so AGENTS.md linked to .env or to a file elsewhere would load it in every session
+// with no Read deny rule applying: the kit imports through no link, as it writes through none, and a link it cannot
+// resolve counts as outside. A CLAUDE.md linked to AGENTS.md loads it already; the import would be AGENTS.md's own.
+function importRefusal(rootReal: string, target: string, file: string): string | undefined {
+  const stats = lstatOrUndefined(path.join(rootReal, ...target.split('/')));
+  if (stats === undefined) return undefined;
+  const fix = `make ${target} a regular file in the project to have it imported`;
+  const real = realRelative(rootReal, target);
+  if (real === undefined || real === '..' || real.startsWith(`..${path.sep}`) || path.isAbsolute(real)) {
+    return `${target} resolves outside the project (${fix})`;
+  }
+  if (stats.isSymbolicLink()) return `${target} is a link (${fix})`;
+  return realRelative(rootReal, file) === real
+    ? `${file} is a link to ${target}, which it loads already`
+    : undefined;
+}
+
 // The kit's import blocks, left out where the user's own memory files already make the import or where the
-// imported file resolves outside the project.
+// imported file is a link or resolves outside the project.
 function treeToWrite(run: InitRun, rendered: RenderTree): RenderTree {
   const read = (file: string): string | undefined => memoryText(run.rootReal, file);
   const imported = withoutImportedBlocks(rendered, read, run.brand);
-  const { tree, refused } = withoutRefusedImports(imported, (target) =>
-    resolvesOutside(run.rootReal, target),
+  const { tree, refused } = withoutRefusedImports(imported, (target, file) =>
+    importRefusal(run.rootReal, target, file),
   );
-  for (const { file, target } of refused) {
-    run.asking.report.warn(
-      `${file}: the kit leaves out its @${target} import, since ${target} resolves outside the project ` +
-        `(make ${target} a regular file in the project to have it imported)`,
-    );
+  for (const { file, target, reason } of refused) {
+    run.asking.report.warn(`${file}: the kit leaves out its @${target} import, since ${reason}`);
   }
   return tree;
 }
