@@ -3,6 +3,7 @@ import type { ProjectConfig } from '../core/config-schema.js';
 import { UsageError } from '../core/errors.js';
 import type { Catalog } from '../core/loader.js';
 import { type Stack, STACKS } from '../core/schema-parts.js';
+import { quoted } from '../core/text.js';
 import type { GitState } from './git-state.js';
 import type { Choice, Prompter } from './prompts.js';
 import type { Reporter } from './init-report.js';
@@ -24,11 +25,11 @@ export function stackFlag(value: string | undefined): Stack[] | undefined {
   if (value.trim() === 'none') return [];
   const names = value.split(',').map((name) => name.trim());
   const unknown = names.find((name) => !(STACKS as readonly string[]).includes(name));
-  if (unknown !== undefined || names.length === 0) {
+  if (unknown !== undefined) {
     throw new UsageError({
       file: '--stack',
       location: '',
-      problem: `"${unknown ?? ''}" is not a stack`,
+      problem: `${quoted(unknown)} is not a stack`,
       hint: STACK_HINT,
     });
   }
@@ -56,7 +57,7 @@ export function moduleChanges(
       throw new UsageError({
         file: '--modules',
         location: '',
-        problem: `"${id}" is not a module`,
+        problem: `${quoted(id)} is not a module`,
         hint: `use +id or -id with one of ${known}`,
       });
     }
@@ -74,7 +75,7 @@ export function checkInitFlags(
 ): void {
   const names = catalog.presets.map((preset) => preset.name);
   if (flags.preset !== undefined && !names.includes(flags.preset)) {
-    const problem = `"${flags.preset}" is not a preset`;
+    const problem = `${quoted(flags.preset)} is not a preset`;
     throw new UsageError({
       file: '--preset',
       location: '',
