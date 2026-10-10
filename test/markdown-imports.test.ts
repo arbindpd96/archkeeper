@@ -5,10 +5,32 @@ import { markdownImports } from '../src/core/markdown-imports.js';
 // without GFM), and whether the kit's reader counts that import. The reader may miss an import, which costs a
 // redundant import line, but must never count one Claude Code does not read, which would leave AGENTS.md out.
 const ROWS: readonly (readonly [text: string, claudeImports: boolean, counted: boolean])[] = [
+  ['- Run:\n    ```bash\n    @AGENTS.md\n    ```', false, false],
+  ['- Run:\n    ```bash\n    npm test\n    ```\n\n@AGENTS.md', true, true],
+  ['1. Install:\n   ```bash\n   npm ci\n   ```\n2. Read @AGENTS.md', true, true],
+  ['- item\n<div>\n@AGENTS.md', false, false],
+  ['- item\n\n  <details>\n  @AGENTS.md', false, false],
+  ['-     @AGENTS.md', false, false],
+  ['- ```\n  @AGENTS.md\n  ```', false, false],
+  ['> ```\n> @AGENTS.md\n> ```', false, false],
+  ['> quote\n> ```\n@AGENTS.md\n```', false, false],
+  ['> Read\n@AGENTS.md', true, true],
+  ['> @AGENTS.md', true, true],
+  ['Title\n=====\n    @AGENTS.md', false, false],
+  ['text\n***\n=\n    @AGENTS.md', false, false],
+  ['[rules]: @AGENTS.md', false, false],
+  ['[rules]:\n@AGENTS.md', false, false],
+  ['[rules]: x\n\n@AGENTS.md', true, true],
   ['![ @AGENTS.md](x)', false, false],
   ['[x]( @AGENTS.md )', false, false],
   ['<span>@AGENTS.md</span> is the import', true, true],
   ['<a title= @AGENTS.md>', false, false],
+  ['<!-- x --> **@AGENTS.md**', false, false],
+  ['<!--\n@AGENTS.md\n-->', false, false],
+  ['<!--\nnote\n--> @AGENTS.md', true, true],
+  ['<p\n\n@AGENTS.md', false, false],
+  ['<pre>\n\n@AGENTS.md\n</pre>', false, false],
+  ['<?php\n\n@AGENTS.md ?>', false, false],
   ['*<!-->*@AGENTS.md*', false, false],
   ['__``_``@AGENTS.md', false, false],
   ['**@AGENTS.md\\ **', false, false],
@@ -16,6 +38,13 @@ const ROWS: readonly (readonly [text: string, claudeImports: boolean, counted: b
   ['Use `foo\n@AGENTS.md bar`', false, false],
   ['\\`` @AGENTS.md `', false, false],
   ['@\\ AGENTS.md', false, false],
+  ['- see ` @AGENTS.md ` x', true, false],
+  ['- [ref]: x\n  @AGENTS.md', true, false],
+  ['* d\n[a]:\n>@AGENTS.md', false, false],
+  ['n\n***\n=\n    _@AGENTS.md_', false, false],
+  ['1. a\nx y~~~\n>\n    @AGENTS.md', false, false],
+  ['@AGENTS.md\n```', true, false],
+  ['@AGENTS.md\n\n```', true, true],
 ];
 
 // Text a hostile repository could commit to keep init busy; each must take time linear in its length.
@@ -29,6 +58,8 @@ const ADVERSARIAL: readonly (readonly [name: string, text: string])[] = [
   ['unclosed images', '![a'.repeat(70_000)],
   ['unclosed tag quotes', '<a b="'.repeat(35_000)],
   ['emphasis openers', '**@a** '.repeat(30_000)],
+  ['list items', '- a\n'.repeat(50_000)],
+  ['lazy quote lines', `> a\n${'b\n'.repeat(100_000)}`],
 ];
 
 describe('markdownImports', () => {
