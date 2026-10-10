@@ -44,6 +44,8 @@ export interface Planned {
    * lock when its text changes and missing base blobs. Any of them needs a yes (#27).
    */
   readonly written: readonly string[];
+  /** The optOut entries the lock does not record yet, as `<module>: <entry>`, which init warns about once. */
+  readonly optedOut: readonly string[];
 }
 
 /** A project file's text, or undefined when it is absent or not a regular text file. */
