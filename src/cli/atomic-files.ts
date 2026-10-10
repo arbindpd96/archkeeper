@@ -13,6 +13,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import path from 'node:path';
+import { PathSafetyError } from '../core/errors.js';
 import { lstatOrUndefined, NO_FOLLOW } from './project-files.js';
 
 const EXCLUSIVE_WRITE = constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | NO_FOLLOW;
@@ -69,11 +70,18 @@ export function writeAtomically(absolute: string, data: Buffer | string, mode?: 
   }
 }
 
-/** Deletes a regular file; a symlink, folder or anything else is refused, so a delete never follows a link. */
+/** Deletes a regular file; anything else, such as a symlink, throws PathSafetyError, so no delete follows a link. */
 export function removeFile(absolute: string): void {
   const stats = lstatOrUndefined(absolute);
   if (stats === undefined) return;
-  if (!stats.isFile()) throw new Error(`${absolute} is not a regular file, so the kit does not delete it.`);
+  if (!stats.isFile()) {
+    throw new PathSafetyError({
+      file: absolute,
+      location: '',
+      problem: 'is not a regular file, so the kit does not delete it',
+      hint: 'the kit deletes only regular files; if this one should go, remove it yourself and run again',
+    });
+  }
   unlinkSync(absolute);
 }
 

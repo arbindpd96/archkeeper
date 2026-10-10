@@ -66,7 +66,7 @@ export class PathSafetyError extends ArchkeeperError {
   override readonly name = 'PathSafetyError';
 }
 
-/** A lock the kit cannot use: invalid, or written by a newer lockfile version or kit (#24). */
+/** A lock or base blob the kit cannot use: invalid, or written by a newer lockfile version or kit (#24). */
 export class LockError extends ArchkeeperError {
   override readonly name = 'LockError';
 }

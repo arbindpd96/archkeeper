@@ -48,7 +48,7 @@ function describeFile(dir: string, file: string): string {
   if (lstatSync(absolute).isSymbolicLink()) return `-> ${readlinkSync(absolute)}\n`;
   const name = path.basename(file);
   if (file.startsWith(`${TEST_BRAND.stateDir}/base/`)) {
-    return `<gzip blob of ${String(readBlob(name, readFileSync(absolute)).length)} characters>\n`;
+    return `<gzip blob of ${String(readBlob(name, readFileSync(absolute), TEST_BRAND).length)} characters>\n`;
   }
   // Snapshots are stored with LF on every OS, so a CR the kit keeps or writes must show as text.
   return readFileSync(absolute, 'utf8').replaceAll('\r', '<CR>');

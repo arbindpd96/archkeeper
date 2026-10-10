@@ -20,6 +20,7 @@ import { ApplyError, LockError, PathSafetyError } from '../src/core/errors.js';
 import { contentHash } from '../src/core/hash.js';
 import { canSymlink, tempDir, writeFiles } from './helpers.js';
 import { filesUnder, fixtureTree, OPTIONS } from './install-helpers.js';
+import { TEST_BRAND } from './kit-fixtures.js';
 
 const LINKS = canSymlink();
 const UNREADABLE = process.platform !== 'win32' && process.getuid?.() !== 0;
@@ -101,7 +102,7 @@ describe('write targets on disk (#23)', () => {
     expect(readFileSync(path.join(outside, 'keep.md'), 'utf8')).toBe('keep me\n');
     expect(() => {
       removeFile(rule);
-    }).toThrow('not a regular file');
+    }).toThrow(PathSafetyError);
   });
 
   it.runIf(LINKS)('refuses a lock that is a symlink', () => {
@@ -199,13 +200,23 @@ describe('base blobs', () => {
     expect(readBlob(contentHash(content), gzip)).toBe(content);
   });
 
-  it('refuse a blob that does not hash to its name', () => {
-    expect(() => readBlob(contentHash('a\n'), compressed('b\n'))).toThrow('does not hash to its name');
+  it('refuse a blob that does not hash to its name, naming the blob and the fix', () => {
+    const name = contentHash('a\n');
+    const read = (): unknown => readBlob(name, compressed('b\n'), TEST_BRAND);
+    expect(read).toThrow(LockError);
+    expect(read).toThrow(`.acmekit/base/${name}: is not a blob the kit wrote: it does not hash to its name`);
+    expect(read).toThrow('Try: restore .acmekit/base/ from git');
   });
 
   it('refuse a gzip bomb instead of exhausting memory', () => {
     const bomb = gzipSync(Buffer.alloc(MAX_BLOB_BYTES + 1));
     expect(bomb.length).toBeLessThan(5000);
-    expect(() => readBlob(contentHash('x'), bomb)).toThrow(RangeError);
+    const read = (): unknown => readBlob(contentHash('x'), bomb, TEST_BRAND);
+    expect(read).toThrow(LockError);
+    expect(read).toThrow('it decompresses to more than 1 MiB');
+  });
+
+  it('refuse a blob that is not gzip', () => {
+    expect(() => readBlob(contentHash('x'), Buffer.from('x'), TEST_BRAND)).toThrow('it is not valid gzip');
   });
 });
