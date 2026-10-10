@@ -5,6 +5,7 @@ import { detectStack } from '../core/detect.js';
 import { type ProblemReport, UsageError } from '../core/errors.js';
 import { withoutImportedBlocks, withoutRefusedImports } from '../core/import-blocks.js';
 import { resolveOptions } from '../core/options.js';
+import { optOutOwnable } from '../core/opt-out.js';
 import { summarizePlan } from '../core/plan-summary.js';
 import { projectValues } from '../core/project-values.js';
 import { render, type RenderTree } from '../core/render.js';
@@ -28,7 +29,8 @@ import { plannedWrites } from './apply.js';
 import { applyPlanned, finishDryRun } from './init-finish.js';
 import { detectedLines, planLines, reporterFor, stateLines } from './init-report.js';
 import { type InitFlags, type InitRun, type Planned, textAt } from './init-run.js';
-import { planProject } from './install.js';
+import { optOutsOf, unknownOptOutReports, unrecordedOptOuts } from './init-opt-out.js';
+import { planProject, previousLock } from './install.js';
 import { lstatOrUndefined } from './project-files.js';
 import { projectView } from './project-view.js';
 
@@ -160,13 +162,17 @@ function planInit(
   warnAll(run, [...next.warnings, ...warnings]);
   const { add, remove } = next.config.modules;
   const { modules: kits } = resolveModules({ preset, stack, add, remove, options }, catalog, run.brand);
+  warnAll(run, unknownOptOutReports(kits, options, run.brand));
   const rendered = render(kits, { stack, options, values: projectValues(profile, stack) }, run.brand);
   const tree = treeToWrite(run, rendered);
   const modules = kits.map((kit) => kit.manifest.id);
-  const installPlan = planProject(run.rootReal, tree, { kit: run.kit, modules, brand: run.brand });
+  const optOuts = optOutsOf(kits, options, run.brand);
+  const ownable = optOutOwnable(optOuts);
+  const installPlan = planProject(run.rootReal, tree, { kit: run.kit, modules, brand: run.brand, ownable });
+  const optedOut = unrecordedOptOuts(optOuts, previousLock(run.rootReal, run.kit, run.brand));
   const plan = withConfig(installPlan, next, existing, run.brand);
   const written = plannedWrites(run.rootReal, plan, run.brand);
-  return { profile, existing, next, stack, modules, tree, plan, written };
+  return { profile, existing, next, stack, modules, tree, plan, written, optedOut };
 }
 
 function showPlan(run: InitRun, planned: Planned): void {
@@ -183,6 +189,12 @@ function showPlan(run: InitRun, planned: Planned): void {
     run.asking.report.warn(
       `modules.remove in ${configPath(run.brand)} leaves out ${guards.join(', ')}, so the guards against ` +
         'dangerous commands and leaked secrets are off for everyone who runs init with this config',
+    );
+  }
+  if (planned.optedOut.length > 0) {
+    run.asking.report.warn(
+      `optOut in ${configPath(run.brand)} leaves out ${planned.optedOut.join(', ')}, so these protections are ` +
+        'off for everyone who runs init with this config',
     );
   }
 }
@@ -204,7 +216,8 @@ function detect(run: InitRun): StackProfile {
 
 // Only a plan that writes asks: about guards the config leaves out, a folder git cannot undo, then for the yes.
 async function goAhead(run: InitRun, planned: Planned): Promise<boolean> {
-  if (!(await goOnWithoutGuards(run.asking, guardsLeftOut(planned.next.config)))) return false;
+  const leftOut = [...guardsLeftOut(planned.next.config), ...planned.optedOut];
+  if (!(await goOnWithoutGuards(run.asking, leftOut))) return false;
   const git = run.session.context.gitState(run.rootReal);
   return (await goOnWithoutGit(run.asking, git, run.root)) && confirmApply(run.asking);
 }

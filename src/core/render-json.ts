@@ -17,7 +17,8 @@ type Server = ModuleManifest['mcpServers'][number];
 
 // Claude Code substitutes this placeholder in exec-form args, so a project path with spaces needs no quoting.
 const PROJECT_DIR = '${CLAUDE_PROJECT_DIR}';
-const PERMISSION_LISTS = ['allow', 'ask', 'deny'] as const;
+/** The permission lists of `.claude/settings.json`, in the order the kit writes them. */
+export const PERMISSION_LISTS = ['allow', 'ask', 'deny'] as const;
 
 /** Where a hook bundle such as `dist/hooks/guard-bash.mjs` is installed in the project (ADR-0015). */
 export function hookScriptPath(script: string, brand: Brand): string {
@@ -27,6 +28,16 @@ export function hookScriptPath(script: string, brand: Brand): string {
 /** The exec-form argument that runs an installed hook script, which also identifies the hook's entry (ADR-0014). */
 export function hookArgument(installedPath: string): string {
   return `${PROJECT_DIR}/${installedPath}`;
+}
+
+/** The owned key of a hook registration in `.claude/settings.json`: its event and installed script (ADR-0014). */
+export function hookKey(event: string, installedPath: string): string {
+  return `hooks.${event} ${installedPath}`;
+}
+
+/** The owned key of a permission rule in `.claude/settings.json`: its list and exact string (ADR-0014). */
+export function permissionKey(list: string, rule: string): string {
+  return `permissions.${list} ${rule}`;
 }
 
 /** Serialises a JSON value with two-space indentation and a trailing newline. */
@@ -66,14 +77,14 @@ export function settingsPart(manifest: ModuleManifest, brand: Brand): JsonPart {
     const registered = manifest.hooks.filter((hook) => hook.event === event);
     if (registered.length === 0) continue;
     hooks[event] = registered.map((hook) => hookGroup(hook, brand));
-    keys.push(...registered.map((hook) => `hooks.${event} ${hookScriptPath(hook.script, brand)}`));
+    keys.push(...registered.map((hook) => hookKey(event, hookScriptPath(hook.script, brand))));
   }
   const permissions: Record<string, readonly string[]> = {};
   for (const list of PERMISSION_LISTS) {
     const rules = manifest.permissions[list] ?? [];
     if (rules.length === 0) continue;
     permissions[list] = rules;
-    keys.push(...rules.map((rule) => `permissions.${list} ${rule}`));
+    keys.push(...rules.map((rule) => permissionKey(list, rule)));
   }
   const value = withoutUndefined({
     hooks: Object.keys(hooks).length > 0 ? hooks : undefined,

@@ -3,6 +3,7 @@ import { RenderError } from './errors.js';
 import { type KitModule, templatePath } from './loader.js';
 import { GITIGNORE_FILE, ignoreLineProblem, MCP_FILE, type ModuleManifest } from './manifest-schema.js';
 import { moduleOptions, type ResolvedOptions } from './options.js';
+import { withoutOptedOut } from './opt-out.js';
 import { relativePathProblem, targetPathProblem } from './paths.js';
 import { hookScriptPath, type JsonPart, mcpPart, settingsPart, toJson } from './render-json.js';
 import { collectEntries, type Draft, type RenderTree } from './render-tree.js';
@@ -141,7 +142,8 @@ function jsonDrafts(job: ModuleRender, file: ManifestFile, path: string): Draft[
     module: manifest.id,
     content: asLfText(source(job.kit, script)),
   }));
-  return [jsonDraft(manifest.id, path, settingsPart(manifest, job.brand)), ...scripts];
+  const settings = settingsPart(manifest, job.brand);
+  return settings.keys.length === 0 ? scripts : [jsonDraft(manifest.id, path, settings), ...scripts];
 }
 
 function fileDrafts(job: ModuleRender, file: ManifestFile, index: number): Draft[] {
@@ -157,11 +159,13 @@ function fileDrafts(job: ModuleRender, file: ManifestFile, index: number): Draft
   }
 }
 
+// The rules and hooks a project's optOut lists are left out, so the kit never writes them (ADR-0014).
 function moduleDrafts(job: ModuleRender): Draft[] {
-  const { manifest } = job.kit;
-  const options = moduleOptions(job.context.options, manifest);
+  const options = moduleOptions(job.context.options, job.kit.manifest);
+  const manifest = withoutOptedOut(job.kit.manifest, options);
+  const scoped = { ...job, kit: { ...job.kit, manifest } };
   return manifest.files.flatMap((file, index) =>
-    whenMismatch(file.when, job.context.stack, options) === undefined ? fileDrafts(job, file, index) : [],
+    whenMismatch(file.when, job.context.stack, options) === undefined ? fileDrafts(scoped, file, index) : [],
   );
 }
 

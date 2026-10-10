@@ -77,6 +77,16 @@ function blobNames(rootReal: string, brand: Brand): Set<string> {
 }
 
 /**
+ * The project's lock as the last apply left it, or undefined when there is none; for a lock a git merge left with
+ * conflict markers, its first readable side. Throws as planning does for a lock the kit cannot read.
+ */
+export function previousLock(root: string, kit: KitId, brand: Brand = BRAND): Lock | undefined {
+  const { read } = readProjectLock(realpathSync.native(root), kit, brand);
+  if (read === undefined) return undefined;
+  return read.conflicted ? read.sides[0] : read.lock;
+}
+
+/**
  * Plans an install against the project at `root` without writing anything: reads the lock (rebuilding one that
  * a git merge left with conflict markers), takes a snapshot of every path the plan needs, and plans (#21). The
  * plan's `expected` also records the lock as read, so an apply refuses a lock that changed since, such as one a
