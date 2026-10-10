@@ -3,6 +3,7 @@ import path from 'node:path';
 import { type Answer, type HookInput, noAnswer, permission, stringField } from '../io.js';
 import type { HookContext, HookModule, Sample } from '../launch.js';
 import { booleanOption, configFile, readModuleOptions, stringListOption } from '../options.js';
+import { realOrUndefined } from '../project.js';
 import { parseCommands } from '../shell/commands.js';
 import { ShellSyntaxError } from '../shell/syntax.js';
 import { pathContext } from './dangerous-paths.js';
@@ -51,12 +52,14 @@ export function judgeCommand(command: string, context: JudgeContext): Verdict | 
   }
 }
 
+// A relative path starts from the session's `cwd`; home and the project are also protected under their real paths.
 function judgeContext(input: HookInput, hook: HookContext, options: BashOptions): JudgeContext {
   const cwd = stringField(input.payload, 'cwd');
   const base = cwd !== undefined && path.isAbsolute(cwd) ? cwd : hook.projectDir;
+  const realDirs = [hook.home, hook.projectDir].map(realOrUndefined).filter((dir) => dir !== undefined);
   return {
     options,
-    paths: pathContext(hook.home, hook.projectDir),
+    paths: pathContext(hook.home, hook.projectDir, base, realDirs),
     exists: (file) => existsSync(path.resolve(base, file)),
   };
 }

@@ -121,6 +121,15 @@ describe('hook bundles (#30, ADR-0015)', () => {
     expect(JSON.parse(result.stdout)).toMatchObject({ hookSpecificOutput: { permissionDecision: 'deny' } });
   });
 
+  it('denies deleting the project from its parent folder, given on stdin with the session cwd', () => {
+    const project = path.join(tempDir(), 'proj');
+    mkdirSync(project);
+    const command = 'cd .. && rm -r proj';
+    const payload = JSON.stringify({ tool_name: 'Bash', tool_input: { command }, cwd: project });
+    const result = run(isolatedCopy('guard-bash'), payload, [], { project });
+    expect(JSON.parse(result.stdout)).toMatchObject({ hookSpecificOutput: { permissionDecision: 'deny' } });
+  });
+
   // The commands are only sent to the hook as JSON text; the base64 spells `rm -rf ~` and is never decoded.
   it.each([
     'base64 -d <<< cm0gLXJmIH4= | sh',

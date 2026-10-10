@@ -22,6 +22,15 @@ export function slashed(file: string): string {
   return file.replaceAll('\\', '/');
 }
 
+/** The real path of a file or folder, or undefined when it does not exist or cannot be resolved. */
+export function realOrUndefined(file: string): string | undefined {
+  try {
+    return realpathSync.native(file);
+  } catch {
+    return undefined;
+  }
+}
+
 /** Tells whether `real` is `root` or lies under it; both are real paths. */
 export function isInside(root: string, real: string): boolean {
   const relative = path.relative(root, real);

@@ -15,14 +15,20 @@ export const PROJECT = '/home/u/work/project-x';
 /** Files that exist where a table's commands run, for `git checkout <file>`. */
 const EXISTING = new Set(['README.md', 'package.json', 'src/a.ts']);
 
-/** A guard-bash context for the tables: the options, the home folder and the project. */
-export function bashContext(
-  options: Partial<BashOptions> = {},
-  where: { readonly home?: string; readonly project?: string } = {},
-): JudgeContext {
+/** Where a table's commands run: the home folder, the project, the session's working folder and real paths. */
+export interface Where {
+  readonly home?: string;
+  readonly project?: string;
+  readonly cwd?: string;
+  readonly realDirs?: readonly string[];
+}
+
+/** A guard-bash context for the tables: the options, the home folder, the project and the working folder. */
+export function bashContext(options: Partial<BashOptions> = {}, where: Where = {}): JudgeContext {
+  const project = where.project ?? PROJECT;
   return {
     options: { ...DEFAULT_OPTIONS, ...options },
-    paths: pathContext(where.home ?? HOME, where.project ?? PROJECT),
+    paths: pathContext(where.home ?? HOME, project, where.cwd ?? project, where.realDirs),
     exists: (file) => EXISTING.has(file),
   };
 }

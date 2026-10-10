@@ -3,7 +3,7 @@ import { readFindExpression, type FindToken } from '../shell/find-expression.js'
 import { hasExpansion } from '../shell/syntax.js';
 import { unwrap } from '../shell/wrappers.js';
 import { hasLong, parseOptions, type ParsedOptions } from './cli-options.js';
-import { isDangerousPath, isUncheckedPath, type PathContext } from './dangerous-paths.js';
+import { isDangerousPath, isUncheckedTarget, type PathContext } from './dangerous-paths.js';
 import type { JudgeContext } from './judge-context.js';
 import { ask, deny, strictest, type Verdict } from './verdicts.js';
 
@@ -35,7 +35,7 @@ export function rmRule({ args, wrappers, splitArgs }: Command, { paths }: JudgeC
   }
   // find -exec and xargs supply the targets at run time, so even a plain `rm` there deletes unseen paths.
   const runner = wrappers.includes('xargs') || wrappers.includes('find');
-  const unseen = runner || targets.some(isUncheckedPath);
+  const unseen = runner || targets.some((target) => isUncheckedTarget(target, paths));
   return (recursive || splitArgs || runner) && unseen ? UNSEEN_DELETE : null;
 }
 
@@ -85,7 +85,7 @@ function judgeFind({ args, splitArgs }: Command, paths: PathContext, deletesOutp
   // An unquoted expansion such as `find ~ $OP` may add -delete or -o at run time.
   const mayDelete = deletes || splitArgs;
   if (!roots.some((root) => isDangerousPath(root, paths))) {
-    return mayDelete && roots.some(isUncheckedPath) ? UNSEEN_DELETE : null;
+    return mayDelete && roots.some((root) => isUncheckedTarget(root, paths)) ? UNSEEN_DELETE : null;
   }
   const verdict = deletes ? deleteVerdict(tokens, actionAt === -1 ? tokens.length : actionAt) : null;
   return verdict ?? (splitArgs ? UNSEEN_DELETE : null);
@@ -99,12 +99,17 @@ export function findRule(command: Command, { paths }: JudgeContext): Verdict | n
 const isXargsRm = (command: Command): boolean =>
   DELETING_PROGRAMS.has(command.program) && command.wrappers.includes('xargs');
 
-/** Judges `find ... | xargs rm` as if the find deleted every path it prints. */
-export function findPipedToRm(commands: readonly Command[], { paths }: JudgeContext): Verdict | null {
+/**
+ * Judges `find ... | xargs rm` as if the find deleted every path it prints, with the paths each find runs from.
+ */
+export function findPipedToRm(
+  commands: readonly Command[],
+  pathsOf: (command: Command) => PathContext,
+): Verdict | null {
   const removerStages = commands.filter(isXargsRm).flatMap((command) => command.pipes);
   const feedsRemover = ({ pipes: [own] }: Command): boolean =>
     own !== undefined &&
     removerStages.some(({ pipeline, stage }) => pipeline === own.pipeline && stage > own.stage);
   const finds = commands.filter((command) => command.program === 'find' && feedsRemover(command));
-  return strictest(finds.map((find) => judgeFind(find, paths, true)));
+  return strictest(finds.map((find) => judgeFind(find, pathsOf(find), true)));
 }

@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
-import { accessSync, constants, realpathSync, statSync } from 'node:fs';
+import { accessSync, constants, statSync } from 'node:fs';
 import path from 'node:path';
-import { isInside } from './project.js';
+import { isInside, realOrUndefined } from './project.js';
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 const SHIM = /\.(?:cmd|bat)$/i;
@@ -18,14 +18,6 @@ export interface ToolOptions {
   readonly cwd: string;
   readonly timeoutMs?: number;
   readonly env?: NodeJS.ProcessEnv;
-}
-
-function realOrUndefined(file: string): string | undefined {
-  try {
-    return realpathSync.native(file);
-  } catch {
-    return undefined;
-  }
 }
 
 function isProgram(file: string): boolean {
