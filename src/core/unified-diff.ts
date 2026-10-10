@@ -74,13 +74,16 @@ function editsOf(before: readonly string[], after: readonly string[]): Edit[] {
   return [...before.slice(0, start).map(keep), ...middle, ...before.slice(before.length - end).map(keep)];
 }
 
-/** Groups changed edits that lie within twice the context of each other into hunks, as `[first, last]` indices. */
+/**
+ * Groups changed edits into hunks, as `[first, last]` indices: as `diff -u` does, two changes with at most twice
+ * the context of unchanged lines between them share a hunk.
+ */
 function hunkRanges(edits: readonly Edit[]): [number, number][] {
   const changed = edits.flatMap((edit, index) => (edit.kind === ' ' ? [] : [index]));
   const ranges: [number, number][] = [];
   for (const index of changed) {
     const last = ranges.at(-1);
-    if (last !== undefined && index - last[1] <= 2 * CONTEXT) last[1] = index;
+    if (last !== undefined && index - last[1] <= 2 * CONTEXT + 1) last[1] = index;
     else ranges.push([index, index]);
   }
   return ranges.map(([first, last]) => [

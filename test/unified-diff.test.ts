@@ -70,11 +70,14 @@ describe('unifiedDiff', () => {
     );
   });
 
-  it('splits changes more than six lines apart into two hunks', () => {
+  it.each([
+    ['3 and 10', ['3', '10'], ['@@ -1,13 +1,13 @@']],
+    ['3 and 11', ['3', '11'], ['@@ -1,6 +1,6 @@', '@@ -8,7 +8,7 @@']],
+  ])('groups changes to lines %s into hunks as diff -u does', (_name, changed, headers) => {
     const lines = Array.from({ length: 20 }, (_, index) => String(index + 1));
-    const after = lines.map((line) => (line === '2' || line === '18' ? `${line}!` : line));
+    const after = lines.map((line) => (changed.includes(line) ? `${line}!` : line));
     const diff = unifiedDiff('n.txt', `${lines.join('\n')}\n`, `${after.join('\n')}\n`);
-    expect(diff.match(/^@@/gm)).toHaveLength(2);
+    expect(diff.match(/^@@.*$/gm)).toEqual(headers);
   });
 
   it('marks a last line without a newline', () => {
