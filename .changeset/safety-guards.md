@@ -1,0 +1,5 @@
+---
+'archkeeper': minor
+---
+
+Add the safety module to every preset. `init` now installs two guard hooks, registered in exec form in `.claude/settings.json`, and six native deny rules (`Read(**/.env)`, `Read(**/.env.*)`, `Read(**/.envrc)`, `Bash(rm -rf:*)`, `Bash(git push --force:*)` and `Bash(git push -f:*)`), adding the SchemaStore `$schema` only where the file has none. guard-bash parses each Bash command and denies destructive ones, such as a recursive delete of home, a force-push wherever the flag stands or a download piped into a shell, and asks before irreversible ones, git commands that run a program through config or the environment, and shell access to `.env` files. guard-secrets denies likely secrets in written files, naming the rule and the file but never the value, and asks before `.env` edits and new `allow-secret` lines. Both fail closed. New `options.safety` settings: `blockAiAttribution`, `blockNoVerify` and `denyCommands`, off by default, and `optOut`, which leaves out deny rules or guards on purpose; `init` warns the first time it meets one.
