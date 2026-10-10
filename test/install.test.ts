@@ -25,12 +25,14 @@ const USER_SETTINGS = [
 ].join('\n');
 
 // The files ripgrep finds holding `text` when it searches everything, ignored, hidden and binary files included.
-// Where ripgrep is not installed, the byte scan of each state file in the same test covers the same ground.
+// Where ripgrep is not installed, the byte scan of each state file in the same test covers the same ground; CI's
+// quality job installs ripgrep and sets REQUIRE_RIPGREP, so #24's search runs there for certain.
 function ripgrepMatches(dir: string, text: string): string[] | undefined {
   const run = spawnSync('rg', ['-uuu', '--files-with-matches', '--fixed-strings', text, '.'], {
     cwd: dir,
     encoding: 'utf8',
   });
+  if (run.error !== undefined && process.env.REQUIRE_RIPGREP === '1') throw run.error;
   if (run.error !== undefined) return undefined;
   return run.stdout
     .split('\n')
