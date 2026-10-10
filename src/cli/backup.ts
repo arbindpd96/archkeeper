@@ -12,10 +12,11 @@ import {
 import path from 'node:path';
 import type { Brand } from '../core/brand.js';
 import { PathSafetyError } from '../core/errors.js';
+import { exactHash } from '../core/hash.js';
 import type { PathState } from '../core/plan-types.js';
 import { compareText, toLf } from '../core/text.js';
 import { ensureFolder, writeAtomically } from './atomic-files.js';
-import { baseFolder, bytesHash, compressed } from './blob-store.js';
+import { baseFolder, compressed } from './blob-store.js';
 import { confinedPath, lstatOrUndefined, NO_FOLLOW, readConfined } from './project-files.js';
 
 /** What a path held before an apply touched it: a file with its bytes and mode, a symlink, or nothing. */
@@ -126,7 +127,7 @@ function save(absolute: string, folder: string): Saved {
   if (stats.isSymbolicLink()) return { type: 'symlink', target: readlinkSync(absolute) };
   if (!stats.isFile()) return { type: 'other' };
   const bytes = readExactly(absolute);
-  const blob = bytesHash(bytes);
+  const blob = exactHash(bytes);
   try {
     writeFileSync(path.join(folder, blob), compressed(bytes), { flag: 'wx', mode: PRIVATE_FILE });
   } catch (error) {

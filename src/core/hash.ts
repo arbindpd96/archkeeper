@@ -9,7 +9,7 @@ export function contentHash(text: string): string {
   return createHash('sha256').update(toLf(text), 'utf8').digest('hex');
 }
 
-/** The sha256 of the exact UTF-8 bytes of `text` in hex, for telling whether a file changed at all. */
-export function exactHash(text: string): string {
-  return createHash('sha256').update(text, 'utf8').digest('hex');
+/** The sha256 in hex of exact bytes, or of the UTF-8 bytes of a string, for telling whether a file changed at all. */
+export function exactHash(data: string | Uint8Array): string {
+  return createHash('sha256').update(data).digest('hex');
 }
