@@ -58,6 +58,7 @@ The guards are a safety net, not a sandbox.
 
 - guard-bash does not look inside runners it does not know: `npx`, `pnpm exec`, `make`, `ssh`, `docker run … sh -c`, `uv run -m`, and git commands that run a command they are given, such as `rebase --exec`, `bisect run` and `submodule foreach`.
 - It does not see git aliases from your git config, or `.env` reads through tools that never name the file, such as `grep -r`.
+- It checks the `GIT_*` variables through which git runs a program, but not the generic `EDITOR`, `VISUAL` and `PAGER` that git falls back on, since so many other tools read them.
 - A value from a variable is checked only where it decides something security-relevant, so `git commit $X` with `X=-n` passes.
 - Interpreters outside its list (`deno run -`, `bun`, `Rscript -`, `lua`, `pwsh`, `julia`) are not read, `awk '{print | "sh"}'` fed by a download only asks, and a downloaded file run directly (`curl -o i.sh … && chmod +x i.sh && ./i.sh`) or through a descriptor (`exec 3< <(curl …); sh <&3`) passes.
 - A `find` filter that the starting folder already satisfies, such as `find ~ -path '*Users*' -delete`, counts as narrowing.
