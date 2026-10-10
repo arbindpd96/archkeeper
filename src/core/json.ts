@@ -1,11 +1,11 @@
 import { parse, type ParseError, printParseErrorCode } from 'jsonc-parser';
 import type { Finding } from './errors.js';
+import { BYTE_ORDER_MARK } from './text.js';
 
 /** A parsed JSON document, or the first syntax error in it. */
 export type JsonResult =
   { readonly ok: true; readonly value: unknown } | { readonly ok: false; readonly finding: Finding };
 
-const BYTE_ORDER_MARK = String.fromCodePoint(0xfeff);
 const STRICT = { disallowComments: true, allowTrailingComma: false, allowEmptyContent: false };
 
 /** A jsonc-parser error code in words, such as `property name expected`. */

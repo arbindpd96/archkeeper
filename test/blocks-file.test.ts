@@ -1,7 +1,8 @@
 import fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { type BlockEdits, editBlocks } from '../src/core/blocks-edit.js';
-import { type BlockPart, blockParts, BYTE_ORDER_MARK, parseBlocks } from '../src/core/blocks-file.js';
+import { type BlockPart, blockParts, parseBlocks } from '../src/core/blocks-file.js';
+import { BYTE_ORDER_MARK } from '../src/core/text.js';
 import { MergeError } from '../src/core/errors.js';
 import { markerIn, markerPattern } from '../src/core/markers.js';
 import { unsafeValue } from '../src/core/template.js';

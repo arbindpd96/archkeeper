@@ -1,5 +1,6 @@
-import { type BlocksFile, BYTE_ORDER_MARK } from './blocks-file.js';
+import type { BlocksFile } from './blocks-file.js';
 import { markerLine } from './markers.js';
+import { BYTE_ORDER_MARK } from './text.js';
 
 /** A block the kit adds to a file, with its LF content. */
 export interface NewBlock {
