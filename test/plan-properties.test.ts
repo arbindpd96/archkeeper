@@ -4,7 +4,7 @@ import { parseBlocks } from '../src/core/blocks-file.js';
 import { readLock } from '../src/core/lock.js';
 import { planInstall } from '../src/core/plan.js';
 import type { PathState } from '../src/core/plan-types.js';
-import type { RenderTree } from '../src/core/render-tree.js';
+import type { RenderedEntry, RenderTree } from '../src/core/render-tree.js';
 import { BYTE_ORDER_MARK } from '../src/core/text.js';
 import {
   applied,
@@ -20,12 +20,14 @@ import {
 } from './plan-fixtures.js';
 
 const RULES = ['Read(**/.env)', 'Bash(rm -rf:*)', 'Bash(git push --force:*)', 'Read(**/.env.*)'];
+const SETTINGS = '.claude/settings.json';
+const MCP = '.mcp.json';
 const text = fc
   .array(fc.stringMatching(/^[A-Za-z0-9 .,#-]{0,24}$/), { maxLength: 4 })
   .map((lines) => lines.map((line) => `${line}\n`).join(''));
 const rules = fc.subarray(RULES);
 
-/** A kit version: an owned file, a create-only file, up to three blocks and some deny rules. */
+/** A kit version: an owned file, a create-only file, up to three blocks, some deny rules and maybe a server. */
 const kitVersion = fc.record({
   owned: text,
   createOnly: text,
@@ -34,15 +36,22 @@ const kitVersion = fc.record({
     selector: ([id]) => id,
   }),
   deny: rules,
+  server: fc.option(fc.constantFrom('https://a.example.com/mcp', 'https://b.example.com/mcp')),
 });
 type KitVersion = typeof kitVersion extends fc.Arbitrary<infer T> ? T : never;
+
+function serverEntry(url: string): RenderedEntry {
+  const content = `${JSON.stringify({ mcpServers: { docs: { type: 'http', url } } }, null, 2)}\n`;
+  return { strategy: 'json', module: 'm', content, keys: ['mcpServers docs'] };
+}
 
 function treeFor(kit: KitVersion): RenderTree {
   return treeOf(
     ['rule.md', fileEntry(kit.owned)],
     ['notes.md', fileEntry(kit.createOnly, 'create-only')],
     ...kit.blocks.map(([id, body]) => ['AGENTS.md', blockEntry(id, body)] as const),
-    ...(kit.deny.length > 0 ? [['.claude/settings.json', denyEntry(kit.deny)] as const] : []),
+    ...(kit.deny.length > 0 ? [[SETTINGS, denyEntry(kit.deny)] as const] : []),
+    ...(kit.server === null ? [] : [[MCP, serverEntry(kit.server)] as const]),
   );
 }
 
@@ -126,6 +135,14 @@ const scenario = fc.record({
   editBlock: fc.option(userLine),
   ownedEdit: fc.option(userLine),
   userRule: fc.option(userLine.map((line) => `Read(${line})`)),
+  ruleEdits: fc.array(
+    fc.tuple(
+      fc.boolean(),
+      userLine.map((line) => `Read(${line})`),
+    ),
+    { maxLength: 3 },
+  ),
+  serverEdit: fc.option(fc.nat(9999)),
 });
 type Scenario = typeof scenario extends fc.Arbitrary<infer T> ? T : never;
 
@@ -136,7 +153,45 @@ function userProject({ initial, crlf, userRule }: Scenario): Map<string, PathSta
   return snapshotOf({ ...agents, '.claude/settings.json': JSON.stringify(settings) });
 }
 
-// The user adds lines around the blocks, may rewrite the first block and may rewrite the owned file.
+interface Settings {
+  permissions: { deny: string[] };
+}
+type Servers = Record<string, unknown>;
+
+// Each edit adds a user rule, or replaces the first kit rule left in the list with it.
+function withRuleEdits(content: string, edits: Scenario['ruleEdits']): string {
+  const settings = JSON.parse(content) as Settings;
+  const { deny } = settings.permissions;
+  for (const [replace, rule] of edits) {
+    const kit = deny.findIndex((entry) => RULES.includes(entry));
+    if (replace && kit >= 0) deny.splice(kit, 1, rule);
+    else deny.push(rule);
+  }
+  return `${JSON.stringify(settings, null, 2)}\n`;
+}
+
+// The user adds a server of their own and points the kit's server, where there is one, somewhere else.
+function withServerEdit(content: string, number: number): string {
+  const servers = (JSON.parse(content) as { mcpServers: Servers }).mcpServers;
+  servers[`user-${String(number)}`] = { type: 'stdio', command: 'mine' };
+  if (servers.docs !== undefined) {
+    servers.docs = { type: 'http', url: `https://user.example.com/${String(number)}` };
+  }
+  return `${JSON.stringify({ mcpServers: servers }, null, 2)}\n`;
+}
+
+function editedJson(edited: Map<string, PathState>, run: Scenario): void {
+  const settings = edited.get(SETTINGS);
+  if (settings?.kind === 'file') {
+    edited.set(SETTINGS, { kind: 'file', content: withRuleEdits(settings.content, run.ruleEdits) });
+  }
+  const mcp = edited.get(MCP);
+  if (mcp?.kind === 'file' && run.serverEdit !== null) {
+    edited.set(MCP, { kind: 'file', content: withServerEdit(mcp.content, run.serverEdit) });
+  }
+}
+
+// The user adds lines around the blocks, may rewrite the first block and the owned file, and edits the JSON.
 function userEdits(installed: ReadonlyMap<string, PathState>, run: Scenario): Map<string, PathState> {
   const edited = new Map(installed);
   const agents = installed.get('AGENTS.md');
@@ -149,7 +204,27 @@ function userEdits(installed: ReadonlyMap<string, PathState>, run: Scenario): Ma
     edited.set('AGENTS.md', { kind: 'file', content });
   }
   if (run.ownedEdit !== null) edited.set('rule.md', { kind: 'file', content: `${run.ownedEdit}\n` });
+  editedJson(edited, run);
   return edited;
+}
+
+function userRules(snapshot: ReadonlyMap<string, PathState>): string[] {
+  const settings = JSON.parse(textAt(snapshot, SETTINGS)) as Settings;
+  return settings.permissions.deny.filter((rule) => rule.includes('user-'));
+}
+
+function servers(snapshot: ReadonlyMap<string, PathState>): Servers {
+  if (!snapshot.has(MCP)) return {};
+  return (JSON.parse(textAt(snapshot, MCP)) as { mcpServers: Servers }).mcpServers;
+}
+
+// The servers the user wrote: their own, and the kit's server where they pointed it somewhere else.
+function userServers(snapshot: ReadonlyMap<string, PathState>): Servers {
+  return Object.fromEntries(
+    Object.entries(servers(snapshot)).filter(
+      ([name, value]) => name.startsWith('user-') || JSON.stringify(value).includes('user.example.com'),
+    ),
+  );
 }
 
 describe('user edits through a kit update (#22)', () => {
@@ -165,12 +240,15 @@ describe('user edits through a kit update (#22)', () => {
           expect(userLines(textAt(final, 'AGENTS.md'))).toEqual(userLines(textAt(edited, 'AGENTS.md')));
         }
         if (run.ownedEdit !== null) expect(textAt(final, 'rule.md')).toBe(`${run.ownedEdit}\n`);
-        const settings = JSON.parse(textAt(final, '.claude/settings.json')) as {
-          model: string;
-          permissions: { deny: string[] };
-        };
+        const settings = JSON.parse(textAt(final, SETTINGS)) as Settings & { model: string };
         expect(settings.model).toBe('opus');
-        if (run.userRule !== null) expect(settings.permissions.deny).toContain(run.userRule);
+        expect(userRules(final)).toEqual(userRules(edited));
+        const kept = (JSON.parse(textAt(edited, SETTINGS)) as Settings).permissions.deny;
+        const deleted = RULES.filter(
+          (rule) => first.lock.json.get(SETTINGS)?.has(`permissions.deny ${rule}`) && !kept.includes(rule),
+        );
+        for (const rule of deleted) expect(settings.permissions.deny).not.toContain(rule);
+        expect(userServers(final)).toEqual(userServers(edited));
       }),
       { numRuns: 1000 },
     );
