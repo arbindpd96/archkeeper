@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { BRAND } from '../../../core/brand.js';
 import { secretKinds } from '../../../core/secrets.js';
+import { escapeUnprintable } from '../../../core/text.js';
 import { isEnvFileName } from '../env-files.js';
 import { type Answer, type HookInput, isRecord, noAnswer, permission, stringField } from '../io.js';
 import type { HookContext, HookModule, Sample } from '../launch.js';
@@ -20,11 +21,12 @@ const kindsIn = (lines: readonly string[]): string => [...new Set(lines.flatMap(
 const linesOf = (text: string): string[] => text.split('\n').map((line) => line.replace(/\r$/, ''));
 const ask = (reason: string): Answer => permission('ask', reason);
 
-// The file as reasons name it: relative to the project when it is there, with forward slashes. Display only.
+// The file as reasons name it: relative to the project when it is there, with forward slashes, and with control and
+// bidirectional characters escaped, so a crafted name cannot dress up the prompt the user reads. Display only.
 function shown(file: string, projectDir: string): string {
   const relative = path.relative(projectDir, file);
   const inside = relative !== '' && !relative.startsWith('..') && !path.isAbsolute(relative);
-  return slashed(inside ? relative : file);
+  return escapeUnprintable(slashed(inside ? relative : file));
 }
 
 const newPragma = (file: string): Answer =>
@@ -106,7 +108,9 @@ function judge(input: HookInput, context: HookContext): Answer | null {
     return ask(`could not check this write because ${location.cause}. Confirm with the user.`);
   }
   const name = envName(location);
-  if (name !== undefined) return ask(`${name} holds secrets. Confirm with the user before editing it.`);
+  if (name !== undefined) {
+    return ask(`${escapeUnprintable(name)} holds secrets. Confirm with the user before editing it.`);
+  }
   return judgeWrite(toolInput, location, shown(location.file, context.projectDir));
 }
 
