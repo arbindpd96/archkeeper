@@ -10,11 +10,13 @@ interface Project {
   tapes?: Record<string, string>;
   modules?: Record<string, unknown>;
   readme?: string;
+  /** The command registry as JS source; the repository's own registry when left out. */
+  commands?: string;
 }
 
 function checkDemos(gifs: Record<string, Buffer>, project: Project = {}): RunResult {
   const root = tempDir();
-  const { tapes = {}, modules = {}, readme = '# Project\n' } = project;
+  const { tapes = {}, modules = {}, readme = '# Project\n', commands } = project;
   writeFiles(root, Object.fromEntries(Object.entries(tapes).map(([name, text]) => [`tapes/${name}`, text])));
   writeFiles(root, { 'README.md': readme });
   for (const [id, manifest] of Object.entries(modules)) {
@@ -23,9 +25,18 @@ function checkDemos(gifs: Record<string, Buffer>, project: Project = {}): RunRes
   mkdirSync(path.join(root, 'media'), { recursive: true });
   for (const [name, bytes] of Object.entries(gifs)) writeFileSync(path.join(root, 'media', name), bytes);
   const args = ['--tapes', path.join(root, 'tapes'), '--modules', path.join(root, 'modules')];
+  if (commands !== undefined) {
+    writeFiles(root, { 'commands.mjs': commands });
+    args.push('--commands', path.join(root, 'commands.mjs'));
+  }
   return runScript('scripts/check-demos.mjs', {
     args: [path.join(root, 'media'), ...args, '--readme', path.join(root, 'README.md')],
+    cwd: REPO_ROOT,
   });
+}
+
+function registry(...commands: unknown[]): string {
+  return `export const COMMANDS = ${JSON.stringify(commands)};\n`;
 }
 
 describe('check-demos', () => {
@@ -171,6 +182,53 @@ describe('check-demos module declarations', () => {
   it("passes this repository's modules, which are internal until their milestone ships a demo", () => {
     const result = runScript('scripts/check-demos.mjs', { cwd: REPO_ROOT });
     expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+  });
+});
+
+describe('check-demos command registry (#26)', () => {
+  const demo = { tape: 'init', section: 'Quick start' };
+  const README = '# Project\n\n## Quick start\n\n![init](docs/media/init.gif)\n';
+  const complete: Project = {
+    tapes: { 'init.tape': FEATURE_TAPE },
+    readme: README,
+    commands: registry({ name: 'init', demo }, { name: 'doctor', internal: true }),
+  };
+
+  it('passes internal commands and a command whose demo has its tape, GIF and README section', () => {
+    const result = checkDemos({ 'init.gif': gifBytes([100]) }, complete);
+    expect(result.stderr).toBe('');
+    expect(result.status).toBe(0);
+  });
+
+  it.each<[string, Project, string]>([
+    [
+      'neither demo nor internal',
+      { commands: registry({ name: 'init' }) },
+      'command init declares neither demo nor internal: true; a user-facing command needs a demo.',
+    ],
+    ['both', { commands: registry({ name: 'init', demo, internal: true }) }, 'declares both demo and'],
+    ['a demo with no tape', { ...complete, tapes: {} }, 'command init demo "init" has no tape at'],
+    [
+      'a demo with no README heading',
+      { ...complete, readme: '# Project\n' },
+      'needs a "Quick start" heading',
+    ],
+    ['no list', { commands: 'export const COMMANDS = { init: {} };\n' }, 'exports no COMMANDS list'],
+  ])('fails a registry with %s', (_name, project, message) => {
+    const result = checkDemos({ 'init.gif': gifBytes([100]) }, project);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(message);
+  });
+
+  it('fails when the registry does not load', () => {
+    const result = checkDemos({}, { commands: 'export const COMMANDS = ;\n' });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('cannot load the command registry');
+  });
+
+  it('holds the CLI registry itself to the rule: every command is a demo or internal', () => {
+    const result = runScript('scripts/check-demos.mjs', { cwd: REPO_ROOT });
     expect(result.status).toBe(0);
   });
 });

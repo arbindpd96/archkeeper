@@ -1,24 +1,11 @@
 #!/usr/bin/env node
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { registerHooks } from 'node:module';
 import path from 'node:path';
 import { exitWith } from './lib.mjs';
+import './ts-resolve.mjs';
 
 const USAGE = 'Usage: node scripts/build-schemas.mjs [--check] [<repo-root>]';
 const FIX = 'Run npm run schema and commit schema/.';
-
-// src/ imports its siblings as `./x.js` (NodeNext); Node's type stripping finds the `.ts` file only by its name.
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    if (!specifier.startsWith('.') || !specifier.endsWith('.js')) return nextResolve(specifier, context);
-    try {
-      return nextResolve(specifier, context);
-    } catch (error) {
-      if (error?.code !== 'ERR_MODULE_NOT_FOUND') throw error;
-      return nextResolve(`${specifier.slice(0, -3)}.ts`, context);
-    }
-  },
-});
 
 const z = await import('zod/mini');
 const { moduleManifestSchema } = await import('../src/core/manifest-schema.ts');
