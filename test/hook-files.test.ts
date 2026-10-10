@@ -70,6 +70,35 @@ describe('hook state under the local state folder (ADR-0014, ADR-0015)', () => {
     writeState(dir, 'a', 'b', TEST_BRAND);
     expect(readdirSync(path.join(dir, LOCAL)).sort()).toEqual(['.gitignore', 'a']);
   });
+
+  it('leaves the same tree when it writes the same state twice', () => {
+    const dir = tempDir();
+    writeState(dir, 'snapshots/latest.json', '{"a":1}', TEST_BRAND);
+    const ignore = statSync(path.join(dir, LOCAL, '.gitignore'));
+    const tree = (): string[] =>
+      readdirSync(path.join(dir, LOCAL), { recursive: true, encoding: 'utf8' }).sort();
+    const first = tree();
+    expect(writeState(dir, 'snapshots/latest.json', '{"a":1}', TEST_BRAND)).toEqual({ written: true });
+    expect(tree()).toEqual(first);
+    expect(first).toEqual(['.gitignore', 'snapshots', path.join('snapshots', 'latest.json')]);
+    expect(statSync(path.join(dir, LOCAL, '.gitignore'))).toMatchObject({
+      ino: ignore.ino,
+      mtimeMs: ignore.mtimeMs,
+    });
+    expect(readState(dir, 'snapshots/latest.json', TEST_BRAND)).toBe('{"a":1}');
+  });
+
+  it('reads missing state without creating the local folder', () => {
+    const dir = tempDir();
+    expect(readState(dir, 'active-feature', TEST_BRAND)).toBeNull();
+    expect(readdirSync(dir)).toEqual([]);
+  });
+
+  it('refuses to write over the local ignore-all file', () => {
+    const dir = tempDir();
+    expect(writeState(dir, '.gitignore', '!*\n', TEST_BRAND)).toMatchObject({ written: false });
+    expect(readdirSync(dir)).toEqual([]);
+  });
 });
 
 describe.skipIf(!canSymlink())('hook state through symlinks', () => {

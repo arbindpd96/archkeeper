@@ -1,4 +1,4 @@
-import { closeSync, constants, fstatSync, lstatSync, openSync, readFileSync, realpathSync } from 'node:fs';
+import { closeSync, constants, fstatSync, lstatSync, openSync, readSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 
 // Windows has neither flag, so callers there `lstat` a path before they open it.
@@ -41,6 +41,18 @@ export function isInside(root: string, real: string): boolean {
   );
 }
 
+// Reads one byte past the cap, so a file that grew after its fstat is refused instead of read to its end.
+function readCapped(descriptor: number, maxBytes: number): string | null {
+  const buffer = Buffer.alloc(maxBytes + 1);
+  let length = 0;
+  let read: number;
+  do {
+    read = readSync(descriptor, buffer, length, buffer.length - length, null);
+    length += read;
+  } while (read > 0 && length < buffer.length);
+  return length > maxBytes ? null : buffer.toString('utf8', 0, length);
+}
+
 /**
  * Reads a regular file of at most `maxBytes` through one descriptor that follows no symlink and never waits on a
  * FIFO; null for anything else, or for a file that grew past the cap. Throws when the path cannot be opened.
@@ -49,7 +61,8 @@ export function readRegularFile(file: string, maxBytes: number): string | null {
   const descriptor = openSync(file, SAFE_READ);
   try {
     const stats = fstatSync(descriptor);
-    return stats.isFile() && stats.size <= maxBytes ? readFileSync(descriptor, 'utf8') : null;
+    if (!stats.isFile() || stats.size > maxBytes) return null;
+    return readCapped(descriptor, maxBytes);
   } finally {
     closeSync(descriptor);
   }
