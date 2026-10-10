@@ -22,7 +22,7 @@ describe('init writes nothing without a yes', () => {
     expect(upgraded.code).toBe(1);
     expect(upgraded.stderr).toContain('pass --yes to apply the plan');
     expect(read(dir, LOCK)).toBe(lock);
-    expect(upgraded.stdout).toContain('the lock and base blobs');
+    expect(upgraded.stdout).toContain('  and the lock\n');
   });
 
   it('needs --yes when a re-run would only restore a deleted base blob', async () => {
@@ -34,6 +34,7 @@ describe('init writes nothing without a yes', () => {
     const again = await runInit(dir);
     expect(again.code).toBe(1);
     expect(again.stderr).toContain('pass --yes to apply the plan');
+    expect(again.stdout).toContain('  and the base blobs\n');
     expect(existsSync(path.join(blobs, blob))).toBe(false);
   });
 

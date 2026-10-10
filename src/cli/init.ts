@@ -24,9 +24,10 @@ import {
   stackFlag,
 } from './init-answers.js';
 import { type ExistingConfig, nextConfig, readExistingConfig, withConfig } from './init-config.js';
+import { plannedWrites } from './apply.js';
 import { applyPlanned, finishDryRun } from './init-finish.js';
-import { detectedLines, planLines, reporterFor } from './init-report.js';
-import { type InitFlags, type InitRun, type Planned, textAt, writesAnything } from './init-run.js';
+import { detectedLines, planLines, reporterFor, stateLines } from './init-report.js';
+import { type InitFlags, type InitRun, type Planned, textAt } from './init-run.js';
 import { planProject } from './install.js';
 import { lstatOrUndefined } from './project-files.js';
 import { projectView } from './project-view.js';
@@ -164,8 +165,8 @@ function planInit(
   const modules = kits.map((kit) => kit.manifest.id);
   const installPlan = planProject(run.rootReal, tree, { kit: run.kit, modules, brand: run.brand });
   const plan = withConfig(installPlan, next, existing, run.brand);
-  const writes = writesAnything(run.rootReal, plan, run.brand);
-  return { profile, existing, next, stack, modules, tree, plan, writes };
+  const written = plannedWrites(run.rootReal, plan, run.brand);
+  return { profile, existing, next, stack, modules, tree, plan, written };
 }
 
 function showPlan(run: InitRun, planned: Planned): void {
@@ -176,11 +177,7 @@ function showPlan(run: InitRun, planned: Planned): void {
   say();
   say(paint('bold', 'Plan:'));
   for (const line of planLines(summarizePlan(planned.plan), paint)) say(line);
-  const state = [
-    ...(planned.next.changed ? [configPath(run.brand)] : []),
-    ...(planned.writes ? ['the lock and base blobs'] : []),
-  ];
-  if (state.length > 0) say(`  and ${escapeUnprintable(state.join(', '))}`);
+  for (const line of stateLines(planned.written, run.brand)) say(line);
   const guards = guardsLeftOut(planned.next.config);
   if (guards.length > 0) {
     run.asking.report.warn(
@@ -227,7 +224,7 @@ async function runInit(run: InitRun): Promise<number> {
   const planned = planInit(run, profile, existing, preset);
   showPlan(run, planned);
   if (run.flags.dryRun === true) return finishDryRun(run, planned);
-  if (planned.writes && !(await goAhead(run, planned))) return cancelled(run);
+  if (planned.written.length > 0 && !(await goAhead(run, planned))) return cancelled(run);
   return applyPlanned(run, planned);
 }
 
