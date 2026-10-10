@@ -89,13 +89,21 @@ function refuseChanged(paths: readonly SavedPath[], expected: ReadonlyMap<string
   });
 }
 
-function applyChange(change: Change, saved: SavedPath | undefined, created: string[]): void {
+// Confined again just before the write, so a folder on its way swapped for a symlink during the run is refused; a
+// swap in the moment between this check and the write needs a hostile local process, outside the threat model.
+function applyChange(
+  rootReal: string,
+  change: Change,
+  saved: SavedPath | undefined,
+  created: string[],
+): void {
+  const absolute = confinedPath(rootReal, change.relative, 'written by the plan');
   if (change.data === null) {
-    removeFile(change.absolute);
+    removeFile(absolute);
     return;
   }
-  ensureFolder(path.dirname(change.absolute), created);
-  writeAtomically(change.absolute, change.data, saved?.saved.type === 'file' ? saved.saved.mode : undefined);
+  ensureFolder(path.dirname(absolute), created);
+  writeAtomically(absolute, change.data, saved?.saved.type === 'file' ? saved.saved.mode : undefined);
 }
 
 // Only the paths the run reached, the failing one included: a file someone saves meanwhile elsewhere is theirs.
@@ -218,7 +226,7 @@ export function applyPlan(root: string, plan: Plan, brand: Brand = BRAND): Apply
   try {
     for (const [index, change] of planned.entries()) {
       reached = index + 1;
-      applyChange(change, backup.paths[index], created);
+      applyChange(rootReal, change, backup.paths[index], created);
     }
   } catch (error) {
     const unrestored = rollBack(backup.paths.slice(0, reached), created);
