@@ -129,6 +129,8 @@ describe('withoutImportedBlocks', () => {
     ['an import with ./', { 'CLAUDE.md': 'Read @./AGENTS.md first.\n' }],
     ['an import in inline markdown', { 'CLAUDE.md': 'Shared rules: **@AGENTS.md** (and @README.md).\n' }],
     ['an import in .claude/CLAUDE.md', { '.claude/CLAUDE.md': 'Rules: @../AGENTS.md\n' }],
+    ['an import of a heading in AGENTS.md', { 'CLAUDE.md': 'Read @AGENTS.md#principles first.\n' }],
+    ['an import of a heading in .claude/CLAUDE.md', { '.claude/CLAUDE.md': '@../AGENTS.md#top\n' }],
   ])('drops the import block when the project already has %s', (_name, files) => {
     expect(keptBlocks(files)).toEqual(['claude-code']);
   });
@@ -142,6 +144,8 @@ describe('withoutImportedBlocks', () => {
     ['the import only in a code span with spaces', 'Write ` @AGENTS.md ` to import it.\n'],
     ['only an address that ends like it', 'Write to ops@AGENTS.md.\n'],
     ['only an import of the AGENTS.md above the project', '@../AGENTS.md\n'],
+    ['only a path that ends in a full stop', 'Shared rules: @AGENTS.md.\n'],
+    ['only an @ after a bracket', 'The shared rules (@AGENTS.md) apply.\n'],
     [
       "the import only in the kit's own block",
       `${marker('begin', 'agents-import')}\n@AGENTS.md\n${marker('end', 'agents-import')}\n`,
@@ -151,6 +155,12 @@ describe('withoutImportedBlocks', () => {
       'agents-import',
       'claude-code',
     ]);
+  });
+
+  it('reads a CLAUDE.md with a long run after an @ in linear time', () => {
+    const started = performance.now();
+    withoutImportedBlocks(tree, (file) => (file === 'CLAUDE.md' ? `@${'.'.repeat(200_000)}x\n` : undefined));
+    expect(performance.now() - started).toBeLessThan(1_000);
   });
 
   it("gives a workspace package that imports the workspace's AGENTS.md an import of its own AGENTS.md", () => {

@@ -1,16 +1,11 @@
 import { BRAND, type Brand } from './brand.js';
-import { withoutComments } from './imports.js';
+import { markdownImports } from './markdown-imports.js';
 import { markerPattern, markerStyle, parseMarker } from './markers.js';
 import type { RenderedEntry, RenderTree } from './render-tree.js';
 import { toLf } from './text.js';
 
 const IMPORT_LINE = /^@\S+$/;
-const FENCE = /^ {0,3}(?:`{3,}|~{3,})/;
-const CODE_SPAN = /`[^`\n]*`/g;
-// Claude Code reads an `@path` after a space or right after inline markdown, such as **@AGENTS.md**, never inside
-// a word such as an email address, and the path ends where that markdown closes (reference §2.1).
-const IMPORT = /(?<![\w@])@((?:\\ |[^\s])+)/g;
-const MARKDOWN_CLOSE = /[*_~)\],.;:!?]+$/;
+const KIT_LINE = '<!-- -->';
 const OUTSIDE_START = /^(?:[~/\\]|[A-Za-z]:)/;
 const OUTSIDE_REASON = 'it may name a file outside the project';
 /** Memory files Claude Code loads together with a file the kit writes (reference §2.1), so their imports count too. */
@@ -43,26 +38,24 @@ function resolved(folder: string, target: string): string | undefined {
   return parts.join('/');
 }
 
-// The user's own text: every line outside the kit's managed blocks and outside fenced code.
+// The user's own text, where each line of the kit's managed blocks reads as an empty comment, as their markers do.
 function userText(text: string, brand: Brand): string {
   const pattern = markerPattern(brand);
-  const kept: string[] = [];
   let inBlock = false;
-  let inFence = false;
-  for (const line of toLf(text).split('\n')) {
-    const marker = pattern.test(line) ? parseMarker(line, 'html', brand) : undefined;
-    if (marker !== undefined) inBlock = marker.edge === 'begin';
-    else if (!inBlock && FENCE.test(line)) inFence = !inFence;
-    else if (!inBlock && !inFence) kept.push(line);
-  }
-  return kept.join('\n');
+  const lines = toLf(text)
+    .split('\n')
+    .map((line) => {
+      const marker = pattern.test(line) ? parseMarker(line, 'html', brand) : undefined;
+      const kit = inBlock || marker !== undefined;
+      if (marker !== undefined) inBlock = marker.edge === 'begin';
+      return kit ? KIT_LINE : line;
+    });
+  return lines.join('\n');
 }
 
-// Claude Code reads no import inside a code span (reference §2.1), even one with spaces around the `@`.
 function importsIn(text: string, folder: string, brand: Brand): string[] {
-  const prose = withoutComments(userText(text, brand)).replace(CODE_SPAN, ' ');
-  return [...prose.matchAll(IMPORT)].flatMap(([, target = '']) => {
-    const path = resolved(folder, target.replace(MARKDOWN_CLOSE, '').replaceAll('\\ ', ' '));
+  return markdownImports(userText(text, brand)).flatMap((target) => {
+    const path = resolved(folder, target);
     return path === undefined ? [] : [path];
   });
 }

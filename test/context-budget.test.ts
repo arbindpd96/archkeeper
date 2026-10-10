@@ -43,9 +43,9 @@ describe('alwaysOnContext', () => {
     expect(measured.skills).toBe('Explain a decision.'.length);
   });
 
-  it('reads imports right after inline markdown but not inside a word, a code span or a fence', () => {
+  it('reads imports after a space or an emphasis opener, but not after a bracket, in a word, a code span or a fence', () => {
     const text =
-      'See **@AGENTS.md** and (@docs/a\\ b.md), not ada@example.com or `@x.md`.\n```\n@y.md\n```\n';
+      'See **@AGENTS.md** and @docs/a\\ b.md now, not (@c.md), ada@example.com or `@x.md`.\n```\n@y.md\n```\n';
     expect(importsOf(text)).toEqual(['AGENTS.md', 'docs/a b.md']);
   });
 
