@@ -18,6 +18,8 @@ guard-bash runs before every Bash call. It parses the command line the way a she
 
 A relative delete target is judged from the session's folder and from every folder a `cd`, `chdir` or `pushd` earlier in the same command line may move to, so `rm -r ../my-project` and `cd .. && rm -r my-project` are denied. Home and the project are protected under their real paths too, such as `/private/tmp/…` for `/tmp/…` on macOS. After a `cd` to a folder a variable decides, a relative recursive delete asks.
 
+guard-bash also asks before a command writes, moves or deletes the guards themselves: anything under `.claude/hooks`, `.claude/settings.json`, `.claude/settings.local.json` or `.archkeeper/config.json`, or a folder that holds one, through `rm`, `mv`, `cp`, `tee`, `truncate`, `dd`, `sed -i`, a redirect and similar. A missing or emptied bundle makes `node` fail, and Claude Code goes on after a hook that fails, so this keeps one plain `rm` from turning a guard off. guard-secrets asks before a Write or Edit to the same files.
+
 A force-push to a named main or master is denied, `git send-pack --force` included. A leased force-push that names no branch, or names `HEAD`, `@` or `--all`, asks, since it rewrites whatever branch is checked out.
 
 `git push --force-with-lease` to a feature branch, `rm -rf dist` and `cat .env.example` pass guard-bash. A pager or editor that runs nothing else, such as `GIT_PAGER=cat` or `GIT_EDITOR=true`, passes too.
@@ -73,4 +75,5 @@ The guards are a safety net, not a sandbox.
 - A `find` filter that the starting folder already satisfies, such as `find ~ -path '*Users*' -delete`, counts as narrowing.
 - It follows `cd` and `pushd` for the commands after them, but not the folder `env -C`, `sudo -D` or `CDPATH` picks, and a `cd` inside a loop is followed once.
 - guard-secrets cannot tell a hardlink's other names, so a hardlink to a `.env` file passes the name check; making one through the shell asks in guard-bash. Shell writes such as `printf … >> a.ts` never reach guard-secrets.
+- The guards' own files are protected only from the writes guard-bash recognises: a path from a variable, a program outside that list (`python3 -c`, `node -e`, `git checkout`), or a deleted `node` still turns a guard off. No native rule protects them, since a native rule only matters when the hooks cannot run.
 - Both guards need `node` on PATH. Without it they do not run, and only the deny rules apply.
