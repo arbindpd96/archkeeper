@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
 import { RenderError } from '../src/core/errors.js';
-import { brandScope, renderTemplate, type TemplateScope, toImport } from '../src/core/template.js';
+import {
+  brandScope,
+  renderTemplate,
+  type TemplateScope,
+  toImport,
+  unsafeValue,
+} from '../src/core/template.js';
 
 const SCOPE: TemplateScope = { brand: brandScope(BRAND), docs: { map: 'docs/architecture.md' }, cap: 1200 };
 const FILE = 'modules/base/files/AGENTS.md';
@@ -48,6 +54,30 @@ describe('renderTemplate', () => {
     expect(error.location).toBe(location);
     expect(error.message).toContain(`${FILE}: ${location}: `);
     expect(error.hint).toContain(fix);
+  });
+});
+
+describe('a list of lines, the one multi-line value', () => {
+  const lines: TemplateScope = { detected: { table: ['| `npm test` |', '| `uv run pytest` |'] } };
+
+  it('fills its variable with the lines joined by newlines', () => {
+    expect(renderTemplate('Commands:\n{{detected.table}}\n', lines, FILE)).toBe(
+      'Commands:\n| `npm test` |\n| `uv run pytest` |\n',
+    );
+  });
+
+  it('passes the value check when every line is safe', () => {
+    expect(unsafeValue(lines, BRAND)).toBeUndefined();
+  });
+
+  it.each([
+    ['a line that holds a newline', ['ok', 'npm test\n@~/.ssh/id_rsa'], 'table[1]', 'control character'],
+    ['a line with an outside import', ['see @~/.ssh/id_rsa'], 'table[0]', 'outside the project'],
+    ['a line with a block marker', [`<!-- ${BRAND.markerPrefix}:end base -->`], 'table[0]', 'managed block'],
+  ])('is refused for %s, naming the line', (_name, table, name, problem) => {
+    const unsafe = unsafeValue({ detected: { table } }, BRAND);
+    expect(unsafe?.name).toBe(`detected.${name}`);
+    expect(unsafe?.problem).toContain(problem);
   });
 });
 

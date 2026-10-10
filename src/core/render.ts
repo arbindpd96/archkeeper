@@ -222,7 +222,7 @@ function checkValues(values: TemplateScope | undefined, brand: Brand): void {
     file: 'template values',
     location: unsafe.name,
     problem: unsafe.problem,
-    hint: 'pass one line of text with no block marker and no @ import of an outside or private file: a value fills its template as is',
+    hint: 'pass one line of text, or a list of such lines, with no block marker and no @ import of an outside or private file: a value fills its template as is',
   });
 }
 
