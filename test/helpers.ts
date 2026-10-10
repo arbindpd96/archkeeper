@@ -11,6 +11,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { onTestFinished } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
 
@@ -98,6 +99,26 @@ export function runScript(
     encoding: 'utf8',
     env: withEnv(options.env),
     timeout: options.timeoutMs ?? SCRIPT_TIMEOUT_MS,
+  });
+  return { status: run.status, stdout: run.stdout, stderr: run.stderr };
+}
+
+/**
+ * Runs the CLI from its TypeScript sources in a child Node.js, the way a user runs the bin: `scripts/ts-resolve.mjs`
+ * maps its `.js` imports to the `.ts` files. stdin is closed unless `input` is given, so nothing waits on a prompt.
+ */
+export function runCliProcess(
+  args: readonly string[],
+  options: { cwd?: string; env?: NodeJS.ProcessEnv; timeoutMs?: number } = {},
+): RunResult {
+  const hook = pathToFileURL(path.join(REPO_ROOT, 'scripts/ts-resolve.mjs')).href;
+  const bin = path.join(REPO_ROOT, 'src/cli/bin.ts');
+  const run = spawnSync(process.execPath, ['--no-warnings', '--import', hook, bin, ...args], {
+    cwd: options.cwd,
+    stdio: ['ignore', 'pipe', 'pipe'],
+    encoding: 'utf8',
+    env: options.env ?? withEnv(),
+    timeout: options.timeoutMs ?? 30_000,
   });
   return { status: run.status, stdout: run.stdout, stderr: run.stderr };
 }

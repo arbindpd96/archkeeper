@@ -48,8 +48,8 @@ function sectionOf(readme, title) {
 }
 
 /** Lists what a declared demo is missing: its tape, its GIF, or a README section that shows the GIF. */
-function demoProblems({ id, demo }, options) {
-  const where = `module ${id} demo "${demo.tape}"`;
+function demoProblems(subject, demo, options) {
+  const where = `${subject} demo "${demo.tape}"`;
   const problems = [];
   if (!existsSync(path.join(options.tapes, `${demo.tape}.tape`))) {
     problems.push(`${where} has no tape at ${path.join(options.tapes, `${demo.tape}.tape`)}.`);
@@ -71,6 +71,20 @@ function demoProblems({ id, demo }, options) {
   return problems;
 }
 
+/** Holds one module or command to the rule: exactly one of `demo: {tape, section}` or `internal: true`. */
+function declarationProblems(kind, name, { demo, internal }, options) {
+  const subject = `${kind} ${name}`;
+  if (demo === undefined && internal !== true) {
+    return [`${subject} declares neither demo nor internal: true; a user-facing ${kind} needs a demo.`];
+  }
+  if (demo !== undefined && internal !== undefined) return [`${subject} declares both demo and internal.`];
+  if (demo === undefined) return [];
+  if (typeof demo.tape !== 'string' || typeof demo.section !== 'string') {
+    return [`${subject} demo needs a tape and a README section, as {"tape": "...", "section": "..."}.`];
+  }
+  return demoProblems(subject, demo, options);
+}
+
 /**
  * Applies the #18 rule to every module: declare exactly one of `demo: {tape, section}` or `internal: true`,
  * and a demo needs its tape, its committed GIF and a README section that shows it.
@@ -78,17 +92,14 @@ function demoProblems({ id, demo }, options) {
 export function moduleDemoProblems(options) {
   return readManifests(options.modules).flatMap(({ id, file, manifest, error }) => {
     if (error !== undefined) return [`${file} is not valid JSON (${error}).`];
-    const { demo, internal } = manifest;
-    if (demo === undefined && internal !== true) {
-      return [`module ${id} declares neither demo nor internal: true; a user-facing module needs a demo.`];
-    }
-    if (demo !== undefined && internal !== undefined) {
-      return [`module ${id} declares both demo and internal.`];
-    }
-    if (demo === undefined) return [];
-    if (typeof demo.tape !== 'string' || typeof demo.section !== 'string') {
-      return [`module ${id} demo needs a tape and a README section, as {"tape": "...", "section": "..."}.`];
-    }
-    return demoProblems({ id, demo }, options);
+    return declarationProblems('module', id, manifest, options);
   });
+}
+
+/** Applies the same rule to every command in the CLI's command registry (#26), which `commands` lists. */
+export function commandDemoProblems(commands, options) {
+  if (!Array.isArray(commands)) {
+    return [`${options.commands} exports no COMMANDS list; the CLI registry must list every command.`];
+  }
+  return commands.flatMap((command) => declarationProblems('command', command.name, command, options));
 }

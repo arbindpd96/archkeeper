@@ -75,3 +75,8 @@ export class LockError extends ArchkeeperError {
 export class ApplyError extends ArchkeeperError {
   override readonly name = 'ApplyError';
 }
+
+/** A flag, a missing answer or a target folder a command cannot work with, named with the flag that fixes it (#26). */
+export class UsageError extends ArchkeeperError {
+  override readonly name = 'UsageError';
+}
