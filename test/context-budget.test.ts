@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { chmodSync } from 'node:fs';
+import path from 'node:path';
+import { describe, expect, it, onTestFinished } from 'vitest';
 import budgets from '../budgets.json' with { type: 'json' };
-import { alwaysOnContext } from '../scripts/context-rules.mjs';
+import { alwaysOnContext, importsOf } from '../scripts/context-rules.mjs';
 import { fixtureCopy, runScript, tempDir, writeFiles } from './helpers.js';
 import { existingClaudeSetup, KIT, runInit } from './init-helpers.js';
 
@@ -40,6 +42,25 @@ describe('alwaysOnContext', () => {
     expect(measured.rules).toBe('Always.\n'.length);
     expect(measured.skills).toBe('Explain a decision.'.length);
   });
+
+  it('reads imports right after inline markdown but not inside a word, a code span or a fence', () => {
+    const text =
+      'See **@AGENTS.md** and (@docs/a\\ b.md), not ada@example.com or `@x.md`.\n```\n@y.md\n```\n';
+    expect(importsOf(text)).toEqual(['AGENTS.md', 'docs/a b.md']);
+  });
+
+  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
+    'fails rather than count a file it cannot read as empty',
+    () => {
+      const dir = tempDir();
+      writeFiles(dir, { 'CLAUDE.md': '@AGENTS.md\n', 'AGENTS.md': 'Rules.\n' });
+      chmodSync(path.join(dir, 'AGENTS.md'), 0o000);
+      onTestFinished(() => {
+        chmodSync(path.join(dir, 'AGENTS.md'), 0o644);
+      });
+      expect(() => alwaysOnContext(dir, 0)).toThrow(/EACCES/);
+    },
+  );
 
   it('adds the SessionStart cap and rounds tokens up from characters / 4', () => {
     const dir = tempDir();

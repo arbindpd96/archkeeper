@@ -11,7 +11,7 @@ export interface AlwaysOnContext {
   readonly tokens: number;
 }
 
-/** The `@path` imports of Markdown text, outside code fences and code spans, with escaped spaces read back. */
+/** The `@path` imports of Markdown text (after a space or inline markdown), outside code fences and spans. */
 export declare function importsOf(text: string): string[];
 
 /** Estimates the context Claude Code loads in every session of the project at `root` (ADR-0017). */
