@@ -131,18 +131,23 @@ export function diffLines(diff: string, paint: Reporter['paint']): string[] {
     });
 }
 
-/** What to do once init has applied its plan (#27): restart Claude Code, then start a feature. */
+/** How to resolve the sidecars waiting for review (ADR-0014): take what you want, delete the sidecar, commit. */
+export function sidecarLines(sidecars: readonly string[], brand: Brand): string[] {
+  if (sidecars.length === 0) return [];
+  return [
+    ...sidecars.map((sidecar) => `  ${escapeUnprintable(sidecar)}`),
+    '  Take what you want from each into its file, delete the sidecar, and commit the change',
+    `  together with ${escapeUnprintable(brand.stateDir)}/lock.json.`,
+  ];
+}
+
+/** What to do once init has applied its plan (#27): review any sidecar, restart Claude Code, start a feature. */
 export function nextStepLines(sidecars: readonly string[], brand: Brand): string[] {
-  const review =
-    sidecars.length === 0
-      ? []
-      : [
-          `  Review each sidecar (${sidecars.map(escapeUnprintable).join(', ')}), take what you want into the file, delete the sidecar,`,
-          `  and commit it together with ${brand.stateDir}/lock.json.`,
-        ];
+  const review = sidecars.length === 0 ? [] : ['  Review the sidecars the kit wrote beside your files:'];
   return [
     'Next steps:',
     ...review,
+    ...sidecarLines(sidecars, brand),
     '  1. Restart Claude Code so it loads the new instructions, settings and hooks.',
     '  2. In Claude Code, run /new-feature <name> to start your first feature.',
   ];

@@ -52,6 +52,8 @@ export interface InitSetup {
   readonly catalog?: Catalog;
   /** Runs before each answer is given, such as an edit made while init waits. */
   readonly whileAsking?: (question: string) => void;
+  /** The kit version to run as, such as a newer one after an upgrade. */
+  readonly version?: string;
 }
 
 function scriptedPrompter(setup: InitSetup, log: (question: string) => void): Prompter {
@@ -91,7 +93,7 @@ export async function runInit(
         written.stderr += text;
       },
     },
-    readInfo: () => INFO,
+    readInfo: () => ({ ...INFO, version: setup.version ?? INFO.version }),
     loadKit: () => setup.catalog ?? KIT,
     brand: TEST_BRAND,
     cwd: dir,

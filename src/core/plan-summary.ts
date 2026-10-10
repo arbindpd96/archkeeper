@@ -1,5 +1,7 @@
+import { BRAND, type Brand } from './brand.js';
 import type { Plan } from './plan.js';
 import type { PlanOp } from './plan-types.js';
+import { sidecarPath } from './sidecar.js';
 import { compareText } from './text.js';
 
 /** How a path fares in a plan, as #27 groups it: created, modified, left with a sidecar, or left as it is. */
@@ -19,6 +21,20 @@ function groupOf(plan: Plan, path: string, ops: readonly PlanOp[]): PlanGroup {
   if (ops.some((op) => op.kind === 'sidecar')) return 'conflict';
   if (!plan.writes.has(path)) return 'skip';
   return plan.expected.get(path) === null ? 'create' : 'modify';
+}
+
+/**
+ * The sidecars a plan leaves waiting for review (ADR-0014): one written now, and one from an earlier run whose
+ * kit version the lock still holds as `pending`, which a re-run plans as a skip. Sorted, each named once.
+ */
+export function pendingSidecars(plan: Plan, brand: Pick<Brand, 'sidecarSuffix'> = BRAND): string[] {
+  const written = plan.ops.filter((op) => op.kind === 'sidecar').map((op) => op.path);
+  const files = [...plan.lock.files].filter(([, entry]) => entry.pending !== undefined).map(([path]) => path);
+  const blocks = [...plan.lock.blocks]
+    .filter(([, entries]) => [...entries.values()].some((entry) => entry.pending !== undefined))
+    .map(([path]) => path);
+  const paths = new Set([...written, ...files, ...blocks]);
+  return [...paths].sort(compareText).map((path) => sidecarPath(path, brand));
 }
 
 /**
