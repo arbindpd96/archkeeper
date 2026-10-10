@@ -53,6 +53,17 @@ const CORE_HAS_NO_IO =
 const IO_MODULES = ['node:process', 'process', 'node:fs', 'fs', 'node:fs/promises', 'fs/promises'];
 const CORE_HAS_NO_COMPRESSION =
   'src/core is pure (ADR-0011): it hashes content; src/cli compresses and decompresses the blobs (ADR-0014).';
+const CORE_RUNS_NOTHING =
+  'src/core is pure (ADR-0011): it starts no process and opens no connection (ADR-0018); src/cli runs git.';
+const PROCESS_AND_NETWORK_MODULES = [
+  'child_process',
+  'worker_threads',
+  'net',
+  'http',
+  'https',
+  'http2',
+  'dgram',
+];
 const HOOKS_ARE_STANDALONE =
   'Hooks are self-contained bundles (ADR-0011): import only node: built-ins and ./runtime/.';
 const RUNTIME_HAS_NO_PACKAGES = 'The hook runtime imports no npm package (ADR-0011): use node: built-ins.';
@@ -68,6 +79,9 @@ const layerBoundaries = [
           paths: [
             ...IO_MODULES.map((name) => ({ name, message: CORE_HAS_NO_IO })),
             ...['node:zlib', 'zlib'].map((name) => ({ name, message: CORE_HAS_NO_COMPRESSION })),
+            ...PROCESS_AND_NETWORK_MODULES.flatMap((name) =>
+              [`node:${name}`, name].map((spelling) => ({ name: spelling, message: CORE_RUNS_NOTHING })),
+            ),
             { name: 'node:console', message: CORE_IS_PURE },
             { name: 'console', message: CORE_IS_PURE },
           ],

@@ -44,6 +44,8 @@ describe('layer boundaries (ADR-0011)', () => {
     ['src/core/imports-node-fs.ts', 'no-restricted-imports'],
     ['src/core/imports-fs-promises.ts', 'no-restricted-imports'],
     ['src/core/imports-node-zlib.ts', 'no-restricted-imports'],
+    ['src/core/imports-child-process.ts', 'no-restricted-imports'],
+    ['src/core/imports-https.ts', 'no-restricted-imports'],
     ['src/hooks/imports-core.ts', 'no-restricted-imports'],
     ['src/hooks/runtime/imports-package.ts', 'no-restricted-imports'],
   ])('%s breaks %s', async (file, ruleId) => {
