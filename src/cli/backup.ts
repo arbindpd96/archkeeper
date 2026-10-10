@@ -108,7 +108,7 @@ export function ensureLocalFolder(rootReal: string, brand: Brand): void {
 }
 
 function runId(): string {
-  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+  const stamp = new Date().toISOString().replace(/[-:.]/g, '');
   return `${stamp}-${randomBytes(4).toString('hex')}`;
 }
 

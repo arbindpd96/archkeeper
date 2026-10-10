@@ -118,7 +118,7 @@ describe('a failure in the middle of an apply', () => {
     expect(file).toMatch(/^\.acmekit\/base\/[0-9a-f]{64}$/);
     expect(message).toContain('injected failure');
     expect(message).toMatch(
-      /the files as they were are in \.acmekit\/local\/backup\/\d{8}T\d{6}Z-[0-9a-f]{8}/,
+      /the files as they were are in \.acmekit\/local\/backup\/\d{8}T\d{9}Z-[0-9a-f]{8}/,
     );
   });
 

@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process';
-import { readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { applyPlan } from '../src/cli/apply.js';
@@ -186,6 +186,16 @@ describe('the state folder', () => {
       install(dir, fixtureTree(), OPTIONS);
     }
     expect(backups(dir)).toHaveLength(3);
+  });
+
+  it('never prunes the backup of the run that made it, however quick the runs', () => {
+    const dir = tempDir();
+    for (let run = 0; run < 5; run += 1) {
+      writeFiles(dir, { 'AGENTS.md': `# Agents ${String(run)}\n` });
+      rmSync(path.join(dir, LOCK), { force: true });
+      const { applied } = install(dir, fixtureTree(), OPTIONS);
+      expect(existsSync(path.join(dir, applied.backup ?? 'none')), `run ${String(run)}`).toBe(true);
+    }
   });
 
   it('removes a base blob once no lock entry references it', () => {
