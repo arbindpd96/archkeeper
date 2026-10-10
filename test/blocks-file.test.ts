@@ -5,6 +5,7 @@ import { type BlockPart, blockParts, parseBlocks } from '../src/core/blocks-file
 import { BYTE_ORDER_MARK } from '../src/core/text.js';
 import { MergeError } from '../src/core/errors.js';
 import { markerIn, markerPattern } from '../src/core/markers.js';
+import { memoryImports } from '../src/core/memory-imports.js';
 import { unsafeValue } from '../src/core/template.js';
 import { TEST_BRAND } from './kit-fixtures.js';
 
@@ -143,6 +144,22 @@ describe('editBlocks', () => {
     });
     expect(result).toBe(
       `${BEGIN('imports')}\n@AGENTS.md\n${END('imports')}\n\n# Project\n\nNotes.\n\n${BEGIN('notes')}\nMore.\n${END('notes')}\n`,
+    );
+  });
+
+  it('puts a new block of imports after a leading YAML frontmatter, so Claude Code still reads it as frontmatter', () => {
+    const imports = { insert: [{ id: 'imports', body: '@AGENTS.md\n' }] };
+    const block = `${BEGIN('imports')}\n@AGENTS.md\n${END('imports')}\n`;
+    const result = edit('CLAUDE.md', '---\nname: rules\n---\n# Project\n', imports);
+    expect(result).toBe(`---\nname: rules\n---\n${block}\n# Project\n`);
+    expect(memoryImports(result)).toEqual(['AGENTS.md']);
+    expect(edit('CLAUDE.md', '---\nname: rules\n---', imports)).toBe(`---\nname: rules\n---\n${block}`);
+  });
+
+  it('puts a new block of imports after a frontmatter that follows a byte-order mark, with CRLF endings', () => {
+    const text = `${BYTE_ORDER_MARK}---\r\nname: rules\r\n---\r\nBody\r\n`;
+    expect(edit('CLAUDE.md', text, { insert: [{ id: 'imports', body: '@AGENTS.md\n' }] })).toBe(
+      `${BYTE_ORDER_MARK}---\r\nname: rules\r\n---\r\n${BEGIN('imports')}\r\n@AGENTS.md\r\n${END('imports')}\r\n\r\nBody\r\n`,
     );
   });
 

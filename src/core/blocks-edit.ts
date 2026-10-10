@@ -1,5 +1,6 @@
 import type { BlocksFile } from './blocks-file.js';
 import { markerLine } from './markers.js';
+import { frontmatterEnd } from './memory-imports.js';
 import { BYTE_ORDER_MARK } from './text.js';
 
 /** A block the kit adds to a file, with its LF content. */
@@ -43,10 +44,28 @@ function keptParts(file: BlocksFile, edits: BlockEdits): string {
     .join('');
 }
 
+// Claude Code reads YAML frontmatter only at the very top of a Markdown memory file, so the first new block goes
+// on the line after a frontmatter's closing `---`.
+function firstBlockAt(file: BlocksFile, text: string): number {
+  const close = file.style === 'html' ? frontmatterEnd(text) : 0;
+  if (close === 0) return 0;
+  const lineEnd = text.indexOf('\n', close);
+  return lineEnd === -1 ? text.length : lineEnd + 1;
+}
+
+function withFirst(file: BlocksFile, text: string, blocks: readonly string[]): string {
+  const at = firstBlockAt(file, text);
+  const head = text.slice(0, at);
+  const rest = text.slice(at);
+  const ended = head === '' || head.endsWith('\n') ? head : `${head}${file.eol}`;
+  return ended + blocks.join(file.eol) + (rest === '' ? '' : file.eol) + rest;
+}
+
 /**
  * Applies block edits to a parsed file and returns its new text. Bytes outside managed blocks, the byte-order
- * mark and the line endings stay as they are. A new block of `@` imports goes first, followed by a blank line;
- * any other new block is appended after a blank line. New markers use `prefix`; existing ones keep theirs.
+ * mark and the line endings stay as they are. A new block of `@` imports goes first, after any YAML frontmatter
+ * of a Markdown file, followed by a blank line; any other new block is appended after a blank line. New markers
+ * use `prefix`; existing ones keep theirs.
  */
 export function editBlocks(file: BlocksFile, edits: BlockEdits, prefix: string): string {
   const { eol } = file;
@@ -54,7 +73,7 @@ export function editBlocks(file: BlocksFile, edits: BlockEdits, prefix: string):
   const first = edits.insert.filter((block) => importsOnly(block.body)).map(render);
   const last = edits.insert.filter((block) => !importsOnly(block.body)).map(render);
   let text = keptParts(file, edits);
-  if (first.length > 0) text = first.join(eol) + (text === '' ? '' : eol) + text;
+  if (first.length > 0) text = withFirst(file, text, first);
   if (last.length > 0) {
     const ended = text === '' || text.endsWith('\n') ? text : `${text}${eol}`;
     text = (ended === '' ? '' : `${ended}${eol}`) + last.join(eol);

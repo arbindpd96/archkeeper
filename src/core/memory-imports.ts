@@ -3,7 +3,7 @@ import { BYTE_ORDER_MARK } from './text.js';
 
 /** Claude Code 2.1.295 skips a memory file larger than this many bytes, imports and all (reference §2.1). */
 const MEMORY_FILE_BYTES = 4_194_304;
-const FRONTMATTER = /^---\s*\n([\s\S]*?)---\s*\n?/;
+const FRONTMATTER = /^(---\s*\n[\s\S]*?---)\s*\n?/;
 const IMPORT = /(?:^|\s)@((?:[^\s\\]|\\ )+)/g;
 const COMMENT = /<!--[\s\S]*?-->/g;
 const SYMBOLS_ONLY = /^[#%^&*()]+/;
@@ -31,10 +31,22 @@ export function skipsMemoryFile(text: string): boolean {
   return utf8Bytes(text) > MEMORY_FILE_BYTES;
 }
 
+function frontmatterIn(body: string): RegExpExecArray | null {
+  return body.includes('---', 3) ? FRONTMATTER.exec(body) : null;
+}
+
+/**
+ * Where the YAML frontmatter Claude Code reads at the top of a memory file without a byte-order mark ends: just
+ * after its closing `---`, or 0 when the text opens with none.
+ */
+export function frontmatterEnd(body: string): number {
+  return frontmatterIn(body)?.[1]?.length ?? 0;
+}
+
 /** The text after a leading byte-order mark and YAML frontmatter, or the text unchanged when it has none. */
 function withoutFrontmatter(text: string): string {
   const body = text.startsWith(BYTE_ORDER_MARK) ? text.slice(1) : text;
-  const frontmatter = body.includes('---', 3) ? FRONTMATTER.exec(body) : null;
+  const frontmatter = frontmatterIn(body);
   return frontmatter === null ? text : body.slice(frontmatter[0].length);
 }
 
