@@ -39,17 +39,17 @@ Run `npx archkeeper init` in any repository and your agent stops rewriting code 
 
 <p align="center"><i>What archkeeper sets up in your repository. Every part is a plain file you can read and edit, and every session starts with all of it loaded.</i></p>
 
-**Get started** (30 seconds, from v0.1):
+## Quick start
+
+<p align="center"><img src="docs/media/init.gif" alt="archkeeper init previews its plan as a diff, warns that the folder is not a git repository, asks for a preset and a yes, then writes CLAUDE.md, AGENTS.md and the ignore rules" width="100%"></p>
 
 ```bash
-npx archkeeper init     # detects your stack, asks a few questions, writes the setup
+npx archkeeper init             # detect the stack, show the plan, ask, then write it
+npx archkeeper init --dry-run   # print the plan as a unified diff and write nothing
+npx archkeeper init --yes       # no questions, as in CI; also --preset, --stack, --modules
 ```
 
-Then, in Claude Code:
-
-```text
-/new-feature checkout-flow
-```
+Your own lines in CLAUDE.md and AGENTS.md stay as they are: the kit writes only its managed blocks, and a file it would replace gets a sidecar instead. Exit codes: 0 done, 1 error or cancelled, 2 done with sidecars to review. Then restart Claude Code and run `/new-feature checkout-flow`.
 
 That's it. You get:
 
