@@ -109,6 +109,11 @@ function planOwned(file: KitFile): PathOutcome {
     return outcome(job, 'create', 'new kit file', { content: entry.content, file: entryOf(file, kitHash) });
   }
   if (state.kind === 'file') return planExisting(file, state.content);
+  if (file.base === kitHash) {
+    const reason =
+      'the user replaced it with something the kit never writes through, and the kit has nothing new';
+    return outcome(job, 'skip', reason, { file: entryOf(file, kitHash, file.pending) });
+  }
   return toSidecar(
     file,
     `is ${state.kind === 'symlink' ? 'a symlink' : 'not a regular text file'}, which the kit never writes through`,
