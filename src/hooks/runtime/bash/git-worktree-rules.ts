@@ -6,8 +6,7 @@ import { ask, type Verdict } from './verdicts.js';
 
 const DISCARDS_WORK = ask('This discards work irreversibly. Confirm with the user.');
 
-// `git checkout <file>` or `git checkout <rev> <file>` overwrites uncommitted edits with no prompt.
-/** Judges `git checkout`: forcing it, or naming paths, discards uncommitted edits. */
+/** Judges `git checkout`: forcing it, or naming paths as `git checkout <rev> <file>` does, discards edits unasked. */
 export function judgeCheckout(
   options: ParsedOptions,
   _command: Command,

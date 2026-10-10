@@ -66,8 +66,10 @@ export const ghRule: Rule = ({ args }) => {
   return deletesResource || (group === 'api' && methodDelete) ? GITHUB_DELETE : null;
 };
 
-// `npm stage approve` and `reject` act on a staged publish; 2FA still gates them, but the guard surfaces them (#31).
-/** Judges package managers: publishing, deprecating, retagging and approving a staged publish ask. */
+/**
+ * Judges package managers: publishing, deprecating, retagging, and approving or rejecting a staged publish ask;
+ * 2FA still gates `npm stage approve`, but the guard surfaces it (#31).
+ */
 export const publishRule: Rule = ({ args }) => {
   const publishes = args.some((arg) => PUBLISH_COMMANDS.has(arg));
   const stages = args.includes('stage') && args.some((arg) => STAGE_ACTIONS.has(arg));
