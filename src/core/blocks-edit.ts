@@ -33,28 +33,42 @@ function renderBlock(file: BlocksFile, prefix: string, block: NewBlock): string 
   return `${begin}${eol}${withEol(block.body, eol)}${end}${eol}`;
 }
 
-function keptParts(file: BlocksFile, edits: BlockEdits): string {
-  return file.parts
-    .map((part) => {
-      if (part.kind === 'text') return part.text;
-      if (edits.remove.has(part.id)) return '';
-      const body = edits.replace.get(part.id);
-      return `${part.begin}${body === undefined ? part.body : withEol(body, file.eol)}${part.end}`;
-    })
-    .join('');
+/** A part of the file as kept, user text or a managed block, with its new text. */
+interface KeptPart {
+  readonly text: string;
+  readonly block: boolean;
+}
+
+function keptParts(file: BlocksFile, edits: BlockEdits): KeptPart[] {
+  return file.parts.map((part) => {
+    if (part.kind === 'text') return { text: part.text, block: false };
+    if (edits.remove.has(part.id)) return { text: '', block: true };
+    const body = edits.replace.get(part.id);
+    return {
+      text: `${part.begin}${body === undefined ? part.body : withEol(body, file.eol)}${part.end}`,
+      block: true,
+    };
+  });
 }
 
 // Claude Code reads YAML frontmatter only at the very top of a Markdown memory file, so the first new block goes
-// on the line after a frontmatter's closing `---`.
-function firstBlockAt(file: BlocksFile, text: string): number {
+// on the line after a frontmatter's closing `---`, or after the kept block that line falls in, never inside it.
+function firstBlockAt(file: BlocksFile, parts: readonly KeptPart[]): number {
+  const text = parts.map((part) => part.text).join('');
   const close = file.style === 'html' ? frontmatterEnd(text) : 0;
   if (close === 0) return 0;
   const lineEnd = text.indexOf('\n', close);
-  return lineEnd === -1 ? text.length : lineEnd + 1;
+  const at = lineEnd === -1 ? text.length : lineEnd + 1;
+  let start = 0;
+  for (const part of parts) {
+    const end = start + part.text.length;
+    if (part.block && start < at && at < end) return end;
+    start = end;
+  }
+  return at;
 }
 
-function withFirst(file: BlocksFile, text: string, blocks: readonly string[]): string {
-  const at = firstBlockAt(file, text);
+function withFirst(file: BlocksFile, text: string, at: number, blocks: readonly string[]): string {
   const head = text.slice(0, at);
   const rest = text.slice(at);
   const ended = head === '' || head.endsWith('\n') ? head : `${head}${file.eol}`;
@@ -64,7 +78,7 @@ function withFirst(file: BlocksFile, text: string, blocks: readonly string[]): s
 /**
  * Applies block edits to a parsed file and returns its new text. Bytes outside managed blocks, the byte-order
  * mark and the line endings stay as they are. A new block of `@` imports goes first, after any YAML frontmatter
- * of a Markdown file, followed by a blank line; any other new block is appended after a blank line. New markers
+ * of a Markdown file (after the managed block its closing line falls in), followed by a blank line; any other new block is appended after a blank line. New markers
  * use `prefix`; existing ones keep theirs.
  */
 export function editBlocks(file: BlocksFile, edits: BlockEdits, prefix: string): string {
@@ -72,8 +86,9 @@ export function editBlocks(file: BlocksFile, edits: BlockEdits, prefix: string):
   const render = (block: NewBlock): string => renderBlock(file, prefix, block);
   const first = edits.insert.filter((block) => importsOnly(block.body)).map(render);
   const last = edits.insert.filter((block) => !importsOnly(block.body)).map(render);
-  let text = keptParts(file, edits);
-  if (first.length > 0) text = withFirst(file, text, first);
+  const parts = keptParts(file, edits);
+  let text = parts.map((part) => part.text).join('');
+  if (first.length > 0) text = withFirst(file, text, firstBlockAt(file, parts), first);
   if (last.length > 0) {
     const ended = text === '' || text.endsWith('\n') ? text : `${text}${eol}`;
     text = (ended === '' ? '' : `${ended}${eol}`) + last.join(eol);
