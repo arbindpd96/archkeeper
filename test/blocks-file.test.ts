@@ -71,6 +71,12 @@ describe('parseBlocks', () => {
     ['a nested begin', `${BEGIN('a')}\n${BEGIN('b')}\n`, 'line 2', 'inside block "a", opened on line 1'],
     ['a mismatched end', `${BEGIN('a')}\n${END('b')}\n`, 'line 2', 'closes block "b" while block "a"'],
     [
+      'an end under another prefix',
+      `<!-- oldkit:begin a -->\n${END('a')}\n`,
+      'line 2',
+      'closes block "a" with acmekit:end, but it opens with oldkit:begin on line 1',
+    ],
+    [
       'a repeated block',
       `${BEGIN('a')}\n${END('a')}\n${BEGIN('a')}\n${END('a')}\n`,
       'line 3',
