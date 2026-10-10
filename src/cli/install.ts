@@ -1,4 +1,5 @@
 import { readdirSync, realpathSync } from 'node:fs';
+import path from 'node:path';
 import { BRAND, type Brand } from '../core/brand.js';
 import { LockError } from '../core/errors.js';
 import { exactHash, HASH } from '../core/hash.js';
@@ -9,8 +10,14 @@ import type { Ownable } from '../core/plan-types.js';
 import type { RenderTree } from '../core/render-tree.js';
 import { type ApplyResult, applyPlan } from './apply.js';
 import { assertRealStateFolders } from './backup.js';
-import { baseFolder } from './blob-store.js';
-import { confinedPath, lstatOrUndefined, readConfined, readSnapshot } from './project-files.js';
+import { baseFolder, readBlob } from './blob-store.js';
+import {
+  confinedPath,
+  lstatOrUndefined,
+  readConfined,
+  readFileBytes,
+  readSnapshot,
+} from './project-files.js';
 
 /** What an install depends on besides the project and the rendered tree. */
 export interface InstallOptions {
@@ -47,10 +54,26 @@ function readProjectLock(rootReal: string, kit: KitId, brand: Brand): ProjectLoc
   return { read: readLock(state.content, kit, brand), hash: exactHash(state.content) };
 }
 
+// Blobs are committed and untrusted: a file counts as known kit content only once it decompresses, within the
+// size cap, to content that hashes to its name (ADR-0014), so a planted empty file vouches for nothing.
+function isValidBlob(folder: string, name: string, brand: Brand): boolean {
+  const absolute = path.join(folder, name);
+  const bytes = lstatOrUndefined(absolute)?.isFile() === true ? readFileBytes(absolute) : undefined;
+  if (bytes === undefined) return false;
+  try {
+    readBlob(name, bytes, brand);
+    return true;
+  } catch (error) {
+    if (error instanceof LockError) return false;
+    throw error;
+  }
+}
+
 function blobNames(rootReal: string, brand: Brand): Set<string> {
   const folder = confinedPath(rootReal, baseFolder(brand), 'the kit base folder');
   if (lstatOrUndefined(folder)?.isDirectory() !== true) return new Set();
-  return new Set(readdirSync(folder).filter((name) => HASH.test(name)));
+  const names = readdirSync(folder).filter((name) => HASH.test(name));
+  return new Set(names.filter((name) => isValidBlob(folder, name, brand)));
 }
 
 /**

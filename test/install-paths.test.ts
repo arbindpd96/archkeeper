@@ -233,4 +233,17 @@ describe('base blobs', () => {
   it('refuse a blob that is not gzip', () => {
     expect(() => readBlob(contentHash('x'), Buffer.from('x'), TEST_BRAND)).toThrow('it is not valid gzip');
   });
+
+  it('vouch for content in a lock rebuild only when they hash to their name', () => {
+    const dir = tempDir();
+    install(dir, fixtureTree(), OPTIONS);
+    const rule = path.join(dir, '.claude/rules/acmekit/guard.md');
+    writeFileSync(rule, 'My own guard rule.\n');
+    const lock = path.join(dir, TEST_BRAND.stateDir, 'lock.json');
+    const text = readFileSync(lock, 'utf8');
+    writeFileSync(lock, `<<<<<<< HEAD\n${text}=======\n${text}>>>>>>> other\n`);
+    writeFileSync(path.join(dir, TEST_BRAND.stateDir, 'base', contentHash('My own guard rule.\n')), '');
+    install(dir, fixtureTree(), OPTIONS);
+    expect(readFileSync(rule, 'utf8')).toBe('My own guard rule.\n');
+  });
 });
