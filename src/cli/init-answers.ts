@@ -104,6 +104,10 @@ const GIT_PROBLEMS: Readonly<Record<Exclude<GitState, 'clean'>, readonly [proble
     'could not be checked with git, so init cannot tell whether git can undo its changes',
     'check that git is installed and works here',
   ],
+  filters: [
+    'has a repository whose own config sets a filter program, which git status could run, so init did not ask git',
+    'check the filter entries in its .git/config',
+  ],
 };
 
 /**

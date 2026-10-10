@@ -36,6 +36,7 @@ describe('init writes nothing without a yes', () => {
 
   it.each([
     ['ignored', 'is ignored by its git repository', 'stop ignoring it and commit it first, or pass --yes'],
+    ['filters', 'sets a filter program', 'check the filter entries in its .git/config, or pass --yes'],
   ] as const)('stops on a folder git says is %s, naming the fix', async (git, problem, fix) => {
     const { dir } = fixtureCopy('ts-app');
     const result = await runInit(dir, [], { git });

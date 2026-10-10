@@ -71,6 +71,15 @@ describe('gitState hardening', () => {
     expect(existsSync(marker)).toBe(false);
   });
 
+  it('does not run git status when the repository config sets a filter program, which status could run', () => {
+    const marker = path.join(tempDir(), 'ran');
+    const repo = tempRepo({ '.gitattributes': '* filter=evil\n', 'README.md': '# App\n' });
+    git(repo, 'config', 'filter.evil.clean', `touch '${marker}'; cat`);
+    writeFiles(repo, { 'README.md': '# App, edited\n' });
+    expect(gitState(repo)).toBe('filters');
+    expect(existsSync(marker)).toBe(false);
+  });
+
   it('answers for a folder whose name holds shell syntax, since no shell is involved', () => {
     const repo = tempRepo({ 'README.md': '# App\n' });
     const folder = path.join(repo, `it's $HOME & a;b (x)`);
