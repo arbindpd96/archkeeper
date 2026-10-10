@@ -49,14 +49,20 @@ function record(value: unknown): Json {
   return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Json) : {};
 }
 
-function hookProblems(event: string, handler: Json, brand: Brand): string[] {
-  const problems: string[] = [];
+function isExecForm(handler: Json, brand: Brand): boolean {
   const script = new RegExp(String.raw`^\$\{CLAUDE_PROJECT_DIR\}/${brand.hookDir}/[a-z0-9-]+\.mjs$`);
   const args = Array.isArray(handler.args) ? handler.args : [];
-  if (handler.command !== 'node' || args.length !== 1 || !script.test(String(args[0]))) {
+  return handler.command === 'node' && args.length === 1 && script.test(String(args[0]));
+}
+
+function hookProblems(event: string, handler: Json, brand: Brand): string[] {
+  const problems: string[] = [];
+  if (!isExecForm(handler, brand)) {
     problems.push(`a ${event} hook is not exec form: node plus one script path`);
   }
   if ('shell' in handler || 'once' in handler) problems.push(`a ${event} hook sets shell or once`);
+  const { timeout } = handler;
+  if (typeof timeout !== 'number' || timeout <= 0) problems.push(`a ${event} hook has no timeout`);
   if ('if' in handler && !TOOL_EVENTS.has(event)) {
     problems.push(`a ${event} hook sets if on a non-tool event`);
   }
