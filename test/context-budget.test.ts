@@ -62,6 +62,12 @@ describe('alwaysOnContext', () => {
     },
   );
 
+  it('counts nothing for a block comment that spans lines, but keeps a comment that starts mid-line', () => {
+    const dir = tempDir();
+    writeFiles(dir, { 'CLAUDE.md': 'Kept.\n<!-- a note\nover two lines -->\nAlso <!-- inline --> kept.\n' });
+    expect(alwaysOnContext(dir, 0).instructions).toBe('Kept.\nAlso <!-- inline --> kept.\n'.length);
+  });
+
   it('adds the SessionStart cap and rounds tokens up from characters / 4', () => {
     const dir = tempDir();
     writeFiles(dir, { 'CLAUDE.md': 'abcde' });
