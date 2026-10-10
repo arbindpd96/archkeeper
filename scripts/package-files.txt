@@ -3,6 +3,9 @@ README.md
 dist/THIRD_PARTY_LICENSES.md
 dist/cli.mjs
 modules/architecture-map/module.json
+modules/base/files/agents.md
+modules/base/files/claude-code.md
+modules/base/files/claude-import.md
 modules/base/module.json
 modules/feature-memory/module.json
 modules/format-on-edit/module.json

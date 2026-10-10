@@ -32,8 +32,8 @@ function wordProblem(word: string): string | undefined {
     : undefined;
 }
 
-// Claude Code drops HTML comments before it looks for imports, so `@.<!---->env` reads as `@.env`.
-function withoutComments(text: string): string {
+/** The text with every closed HTML comment cut out, as Claude Code reads it: `@.<!---->env` reads as `@.env`. */
+export function withoutComments(text: string): string {
   let kept = '';
   let from = 0;
   let start = text.indexOf('<!--');

@@ -2,8 +2,24 @@
   "$schema": "../../schema/module.schema.json",
   "schemaVersion": 1,
   "id": "base",
-  "description": "CLAUDE.md importing AGENTS.md, shared agent rules, ignore rules and settings.",
+  "description": "CLAUDE.md importing AGENTS.md, the agent rules every AI tool shares, and ignore rules for local files.",
   "presets": ["small", "medium", "full"],
   "requires": [],
+  "files": [
+    { "to": "CLAUDE.md", "strategy": "blocks", "target": "project" },
+    { "to": "AGENTS.md", "strategy": "blocks", "target": "project" },
+    { "to": ".gitignore", "strategy": "blocks", "target": "project" }
+  ],
+  "blocks": [
+    { "file": "CLAUDE.md", "id": "agents-import", "template": "claude-import.md" },
+    { "file": "CLAUDE.md", "id": "claude-code", "template": "claude-code.md" },
+    { "file": "AGENTS.md", "id": "agent-rules", "template": "agents.md" }
+  ],
+  "gitignore": [
+    "CLAUDE.local.md",
+    ".claude/settings.local.json",
+    "{{brand.stateDir}}/local/",
+    ".*.[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f].tmp"
+  ],
   "internal": true
 }
