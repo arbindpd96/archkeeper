@@ -39,7 +39,7 @@ v0.1 milestone M4 (issues #30, #31, #32, #33): the safety layer the kit installs
 - [x] #32 guard-secrets: shared core patterns, target, replay, entry and the ported suites plus the false-positive suite (7927416); escaped file names (0311def).
 - [x] #33 safety module: manifest, AGENTS block, golden trees, module snapshot, static settings rules, init tests with a user's settings and a linked `.claude`, end-to-end run of the installed guards under a path with a space (3246b98); `optOut` in core and init (73831c4); a timeout on every generated hook in the static settings rules (116e76a).
 - [x] Demo and docs: README Safety section (no image yet), `docs/guards.md`, `docs/media/tapes/guard.tape` marked `# live` (514fe97), the generic editor and pager variables among the known limits (ab99750); changeset (c177411); architecture map with each commit; decisions, mistakes, ROADMAP and this file (the docs commit).
-- [x] `npm run check` green before every commit. Measured: guard-bash 109.7 kB (budget 120 kB), guard-secrets 19.6 kB (30 kB); p95 43 ms and 40 ms locally (200 ms); always-on context small 826, medium 1,276, full 1,526 tokens (1,500 / 3,000 / 4,500); warm init 386 ms (2,000 ms); tarball well inside 300 kB.
+- [x] `npm run check` green before every commit. Measured on the branch tip (496f019): guard-bash 110.5 kB (budget 120 kB), guard-secrets 20.3 kB (30 kB), up from 109.7 kB and 19.6 kB before the escaped reasons and the review fixes; p95 44.9 ms and 40.9 ms locally (200 ms); always-on context small 826, medium 1,276, full 1,526 tokens (1,500 / 3,000 / 4,500); warm init 210 ms (2,000 ms); tarball 206.8 kB (300 kB); 2,698 tests in 79 files.
 
 ## Next step
 
@@ -60,10 +60,12 @@ v0.1 milestone M4 (issues #30, #31, #32, #33): the safety layer the kit installs
 - tsdown's `codeSplitting: false` refuses more than one entry per build; the scratch measurements need one config per hook.
 - `npm run package -- --update` rewrites `scripts/package-files.txt` after a new published file (a hook bundle, a module template).
 - A test kit read through `readKit(REPO_ROOT)` holds the real bundles; `KIT` from `test/init-helpers.ts` holds stand-ins. Golden and snapshot tests use `KIT`; anything that runs an installed hook uses `readKit`.
+- Never run `rm -rf`, not even on a worktree, a build folder or a scratch folder (the maintainer, 2026-10-10). Leave cleanup to the tools that own a folder (tsdown's `dist/`, the tests' `tempDir`, the scripts' `mkdtemp` folders) or ask the maintainer.
+- In a sandbox that cannot write `~/.npm`, every `test/check-package.test.ts` case fails with `npm pack` EPERM on `~/.npm/_cacache`, which is not a code failure. Run the check with `npm_config_cache` set to a writable temp folder.
 
 ## Open questions
 
-- Sign-off (#30, blocks closing it): guard-bash's bundle is 109.7 kB under its own 120 kB budget, not the 30 kB #30 and the brief name (see Decisions and ADR-0017's note). Keep it unminified at 120 kB, minify every hook bundle (54 kB, still over 30 kB, unreadable in users' repos), or amend #30.
+- Sign-off (#30, blocks closing it): guard-bash's bundle is 110.5 kB under its own 120 kB budget, not the 30 kB #30 and the brief name (see Decisions and ADR-0017's note). Keep it unminified at 120 kB, minify every hook bundle (about 54 kB, still over 30 kB, unreadable in users' repos), or amend #30.
 - Not met (#32, blocks closing it): #32's "high-entropy values assigned to `*_KEY`, `*_SECRET`, `*_TOKEN` or `PASSWORD`" is not in the reference guard, and the brief says to keep to guard-secrets' own rules. An entropy rule needs its own linear-time design and false-positive suite (placeholders, lockfile hashes, fixtures), and the shared list also gates what the renderer writes. Proposed: a follow-up issue.
 - Sign-off (#31, blocks closing it): #31's "Unparseable input fails open with a stderr note" is replaced by ADR-0015's fail-closed `ask` (the R3 comment); a payload with no command now asks too.
 - Sign-off (#33, blocks closing it): "Manifest `demo` is `guard`" waits on the live GIF (Next step 2); the module stays `internal` until then, as the brief asks. "doctor and every update warn …" lands with those commands in M7 (Next step 4).
