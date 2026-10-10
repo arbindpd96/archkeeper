@@ -3,7 +3,7 @@ import { contentHash } from './hash.js';
 import type { FileEntry } from './lock.js';
 import type { OpKind, PathOutcome, PathState } from './plan-types.js';
 import type { RenderedEntry } from './render-tree.js';
-import { keptSidecarReason, sidecarAction, sidecarPath } from './sidecar.js';
+import { keptSidecarReason, settledOp, sidecarAction, sidecarPath } from './sidecar.js';
 
 /** Everything the planner knows about one owned or create-only path. */
 export interface FileJob {
@@ -30,21 +30,9 @@ interface KitFile {
 
 type Change = Omit<PathOutcome, 'ops' | 'removed'>;
 
-function entryText(entry: FileEntry | undefined): string {
-  return entry === undefined ? '' : JSON.stringify([entry.module, entry.strategy, entry.base, entry.pending]);
-}
-
-function adoptReason(job: FileJob): string {
-  if (job.lock?.pending !== undefined && job.sidecar === undefined) {
-    return 'its sidecar is gone, so the kit version it held now counts as seen';
-  }
-  return 'its lock entry now names the module and strategy that write it';
-}
-
-// A skip that still moves the lock entry, such as a resolved sidecar, is reported as an adoption.
 function outcome(job: FileJob, kind: OpKind, reason: string, change: Change = {}): PathOutcome {
-  const moved = kind === 'skip' && entryText(change.file) !== entryText(job.lock);
-  const op = moved ? { kind: 'adopt' as const, reason: adoptReason(job) } : { kind, reason };
+  const moved = 'its lock entry now names the module and strategy that write it';
+  const op = settledOp(kind, reason, { before: job.lock, after: change.file, sidecar: job.sidecar, moved });
   return { ops: [{ ...op, path: job.path }], removed: [], ...change };
 }
 
