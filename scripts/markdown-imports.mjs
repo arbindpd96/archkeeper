@@ -7,7 +7,6 @@ const MEMORY_FILE_BYTES = 4_194_304;
 const BYTE_ORDER_MARK = '﻿';
 const FRONTMATTER = /^---\s*\n([\s\S]*?)---\s*\n?/;
 const IMPORT = /(?:^|\s)@((?:[^\s\\]|\\ )+)/g;
-const COMMENT = /<!--[\s\S]*?-->/g;
 const SYMBOLS_ONLY = /^[#%^&*()]+/;
 const PATH_START = /^[a-zA-Z0-9._-]/;
 const SKIPPED_TYPES = new Set(['code', 'codespan']);
@@ -36,10 +35,25 @@ function addImports(text, found) {
   }
 }
 
+/** The text with every closed HTML comment cut out, as /<!--[\s\S]*?-->/g cuts them, in linear time. */
+function withoutComments(text) {
+  let kept = '';
+  let from = 0;
+  let start = text.indexOf('<!--');
+  while (start !== -1) {
+    const end = text.indexOf('-->', start + 4);
+    if (end === -1) break;
+    kept += text.slice(from, start);
+    from = end + 3;
+    start = text.indexOf('<!--', from);
+  }
+  return kept + text.slice(from);
+}
+
 /** What an HTML token that opens with a closed comment leaves once its comments are cut out; '' otherwise. */
 function commentLeftover(raw) {
   const opened = raw.trimStart();
-  return opened.startsWith('<!--') && opened.includes('-->') ? raw.replace(COMMENT, '') : '';
+  return opened.startsWith('<!--') && opened.includes('-->') ? withoutComments(raw) : '';
 }
 
 function walk(tokens, found) {

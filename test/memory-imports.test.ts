@@ -141,6 +141,7 @@ const ADVERSARIAL: readonly (readonly [name: string, text: string])[] = [
     Array.from({ length: 600 }, (_, run) => `${'`'.repeat(run + 1)} x `).join(''),
   ],
   ['unclosed comments', '<!--'.repeat(50_000)],
+  ['unclosed comments after a closed one', `<!-- -->${'<!--'.repeat(120_000)}@AGENTS.md`],
   ['unclosed images', '![a'.repeat(70_000)],
   ['unclosed tag quotes', '<a b="'.repeat(35_000)],
   ['emphasis openers', '**@a** '.repeat(30_000)],

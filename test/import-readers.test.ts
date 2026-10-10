@@ -76,6 +76,14 @@ describe('the @ import readers of the kit and of the context budget', () => {
     expect(kitLeavesOutItsImport(text)).toBe(imports);
   });
 
+  it('read unclosed comments after a closed one within a second', () => {
+    const text = `<!-- -->${'<!--'.repeat(120_000)}@AGENTS.md`;
+    const started = performance.now();
+    importsOf(text);
+    kitLeavesOutItsImport(text);
+    expect(performance.now() - started).toBeLessThan(1_000);
+  });
+
   it('read a paragraph of about 100,000 imports without throwing', () => {
     const text = Array.from({ length: 100_000 }, (_, index) => `@docs/f${String(index)}.md`).join(' ');
     expect(importsOf(text)).toHaveLength(100_000);

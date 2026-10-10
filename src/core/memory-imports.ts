@@ -1,11 +1,11 @@
 import { lexedTokens } from './bounded-lexer.js';
+import { withoutComments } from './imports.js';
 import { BYTE_ORDER_MARK } from './text.js';
 
 /** Claude Code 2.1.295 skips a memory file larger than this many bytes, imports and all (reference §2.1). */
 const MEMORY_FILE_BYTES = 4_194_304;
 const FRONTMATTER = /^(---\s*\n[\s\S]*?---)\s*\n?/;
 const IMPORT = /(?:^|\s)@((?:[^\s\\]|\\ )+)/g;
-const COMMENT = /<!--[\s\S]*?-->/g;
 const SYMBOLS_ONLY = /^[#%^&*()]+/;
 const PATH_START = /^[a-zA-Z0-9._-]/;
 
@@ -64,10 +64,12 @@ function addImports(text: string, found: Set<string>): void {
   }
 }
 
-/** What an HTML token that opens with a closed comment leaves once its comments are cut out; '' otherwise. */
+// What an HTML token that opens with a closed comment leaves once its comments are cut out; '' otherwise. Claude
+// Code cuts them with /<!--[\s\S]*?-->/g, which rescans to the end from each unclosed `<!--`; withoutComments
+// gives the same text in linear time.
 function commentLeftover(raw: string): string {
   const opened = raw.trimStart();
-  return opened.startsWith('<!--') && opened.includes('-->') ? raw.replace(COMMENT, '') : '';
+  return opened.startsWith('<!--') && opened.includes('-->') ? withoutComments(raw) : '';
 }
 
 const SKIPPED_TYPES = new Set(['code', 'codespan']);
