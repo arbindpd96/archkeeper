@@ -243,6 +243,17 @@ describe('the lock on disk', () => {
     expect(readLock(lock, OPTIONS.kit, TEST_BRAND).conflicted).toBe(false);
   });
 
+  it('reads a lock checked out with CRLF as unchanged, and writes nothing', () => {
+    const dir = tempDir();
+    install(dir, fixtureTree(), OPTIONS);
+    const lock = path.join(dir, LOCK);
+    writeFileSync(lock, readFileSync(lock, 'utf8').replaceAll('\n', '\r\n'));
+    const runs = backups(dir);
+    expect(install(dir, fixtureTree(), OPTIONS).applied.changed).toBe(false);
+    expect(readFileSync(lock, 'utf8')).toContain('\r\n');
+    expect(backups(dir)).toEqual(runs);
+  });
+
   it('reads files checked out with CRLF as unchanged', () => {
     const dir = tempDir();
     install(dir, fixtureTree(), OPTIONS);
