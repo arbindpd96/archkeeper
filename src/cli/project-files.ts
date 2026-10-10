@@ -18,6 +18,8 @@ const optional: Partial<typeof constants> = constants;
 /** Opens a path without following a symlink where the platform supports it. */
 export const NO_FOLLOW = optional.O_NOFOLLOW ?? 0;
 const NON_BLOCKING = optional.O_NONBLOCK ?? 0;
+/** Opens a path for reading without following a symlink or waiting on a FIFO, where the platform supports it. */
+export const SAFE_READ = constants.O_RDONLY | NO_FOLLOW | NON_BLOCKING;
 const STRICT_UTF8 = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
 /** The status of a path without following a symlink, or undefined when nothing is there. */
@@ -102,7 +104,7 @@ export function confinedPath(rootReal: string, relative: string, source: string)
 }
 
 function readText(absolute: string): PathState {
-  const descriptor = openSync(absolute, constants.O_RDONLY | NO_FOLLOW | NON_BLOCKING);
+  const descriptor = openSync(absolute, SAFE_READ);
   try {
     if (!fstatSync(descriptor).isFile()) return { kind: 'other' };
     return { kind: 'file', content: STRICT_UTF8.decode(readFileSync(descriptor)) };
