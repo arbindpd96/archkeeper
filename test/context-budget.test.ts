@@ -62,6 +62,12 @@ describe('alwaysOnContext', () => {
     expect(importsOf(text)).toEqual(['AGENTS.md', 'docs/a b.md']);
   });
 
+  it('fails rather than count no import in a text marked cannot lex', () => {
+    expect(() => importsOf(`${'>'.repeat(32_000)} @AGENTS.md`)).toThrow(
+      /marked could not lex a memory file: RangeError/,
+    );
+  });
+
   it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)(
     'fails rather than count a file it cannot read as empty',
     () => {

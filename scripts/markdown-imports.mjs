@@ -1,9 +1,14 @@
+import { MessageChannel, receiveMessageOnPort, Worker } from 'node:worker_threads';
 import { Lexer } from 'marked';
 
 // The context budget's copy of the kit's port of Claude Code 2.1.295's import extractor (src/core/memory-imports.ts),
 // on the same marked from node_modules (docs/decisions.md says why a script may import it). It has no lexing
 // budget: the budget counts every import Claude Code loads, and its gate reads only the kit's own output.
 const MEMORY_FILE_BYTES = 4_194_304;
+// Claude Code runs on Bun, whose stack lets marked nest about four times deeper than Node.js's default, so the
+// budget reads imports on a worker thread whose stack nests deeper still (about 24,600 quotes, to Bun's 12,500).
+const WORKER_STACK_MB = 8;
+const WORKER_WAIT_MS = 120_000;
 const BYTE_ORDER_MARK = '\uFEFF';
 const FRONTMATTER = /^---\s*\n([\s\S]*?)---\s*\n?/;
 const IMPORT = /(?:^|\s)@((?:[^\s\\]|\\ )+)/g;
@@ -76,24 +81,9 @@ function walk(tokens, found) {
   }
 }
 
-function lexed(text) {
-  try {
-    return new Lexer({ gfm: false }).lex(withoutFrontmatter(text));
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * The `@path` imports Claude Code 2.1.295 reads in a memory file's text, as written: each cut at `#`, `\ `
- * unescaped and trimmed, from its text tokens and what closed HTML comments leave. None for a file it skips: over
- * 4 MiB, one marked cannot lex, or one with a NUL in an import path. `bytes` is the file's size on disk, which is
- * what Claude Code checks; it defaults to the text's UTF-8 length, which is longer for bytes that are not UTF-8.
- */
-export function importsOf(text, bytes = Buffer.byteLength(text, 'utf8')) {
-  if (bytes > MEMORY_FILE_BYTES || !text.includes('@')) return [];
-  const tokens = lexed(text);
-  if (tokens === undefined) return [];
+/** Lexes `text` and lists its imports on the calling thread; markdown-imports-worker.mjs runs it for importsOf. */
+export function importsInText(text) {
+  const tokens = new Lexer({ gfm: false }).lex(withoutFrontmatter(text));
   const found = new Set();
   try {
     walk(tokens, found);
@@ -102,4 +92,47 @@ export function importsOf(text, bytes = Buffer.byteLength(text, 'utf8')) {
     throw error;
   }
   return [...found];
+}
+
+let worker;
+
+function startedWorker() {
+  if (worker !== undefined) return worker;
+  const { port1, port2 } = new MessageChannel();
+  const signal = new Int32Array(new SharedArrayBuffer(4));
+  new Worker(new URL('markdown-imports-worker.mjs', import.meta.url), {
+    workerData: { port: port2, signal },
+    transferList: [port2],
+    resourceLimits: { stackSizeMb: WORKER_STACK_MB },
+  }).unref();
+  worker = { port: port1, signal };
+  return worker;
+}
+
+// Waits for the worker, so that importsOf stays synchronous. A text marked cannot lex fails the budget rather than
+// count no import: the kit's own output never holds one, so the error is the budget's to fix.
+function importsOnWorker(text) {
+  const { port, signal } = startedWorker();
+  Atomics.store(signal, 0, 0);
+  port.postMessage(text);
+  if (Atomics.wait(signal, 0, 0, WORKER_WAIT_MS) === 'timed-out') {
+    throw new Error(`The import reader's worker did not answer within ${String(WORKER_WAIT_MS / 1000)} s.`);
+  }
+  const reply = receiveMessageOnPort(port)?.message;
+  if (reply?.imports === undefined) {
+    throw new Error(`marked could not lex a memory file: ${String(reply?.error)}`);
+  }
+  return reply.imports;
+}
+
+/**
+ * The `@path` imports Claude Code 2.1.295 reads in a memory file's text, as written: each cut at `#`, `\ `
+ * unescaped and trimmed, from its text tokens and what closed HTML comments leave. None for a file it skips: over
+ * 4 MiB, or one with a NUL in an import path; it throws for a text marked cannot lex even on its deeper stack.
+ * `bytes` is the file's size on disk, which is what Claude Code checks; it defaults to the text's UTF-8 length,
+ * which is longer for bytes that are not UTF-8.
+ */
+export function importsOf(text, bytes = Buffer.byteLength(text, 'utf8')) {
+  if (bytes > MEMORY_FILE_BYTES || !text.includes('@')) return [];
+  return importsOnWorker(text);
 }

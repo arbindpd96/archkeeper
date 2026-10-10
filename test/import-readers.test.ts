@@ -74,6 +74,10 @@ const SAFE_SIDES: readonly (readonly [name: string, text: string])[] = [
   ['frontmatter whose paths nest themselves', '---\npaths: &x [*x]\n---\n@AGENTS.md'],
   ['frontmatter with a paths glob', '---\npaths: ["src/*.ts"]\n---\n@AGENTS.md'],
   ['a NUL in a UNC path, which Claude Code drops before it expands it', '@//\u0000\n@AGENTS.md'],
+  [
+    'quotes nested 5,000 deep, past what Node.js lexes on its default stack',
+    `${'>'.repeat(5000)} @AGENTS.md`,
+  ],
 ];
 
 function kitLeavesOutItsImport(text: string): boolean {
