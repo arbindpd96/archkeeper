@@ -11,6 +11,9 @@ const PURPOSE_TEXT: Readonly<Record<CommandPurpose, string>> = {
 };
 const NO_COMMANDS =
   'No build, test or lint commands were detected. Check the README, or ask before running anything.';
+const NONE_FOR_STACKS =
+  'No build, test or lint commands were detected for the stacks this setup covers. Check the README, or ask ' +
+  'before running anything.';
 // A backtick would close the code span a command sits in, and a bar would split its table row.
 const BREAKS_MARKDOWN = /[`|]/;
 
@@ -18,7 +21,7 @@ function commandRows(profile: StackProfile, stack: readonly Stack[]): string[] {
   const commands = profile.commands.filter(
     (command) => stack.includes(command.stack) && !BREAKS_MARKDOWN.test(command.command),
   );
-  if (commands.length === 0) return [NO_COMMANDS];
+  if (commands.length === 0) return [profile.commands.length === 0 ? NO_COMMANDS : NONE_FOR_STACKS];
   const rows = commands.map((command) => `| \`${command.command}\` | ${PURPOSE_TEXT[command.purpose]} |`);
   return ['| Command | What it does |', '| --- | --- |', ...rows];
 }

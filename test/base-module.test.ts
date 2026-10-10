@@ -87,6 +87,13 @@ describe('the base module', () => {
     expect(bare).toContain('No build, test or lint commands were detected.');
   });
 
+  it('says no commands were detected for the stacks in effect when the stack leaves out the detected ones', () => {
+    const block = blockOf(baseTree(PROFILE, []), 'AGENTS.md', 'agent-rules');
+    expect(block).toContain(
+      'No build, test or lint commands were detected for the stacks this setup covers.',
+    );
+  });
+
   it('ignores the local files and the kit temp files of an interrupted write', () => {
     const lines = blockOf(baseTree(), '.gitignore', 'base').trimEnd().split('\n');
     expect(lines.slice(0, 3)).toEqual([
