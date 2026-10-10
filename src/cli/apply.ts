@@ -5,7 +5,7 @@ import { ApplyError, ArchkeeperError, PathSafetyError } from '../core/errors.js'
 import { HASH } from '../core/hash.js';
 import { type Lock, lockFilePath } from '../core/lock.js';
 import type { Plan } from '../core/plan.js';
-import { toLf } from '../core/text.js';
+import { compareText, toLf } from '../core/text.js';
 import { ensureFolder, removeFile, removeFolders, writeAtomically } from './atomic-files.js';
 import {
   assertRealStateFolders,
@@ -34,7 +34,7 @@ interface Change {
 }
 
 const KEPT_BACKUPS = 3;
-const RUN_ID = /^\d{8}T\d{6}Z-[0-9a-f]{8}$/;
+const RUN_ID = /^\d{8}T\d{9}Z-[0-9a-f]{8}$/;
 
 // Blobs first and the lock last, so an interrupted run leaves the previous lock and the next run plans again.
 function changes(rootReal: string, plan: Plan, brand: Brand): Change[] {
@@ -174,12 +174,13 @@ function pruneBlobs(rootReal: string, lock: Lock, brand: Brand): string[] {
     });
 }
 
-function pruneBackups(rootReal: string, brand: Brand): string[] {
+// Runs are named by UTC time to the millisecond, so they sort by age; this run's own backup is never pruned.
+function pruneBackups(rootReal: string, brand: Brand, current: string): string[] {
   const folder = confinedPath(rootReal, backupsFolder(brand), 'the kit backup folder');
-  const runs = folderEntries(folder)
-    .filter((name) => RUN_ID.test(name))
-    .sort();
-  return runs.slice(0, Math.max(0, runs.length - KEPT_BACKUPS)).flatMap((name) => {
+  const older = folderEntries(folder)
+    .filter((name) => RUN_ID.test(name) && name !== current)
+    .sort(compareText);
+  return older.slice(0, Math.max(0, older.length - (KEPT_BACKUPS - 1))).flatMap((name) => {
     const run = path.join(folder, name);
     if (lstatOrUndefined(run)?.isDirectory() !== true) return [];
     try {
@@ -215,6 +216,9 @@ export function applyPlan(root: string, plan: Plan, brand: Brand = BRAND): Apply
   } catch (error) {
     throw failure(error, current, backup, rollBack(backup, created));
   }
-  const warnings = [...pruneBlobs(rootReal, plan.lock, brand), ...pruneBackups(rootReal, brand)];
+  const warnings = [
+    ...pruneBlobs(rootReal, plan.lock, brand),
+    ...pruneBackups(rootReal, brand, path.posix.basename(backup.folder)),
+  ];
   return { changed: true, backup: backup.folder, warnings };
 }
