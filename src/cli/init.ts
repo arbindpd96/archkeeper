@@ -17,6 +17,8 @@ import {
   choosePreset,
   confirmApply,
   goOnWithoutGit,
+  goOnWithoutGuards,
+  guardsLeftOut,
   moduleChanges,
   presetLine,
   stackFlag,
@@ -164,6 +166,13 @@ function showPlan(run: InitRun, planned: Planned): void {
     ...(planned.writes ? ['the lock and base blobs'] : []),
   ];
   if (state.length > 0) say(`  and ${escapeUnprintable(state.join(', '))}`);
+  const guards = guardsLeftOut(planned.next.config);
+  if (guards.length > 0) {
+    run.asking.report.warn(
+      `modules.remove in ${configPath(run.brand)} leaves out ${guards.join(', ')}, so the guards against ` +
+        'dangerous commands and leaked secrets are off for everyone who runs init with this config',
+    );
+  }
 }
 
 function cancelled(run: InitRun): number {
@@ -181,8 +190,9 @@ function detect(run: InitRun): StackProfile {
   return profile;
 }
 
-// Only a plan that writes asks: about a folder git cannot undo, then for the yes itself.
-async function goAhead(run: InitRun): Promise<boolean> {
+// Only a plan that writes asks: about guards the config leaves out, a folder git cannot undo, then for the yes.
+async function goAhead(run: InitRun, planned: Planned): Promise<boolean> {
+  if (!(await goOnWithoutGuards(run.asking, guardsLeftOut(planned.next.config)))) return false;
   const git = run.session.context.gitState(run.rootReal);
   return (await goOnWithoutGit(run.asking, git, run.root)) && confirmApply(run.asking);
 }
@@ -202,7 +212,7 @@ async function runInit(run: InitRun): Promise<number> {
   const planned = planInit(run, profile, existing, preset);
   showPlan(run, planned);
   if (run.flags.dryRun === true) return finishDryRun(run, planned);
-  if (planned.writes && !(await goAhead(run))) return cancelled(run);
+  if (planned.writes && !(await goAhead(run, planned))) return cancelled(run);
   return applyPlanned(run, planned);
 }
 

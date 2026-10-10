@@ -87,6 +87,25 @@ describe('init and a config edited while it waits', () => {
   });
 });
 
+describe('init with the safety guards left out', () => {
+  it('warns and, on a terminal, asks before going on, writing nothing on a no', async () => {
+    const { dir } = fixtureCopy('ts-app');
+    const args = ['--preset', 'medium', '--modules', '-safety'];
+    const result = await runInit(dir, args, { interactive: true, answers: [false] });
+    expect(result.stderr).toContain('leaves out safety');
+    expect(result.asked).toEqual(['Continue without safety?']);
+    expect(result.code).toBe(1);
+    expect(existsSync(path.join(dir, CONFIG))).toBe(false);
+  });
+
+  it('warns and goes on with --yes', async () => {
+    const { dir } = fixtureCopy('ts-app');
+    const result = await runInit(dir, ['--yes', '--modules', '-safety']);
+    expect(result.stderr).toContain('leaves out safety');
+    expect(result.code).toBe(0);
+  });
+});
+
 describe('init and the folders above every project', () => {
   it('refuses the home folder, where CLAUDE.md would load in every project, and writes nothing', async () => {
     const { dir } = fixtureCopy('ts-app');
