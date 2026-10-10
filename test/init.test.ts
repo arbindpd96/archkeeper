@@ -151,12 +151,16 @@ describe('init, interactive', () => {
     expect(JSON.parse(read(dir, CONFIG))).toMatchObject({ preset: 'full' });
   });
 
-  it('asks before going on in a project git cannot undo, and stops on a no', async () => {
+  it('asks, once the plan is shown, before going on in a project git cannot undo, and stops on a no', async () => {
     const { dir } = fixtureCopy('ts-app');
     const before = projectText(dir);
-    const result = await runInit(dir, [], { interactive: true, git: 'not-a-repo', answers: [false] });
+    const answers = ['medium', false];
+    const result = await runInit(dir, [], { interactive: true, git: 'not-a-repo', answers });
     expect(result.code).toBe(1);
-    expect(result.asked).toEqual(['Continue anyway?']);
+    expect(result.asked.slice(1)).toEqual(['Continue anyway?']);
+    expect(result.transcript.indexOf('Plan:')).toBeLessThan(
+      result.transcript.indexOf('[? Continue anyway?]'),
+    );
     expect(result.stdout).toContain('Cancelled. Nothing was written.');
     expect(projectText(dir)).toBe(before);
   });

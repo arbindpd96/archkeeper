@@ -1,12 +1,12 @@
-import path from 'node:path';
 import type { Brand } from '../core/brand.js';
 import { CONFIG_VERSION, type ProjectConfig } from '../core/config-schema.js';
 import { configPath, configSchemaUrl, parseConfig } from '../core/config.js';
-import { ApplyError, ConfigError, type ProblemReport } from '../core/errors.js';
+import { ConfigError, type ProblemReport } from '../core/errors.js';
+import { exactHash } from '../core/hash.js';
 import { isRecord, parseJson } from '../core/json.js';
+import type { Plan } from '../core/plan.js';
 import type { Stack } from '../core/schema-parts.js';
-import { ensureFolder, writeAtomically } from './atomic-files.js';
-import { confinedPath, readConfined } from './project-files.js';
+import { readConfined } from './project-files.js';
 
 const SOURCE = 'the project config';
 
@@ -94,27 +94,21 @@ export function nextConfig(
 }
 
 /**
- * Writes the config when it changed, atomically and inside the project, refusing when the file on disk is no
- * longer the one init read, so an edit made while init waited for a yes is never overwritten.
+ * The plan with the config written in the same transaction when it changed (ADR-0014): backed up and rolled back
+ * with every other file, and refused with them when the config on disk is no longer the one init read, so an
+ * edit made while init waited for a yes never meets files planned from the older config.
  */
-export function writeConfig(
-  rootReal: string,
+export function withConfig(
+  plan: Plan,
   next: NextConfig,
   existing: ExistingConfig | undefined,
   brand: Brand,
-): void {
-  if (!next.changed) return;
+): Plan {
+  if (!next.changed) return plan;
   const file = configPath(brand);
-  const now = readConfined(rootReal, file, SOURCE);
-  if ((now?.kind === 'file' ? now.content : now?.kind) !== existing?.text) {
-    throw new ApplyError({
-      file,
-      location: '',
-      problem: 'changed while init was running, so init left it as it is',
-      hint: 'run init again to plan with the config as it is now',
-    });
-  }
-  const absolute = confinedPath(rootReal, file, SOURCE);
-  ensureFolder(path.dirname(absolute), []);
-  writeAtomically(absolute, next.text);
+  return {
+    ...plan,
+    writes: new Map(plan.writes).set(file, next.text),
+    expected: new Map(plan.expected).set(file, existing === undefined ? null : exactHash(existing.text)),
+  };
 }

@@ -65,6 +65,15 @@ describe('init with a kit skill a user already has', () => {
     expect(read(dir, '.claude/skills/why/SKILL.md')).toBe(USER_SKILL);
     expect(read(dir, `.claude/skills/why/SKILL.md${TEST_BRAND.sidecarSuffix}`)).toBe(kitSkill);
   });
+
+  it('still exits 2 and names the sidecar on a re-run while it waits for review', async () => {
+    const dir = existingSetup();
+    await runInit(dir, ['--yes'], { catalog });
+    const again = await runInit(dir, [], { catalog });
+    expect(again.code).toBe(2);
+    expect(again.stdout).toContain('sidecars still wait for review');
+    expect(again.stdout).toContain(`.claude/skills/why/SKILL.md${TEST_BRAND.sidecarSuffix}`);
+  });
 });
 
 describe('init beside a .claude folder linked elsewhere, as in a dotfiles setup', () => {
