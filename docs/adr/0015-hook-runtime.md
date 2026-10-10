@@ -166,7 +166,7 @@ The preset × stack static test checks the frontmatter of every generated skill 
 
 These are part of the ADR-0017 contract:
 
-- Each bundle is 30 kB or less. This is enforced from `budgets.json` since R1.
+- Each bundle is 30 kB or less. This is enforced from `budgets.json` since R1. guard-bash has its own 120 kB budget, pending the owner's sign-off ([ADR-0017's note of 2026-10-10](0017-lightness-budgets.md#notes)).
 - p95 latency is 200 ms or less per hook on ubuntu CI, with formatter time excluded. Windows is reported, not gated. This budget joins `budgets.json` with the hook runtime (v0.1 M4).
 
 ## Consequences
