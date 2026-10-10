@@ -20,7 +20,9 @@ import {
   goOnWithoutGit,
   goOnWithoutGuards,
   guardsLeftOut,
+  guardsOffWarning,
   moduleChanges,
+  ownsHooks,
   presetLine,
   stackFlag,
 } from './init-answers.js';
@@ -169,10 +171,12 @@ function planInit(
   const optOuts = optOutsOf(kits, options, run.brand);
   const ownable = optOutOwnable(optOuts);
   const installPlan = planProject(run.rootReal, tree, { kit: run.kit, modules, brand: run.brand, ownable });
-  const optedOut = unrecordedOptOuts(optOuts, previousLock(run.rootReal, run.kit, run.brand));
+  const lock = previousLock(run.rootReal, run.kit, run.brand);
+  const optedOut = unrecordedOptOuts(optOuts, lock);
   const plan = withConfig(installPlan, next, existing, run.brand);
   const written = plannedWrites(run.rootReal, plan, run.brand);
-  return { profile, existing, next, stack, modules, tree, plan, written, optedOut };
+  const hooksKept = ownsHooks(lock, run.brand);
+  return { profile, existing, next, stack, modules, tree, plan, written, optedOut, hooksKept };
 }
 
 function showPlan(run: InitRun, planned: Planned): void {
@@ -185,12 +189,7 @@ function showPlan(run: InitRun, planned: Planned): void {
   for (const line of planLines(summarizePlan(planned.plan), paint)) say(line);
   for (const line of stateLines(planned.written, run.brand)) say(line);
   const guards = guardsLeftOut(planned.next.config);
-  if (guards.length > 0) {
-    run.asking.report.warn(
-      `modules.remove in ${configPath(run.brand)} leaves out ${guards.join(', ')}, so the guards against ` +
-        'dangerous commands and leaked secrets are off for everyone who runs init with this config',
-    );
-  }
+  if (guards.length > 0) run.asking.report.warn(guardsOffWarning(guards, planned.hooksKept, run.brand));
   if (planned.optedOut.length > 0) {
     run.asking.report.warn(
       `optOut in ${configPath(run.brand)} leaves out ${planned.optedOut.join(', ')}, so these protections are ` +

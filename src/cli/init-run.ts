@@ -46,6 +46,8 @@ export interface Planned {
   readonly written: readonly string[];
   /** The optOut entries the lock does not record yet, as `<module>: <entry>`, which init warns about once. */
   readonly optedOut: readonly string[];
+  /** The previous lock owns hooks the kit installed, which stay when their module is now left out. */
+  readonly hooksKept: boolean;
 }
 
 /** A project file's text, or undefined when it is absent or not a regular text file. */

@@ -1,7 +1,10 @@
 import budgets from '../../budgets.json' with { type: 'json' };
+import type { Brand } from '../core/brand.js';
+import { configPath } from '../core/config.js';
 import type { ProjectConfig } from '../core/config-schema.js';
 import { UsageError } from '../core/errors.js';
 import type { Catalog } from '../core/loader.js';
+import type { Lock } from '../core/lock.js';
 import { type Stack, STACKS } from '../core/schema-parts.js';
 import { quoted } from '../core/text.js';
 import type { GitState } from './git-state.js';
@@ -138,6 +141,23 @@ const GUARD_MODULES: readonly string[] = ['safety'];
 /** The guard modules a config leaves out in `modules.remove`, which turns them off for everyone who runs init. */
 export function guardsLeftOut(config: ProjectConfig): string[] {
   return config.modules.remove.filter((id) => GUARD_MODULES.includes(id));
+}
+
+/** Tells whether the lock owns a hook the kit installed, which init keeps when its module is left out (M7 removes). */
+export function ownsHooks(lock: Lock | undefined, brand: Brand): boolean {
+  return [...(lock?.files.keys() ?? [])].some((file) => file.startsWith(`${brand.hookDir}/`));
+}
+
+/** The warning for guard modules the config leaves out, saying that what init installed earlier stays in place. */
+export function guardsOffWarning(guards: readonly string[], installed: boolean, brand: Brand): string {
+  const leaves = `modules.remove in ${configPath(brand)} leaves out ${guards.join(', ')}`;
+  if (!installed) {
+    return `${leaves}, so the guards against dangerous commands and leaked secrets are off for everyone who runs init with this config`;
+  }
+  return (
+    `${leaves}, but init removes nothing it installed earlier: the guards and deny rules already here stay on ` +
+    'until you remove them, and are off wherever init sets up this config fresh'
+  );
 }
 
 /**
