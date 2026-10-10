@@ -21,7 +21,7 @@ describe('the generated-settings rules (ADR-0015)', () => {
         PreToolUse: [
           {
             matcher: 'Bash',
-            hooks: [{ type: 'command', command: 'node', args: [GUARD], if: 'Bash(git *)' }],
+            hooks: [{ type: 'command', command: 'node', args: [GUARD], timeout: 10, if: 'Bash(git *)' }],
           },
         ],
       },
@@ -42,6 +42,11 @@ describe('the generated-settings rules (ADR-0015)', () => {
       'not exec form',
     ],
     ['once', hook('Stop', { command: 'node', args: [GUARD], once: true }), 'sets shell or once'],
+    [
+      'no timeout',
+      hook('PreToolUse', { command: 'node', args: [GUARD], timeout: undefined }),
+      'has no timeout',
+    ],
     [
       'if on a non-tool event',
       hook('SessionStart', { command: 'node', args: [GUARD], if: 'Bash(x)' }),
