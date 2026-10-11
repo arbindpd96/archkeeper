@@ -44,6 +44,23 @@ export function unknownOptOutReports(
   );
 }
 
+/**
+ * The optOut entries without the hook scripts that a kept registration still runs: a guard registration the user
+ * changed stays in settings, and removing the bundle it names would make `node` fail before every matching call.
+ */
+export function keepingRegisteredScripts(
+  entries: readonly ModuleOptOut[],
+  ops: readonly PlanOp[],
+): readonly ModuleOptOut[] {
+  const kept = new Set(
+    ops.filter((op) => op.kind === 'skip' && op.path === SETTINGS_FILE).map((op) => op.entry),
+  );
+  const runsKept = (entry: ModuleOptOut): boolean =>
+    entry.scripts.length > 0 && entry.keys.some((key) => kept.has(key));
+  if (!entries.some(runsKept)) return entries;
+  return entries.map((entry) => (runsKept(entry) ? { ...entry, scripts: [] } : entry));
+}
+
 // Once an apply put the entry in effect, the lock lists the module and the plan removes nothing the entry leaves
 // out: what is left is gone, or kept because the user changed it, which the kit no longer touches.
 function isRecorded(entry: ModuleOptOut, lock: Lock | undefined, ops: readonly PlanOp[]): boolean {

@@ -7,6 +7,7 @@ import { withoutImportedBlocks, withoutRefusedImports } from '../core/import-blo
 import { resolveOptions } from '../core/options.js';
 import { optOutOwnable } from '../core/opt-out.js';
 import { summarizePlan } from '../core/plan-summary.js';
+import type { Plan } from '../core/plan.js';
 import { projectValues } from '../core/project-values.js';
 import { render, type RenderTree } from '../core/render.js';
 import { resolveModules } from '../core/resolve.js';
@@ -31,7 +32,13 @@ import { plannedWrites } from './apply.js';
 import { applyPlanned, finishDryRun } from './init-finish.js';
 import { detectedLines, planLines, reporterFor, stateLines } from './init-report.js';
 import { type InitFlags, type InitRun, type Planned, textAt } from './init-run.js';
-import { optOutsOf, unknownOptOutReports, unrecordedOptOuts } from './init-opt-out.js';
+import {
+  keepingRegisteredScripts,
+  type ModuleOptOut,
+  optOutsOf,
+  unknownOptOutReports,
+  unrecordedOptOuts,
+} from './init-opt-out.js';
 import { planProject, previousLock } from './install.js';
 import { lstatOrUndefined } from './project-files.js';
 import { projectView } from './project-view.js';
@@ -168,9 +175,18 @@ function planInit(
   const rendered = render(kits, { stack, options, values: projectValues(profile, stack) }, run.brand);
   const tree = treeToWrite(run, rendered);
   const modules = kits.map((kit) => kit.manifest.id);
-  const optOuts = optOutsOf(kits, options, run.brand);
-  const ownable = optOutOwnable(optOuts);
-  const installPlan = planProject(run.rootReal, tree, { kit: run.kit, modules, brand: run.brand, ownable });
+  const planWith = (entries: readonly ModuleOptOut[]): Plan =>
+    planProject(run.rootReal, tree, {
+      kit: run.kit,
+      modules,
+      brand: run.brand,
+      ownable: optOutOwnable(entries),
+    });
+  const everyOptOut = optOutsOf(kits, options, run.brand);
+  const firstPlan = planWith(everyOptOut);
+  // A second plan keeps the bundles that guard registrations the user changed, and the first plan kept, still run.
+  const optOuts = keepingRegisteredScripts(everyOptOut, firstPlan.ops);
+  const installPlan = optOuts === everyOptOut ? firstPlan : planWith(optOuts);
   const lock = previousLock(run.rootReal, run.kit, run.brand);
   const optedOut = unrecordedOptOuts(optOuts, lock, installPlan.ops);
   const plan = withConfig(installPlan, next, existing, run.brand);

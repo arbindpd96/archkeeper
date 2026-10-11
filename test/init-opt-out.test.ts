@@ -75,15 +75,17 @@ describe('init with the safety optOut option (#33, ADR-0014)', () => {
     expect(projectText(dir)).toBe(before);
   });
 
-  it('keeps a guard registration the user changed, then neither warns nor asks again', async () => {
+  it('keeps a guard registration the user changed and the bundle it runs, then neither warns nor asks', async () => {
     const { dir } = fixtureCopy('ts-app');
     await runInit(dir, ['--yes', '--preset', 'small']);
     const file = path.join(dir, SETTINGS);
     writeFileSync(file, readFileSync(file, 'utf8').replace(/(guard-bash\.mjs"[^}]*"timeout": )10/, '$130'));
     expect(readFileSync(file, 'utf8')).toContain('"timeout": 30');
     writeFileSync(path.join(dir, CONFIG), configWith(['guard-bash']));
-    expect((await runInit(dir, ['--yes'])).stderr).toContain('leaves out safety: guard-bash');
-    expect(readFileSync(file, 'utf8')).toContain('"timeout": 30');
+    const bundle = readFileSync(path.join(dir, GUARD_BASH), 'utf8');
+    expect((await runInit(dir, ['--yes'])).code).toBe(0);
+    expect(readFileSync(file, 'utf8')).toMatch(/guard-bash\.mjs"[^}]*"timeout": 30/);
+    expect(readFileSync(path.join(dir, GUARD_BASH), 'utf8')).toBe(bundle);
     const before = projectText(dir);
     const again = await runInit(dir, [], { interactive: true, answers: [true] });
     expect(again.asked).not.toContain('Continue without safety: guard-bash?');
