@@ -13,18 +13,28 @@ const GUARD_FILES_CHANGED = ask(
   'This command changes the guards themselves (.claude/hooks, Claude Code settings or the project config). Confirm with the user.',
 );
 const PROJECT_REPLACED = ask(
-  'This command moves or overwrites the project folder or a folder above it, which holds the guards. Confirm with the user.',
+  'This command moves or overwrites the home or project folder, or a folder above one, which holds the guards. Confirm with the user.',
 );
 const CHANGERS: ReadonlySet<string> = new Set([
   ...['rm', 'unlink', 'rmdir', 'shred', 'mv', 'tee', 'truncate'],
   ...['touch', 'dd', 'chmod', 'chown', 'chgrp'],
 ]);
+const RSYNC_VALUES: OptionSpec = {
+  short: 'efTBM',
+  long: [
+    ...['--rsh', '--exclude', '--include', '--filter', '--exclude-from', '--include-from', '--files-from'],
+    ...['--temp-dir', '--backup-dir', '--log-file', '--partial-dir', '--compare-dest', '--copy-dest'],
+    ...['--link-dest', '--suffix', '--rsync-path', '--remote-option', '--block-size', '--password-file'],
+    ...['--out-format', '--log-file-format', '--chmod', '--chown', '--usermap', '--groupmap'],
+    ...['--max-size', '--min-size', '--timeout', '--contimeout', '--bwlimit', '--port', '--sockopts'],
+  ],
+};
 // Copiers write only their destination: the last operand, or the folder -t names.
 const COPIERS: ReadonlyMap<string, OptionSpec> = new Map([
   ['cp', { short: 'tS', long: ['--target-directory', '--suffix'] }],
   ['ln', { short: 'tS', long: ['--target-directory', '--suffix'] }],
   ['install', { short: 'tSmog', long: ['--target-directory', '--suffix', '--mode', '--owner', '--group'] }],
-  ['rsync', { short: 'e', long: ['--rsh', '--exclude', '--include', '--filter'] }],
+  ['rsync', RSYNC_VALUES],
 ]);
 const IN_PLACE_EDITORS: ReadonlySet<string> = new Set(['sed', 'gsed', 'perl', 'ruby']);
 const IN_PLACE = /^(?:-[a-z]*i|--in-place(?:=|$))/i;

@@ -76,11 +76,22 @@ describe('guard-bash on commands that change the guards themselves', () => {
     'rsync -a --delete empty/ ./',
     'rsync -a ../template/ .',
     'mv -t /tmp $CLAUDE_PROJECT_DIR',
+    'rsync -a --delete empty/ . -T /tmp',
+    'rsync -a --backup-dir /tmp/b ../template/ .',
+    'rsync -a --exclude-from list.txt ../template/ ./',
+    'rsync -a x/ ~/',
   ])('asks before %s, which moves or overwrites the folder that holds the guards', (command) => {
     const { decision, reason } = bashVerdict(command);
     expect(decision).toBe('ask');
-    expect(reason).toMatch(/project folder or a folder above it/);
+    expect(reason).toMatch(/home or project folder, or a folder above one/);
   });
+
+  it.each([`rsync -a --files-from list.txt src/ dist/`, 'rsync -a -T /tmp src/ dist/'])(
+    'allows %s, whose option values are not its destination',
+    (command) => {
+      expect(bashVerdict(command).decision).toBe('allow');
+    },
+  );
 
   it('asks before moving a folder above a project that lives under it', () => {
     const context = bashContext({}, { project: '/home/u/Documents/proj' });
