@@ -37,11 +37,15 @@ const segmentMatches: SegmentMatch = (actual, protectedSegment) =>
     (actual.startsWith('.') || !protectedSegment.startsWith('.')) &&
     globMatches(actual, protectedSegment));
 
-function copyDestination(args: readonly string[], spec: OptionSpec): string[] {
+// `ln <target>` with no destination links into the current folder under the target's own name.
+function copyDestination(program: string, args: readonly string[], spec: OptionSpec): string[] {
   const options = parseOptions(args, spec);
   const named = options.values.filter(([name]) => TARGET_DIRECTORY.has(name)).map(([, value]) => value);
-  const last = [...options.operands, ...options.afterDashes].at(-1);
-  return named.length > 0 || last === undefined ? named : [last];
+  const operands = [...options.operands, ...options.afterDashes];
+  const [only] = operands;
+  if (named.length > 0 || only === undefined) return named;
+  const linksHere = program === 'ln' && operands.length === 1;
+  return [linksHere ? (only.replace(/\/+$/, '').split('/').at(-1) ?? only) : (operands.at(-1) ?? only)];
 }
 
 // find with -delete, or an -exec that deletes, moves or changes files, writes everything under its starting folders.
@@ -55,7 +59,7 @@ function findWrites(args: readonly string[]): string[] {
 
 function writtenArgs({ program, args }: Command): string[] {
   const copier = COPIERS.get(program);
-  if (copier !== undefined) return copyDestination(args, copier);
+  if (copier !== undefined) return copyDestination(program, args, copier);
   if (program === 'find') return findWrites(args);
   const named =
     CHANGERS.has(program) || (IN_PLACE_EDITORS.has(program) && args.some((arg) => IN_PLACE.test(arg)));
@@ -65,7 +69,7 @@ function writtenArgs({ program, args }: Command): string[] {
 // mv takes its sources away, and rsync makes its destination match the source, so either may take the project's
 // .claude folder with it.
 function replacedFolders({ program, args }: Command): string[] {
-  if (program === 'rsync') return copyDestination(args, COPIERS.get('rsync') ?? {});
+  if (program === 'rsync') return copyDestination(program, args, COPIERS.get('rsync') ?? {});
   if (program !== 'mv') return [];
   const options = parseOptions(args, { short: 'tS', long: ['--target-directory', '--suffix'] });
   const operands = [...options.operands, ...options.afterDashes];
