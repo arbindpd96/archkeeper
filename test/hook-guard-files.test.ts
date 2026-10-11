@@ -34,6 +34,11 @@ describe('guard-bash on commands that change the guards themselves', () => {
     `find ${HOOKS} -delete`,
     `find .claude -name '*.mjs' -exec rm {} +`,
     `find .claude -execdir mv {} /tmp \\;`,
+    `ln -sf /tmp/e.mjs ${HOOKS}/guard-bash.mjs`,
+    `install -m 755 e.mjs ${HOOKS}/guard-bash.mjs`,
+    `cp --target-directory=${HOOKS} e.mjs`,
+    `cd ${HOOKS} && ln -sf /tmp/x/guard-bash.mjs`,
+    `cd .claude && ln -s /tmp/x/settings.json`,
   ])('asks before %s', (command) => {
     const { decision, reason } = bashVerdict(command);
     expect(decision).toBe('ask');
@@ -57,6 +62,8 @@ describe('guard-bash on commands that change the guards themselves', () => {
     `find .claude/worktrees -delete`,
     `mv a.ts b.ts`,
     `rsync -a src/ dist/`,
+    `ln -s ${HOOKS}/guard-bash.mjs /tmp/link`,
+    'ln -s /tmp/x/guard-bash.mjs',
   ])('allows %s', (command) => {
     expect(bashVerdict(command).decision).toBe('allow');
   });
