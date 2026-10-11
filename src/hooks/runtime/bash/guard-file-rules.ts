@@ -6,6 +6,7 @@ import { unwrap } from '../shell/wrappers.js';
 import { type OptionSpec, parseOptions } from './cli-options.js';
 import { absoluteTargets, holdsProtectedDir, portablePath, resolveSegments } from './dangerous-paths.js';
 import { globMatches } from './glob-match.js';
+import { gitWrittenPaths } from './guard-file-git.js';
 import type { JudgeContext } from './judge-context.js';
 import { ask, type Verdict } from './verdicts.js';
 
@@ -13,7 +14,7 @@ const GUARD_FILES_CHANGED = ask(
   'This command changes the guards themselves (.claude/hooks, Claude Code settings or the project config). Confirm with the user.',
 );
 const PROJECT_REPLACED = ask(
-  'This command moves or overwrites the home or project folder, or a folder above one, which holds the guards. Confirm with the user.',
+  'This command moves, deletes or overwrites the home or project folder, or a folder above one, which holds the guards. Confirm with the user.',
 );
 const CHANGERS: ReadonlySet<string> = new Set([
   ...['rm', 'unlink', 'rmdir', 'shred', 'mv', 'tee', 'truncate'],
@@ -95,14 +96,15 @@ function namesGuardFile(word: string, context: JudgeContext): boolean {
 }
 
 /**
- * Asks before a command writes, moves or deletes a hook bundle, a Claude Code settings file or the kit's config, or
- * a folder that holds one, the project folder and those above it included: a missing or emptied bundle makes `node`
- * fail, which Claude Code does not block on.
+ * Asks before a command, `git rm`, `git mv` and `git stash -u` included, writes, moves or deletes a hook bundle, a
+ * Claude Code settings file or the kit's config, or a folder that holds one, the project folder and those above it
+ * included: a missing or emptied bundle makes `node` fail, which Claude Code does not block on.
  */
 export function guardFilesRule(command: Command, context: JudgeContext): Verdict | null {
-  const written = [...writtenArgs(command), ...command.outputs];
+  const fromGit = command.program === 'git' ? gitWrittenPaths(command.args, context.paths) : [];
+  const written = [...writtenArgs(command), ...command.outputs, ...fromGit];
   if (written.some((word) => namesGuardFile(word, context))) return GUARD_FILES_CHANGED;
-  return replacedFolders(command).some((word) => holdsProtectedDir(word, context.paths))
+  return [...replacedFolders(command), ...fromGit].some((word) => holdsProtectedDir(word, context.paths))
     ? PROJECT_REPLACED
     : null;
 }

@@ -50,9 +50,12 @@ const CONFIG_VALUES: OptionSpec = {
 
 type GitJudge = (options: ParsedOptions, command: Command, context: JudgeContext) => Verdict | null;
 
-interface GlobalOptions {
+/** git's options before its subcommand: config entries, `--exec-path=<dir>`, the `-C` folder, then the rest. */
+export interface GlobalOptions {
   readonly configs: ConfigEntry[];
   readonly execPath: boolean;
+  /** The folder `-C` makes git start in, relative to the one before; empty without one. */
+  readonly folder: string;
   readonly subcommand: string;
   readonly rest: string[];
 }
@@ -66,18 +69,24 @@ function configOf(option: string, next: string | undefined): ConfigEntry | undef
   return fromEnvironment === undefined ? undefined : configEntry(fromEnvironment, true);
 }
 
-function globalOptions(args: readonly string[]): GlobalOptions {
+const joinFolder = (folder: string, next: string): string =>
+  folder === '' || next.startsWith('/') ? next : `${folder}/${next}`;
+
+/** Splits a git invocation's arguments into its global options, its subcommand and the subcommand's arguments. */
+export function globalOptions(args: readonly string[]): GlobalOptions {
   const configs: ConfigEntry[] = [];
   let execPath = false;
+  let folder = '';
   let index = 0;
   for (let option = args[index]; option?.startsWith('-') === true; option = args[index]) {
     const config = configOf(option, args[index + 1]);
     if (config !== undefined) configs.push(config);
+    if (option === '-C') folder = joinFolder(folder, args[index + 1] ?? '');
     // `--exec-path=<dir>` runs git's own programs from that folder; without a value it only prints the path.
     execPath ||= option.startsWith('--exec-path=');
     index += GLOBAL_VALUE_OPTIONS.has(option) ? 2 : 1;
   }
-  return { configs, execPath, subcommand: args[index] ?? '', rest: args.slice(index + 1) };
+  return { configs, execPath, folder, subcommand: args[index] ?? '', rest: args.slice(index + 1) };
 }
 
 function destinationOf(refspec: string): string {

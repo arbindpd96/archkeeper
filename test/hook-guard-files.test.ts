@@ -93,6 +93,40 @@ describe('guard-bash on commands that change the guards themselves', () => {
     },
   );
 
+  it.each([
+    'git rm -r .claude',
+    `git rm ${HOOKS}/guard-bash.mjs`,
+    'git mv .claude x',
+    `git mv ${HOOKS} x`,
+    `git mv -f evil.mjs ${HOOKS}/guard-bash.mjs`,
+    'git -C .claude rm -r hooks',
+    'cd src && git rm -r :/.claude',
+    'git stash -u',
+    'git stash push --include-untracked',
+    'git stash -a -- .claude',
+    'git stash save -u wip',
+  ])('asks before %s, which takes the guards from the working tree', (command) => {
+    const { decision, reason } = bashVerdict(command);
+    expect(decision).toBe('ask');
+    expect(reason).toMatch(GUARD_FILES);
+  });
+
+  it('asks before git rm takes the whole project folder', () => {
+    expect(bashVerdict('git rm -r .').reason).toMatch(/home or project folder/);
+  });
+
+  it.each([
+    'git rm --cached -r .claude',
+    'git rm src/a.ts',
+    'git mv a.ts b.ts',
+    'git stash',
+    'git stash push -m wip',
+    'git stash -u -- src',
+    'git stash pop',
+  ])('allows %s', (command) => {
+    expect(bashVerdict(command).decision).toBe('allow');
+  });
+
   it('asks before moving a folder above a project that lives under it', () => {
     const context = bashContext({}, { project: '/home/u/Documents/proj' });
     expect(bashVerdict('mv ~/Documents ~/Docs2', context).decision).toBe('ask');
