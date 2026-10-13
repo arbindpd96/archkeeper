@@ -79,6 +79,7 @@ flowchart LR
 
 More ADRs will be written when their phase starts:
 
+- guided fixes to user-written text (v0.2)
 - the design-token file format (v0.3)
 - the `.claude/agent-memory/` policy (v0.3)
 - the dashboard as a static HTML file (v0.7)
@@ -183,7 +184,7 @@ Only the README skeleton changes in this phase. It gets:
 - format-on-edit (medium and full)
 - a test check before "done" (full)
 
-`init` also offers Superpowers and Spec Kit. `update` never overwrites user edits, `uninstall` restores the pre-init state, `doctor` validates the install, and this repo runs on the result.
+`init` also offers Superpowers and Spec Kit. `update` never overwrites user edits, `uninstall` restores the pre-init state, `doctor` validates the install and reports what is wrong in the user's own memory files without changing them, and this repo runs on the result.
 
 **Why now.** This is the smallest release that is useful on its own and proves the pitch, and it is the only way to get real feedback. The lockfile, base blobs, markers and ownership model ship in the first release and are effectively permanent once users install them. So they are built carefully and exercised across two kit versions before 0.1.0 freezes them.
 
@@ -256,11 +257,15 @@ The first contact with existing user files loses nothing.
 - [ ] feat(modules): full preset with an optional shell-free stop check
 - [ ] feat(cli): init offers Superpowers and Spec Kit (print-only in v0.1)
 
-**M7: Lifecycle: update, uninstall, doctor v0, e2e, live acceptance.** Users can take fixes safely, diagnose problems and leave cleanly. This is proven on the real tarball, across two kit versions and three OSes, and in a real Claude Code session.
+**M7: Lifecycle: update, uninstall, doctor v0, e2e, live acceptance.** Users can take fixes safely, diagnose problems in the install and in their own memory files, and leave cleanly. This is proven on the real tarball, across two kit versions and three OSes, and in a real Claude Code session.
 
 - [ ] feat(cli): `update` with a never-overwrite policy, --check and --restore
 - [ ] feat(cli): `uninstall` that restores the pre-init state
-- [ ] feat(cli): `doctor` v0 install checks (read-only, offline)
+- [ ] feat(cli): `doctor` v0 install and memory-file checks (read-only, offline)
+  - The memory-file checks read CLAUDE.md, `.claude/CLAUDE.md`, `CLAUDE.local.md`, AGENTS.md, `.claude/rules/**/*.md` and the files they import, through the kit's port of Claude Code's import reader.
+  - They report imports that are broken or that Claude Code silently ignores, AGENTS.md not reaching Claude, files that are too large to load or miss the target of fewer than 200 lines, paths that no longer exist, and commands or scripts that do not exist (looked up, never run).
+  - Each finding gives file:line, what is wrong, why it matters and the exact fix. Only certain defects in memory files are errors (exit 1): what Claude Code certainly loads wrongly, and unresolved git conflicts; the rest are warnings or info, and a file `doctor` cannot fully read is reported as not checked.
+  - `doctor` writes nothing. A kit block's fix names `update` or `update --restore` (ADR-0014); a fix to the user's own text is printed for them to apply, and from v0.2 M2 the guided-fix skill can apply it once they approve its diff.
 - [ ] test(e2e): packed-tarball lifecycle with a two-version upgrade
 - [ ] docs(testing): live acceptance checklist for a real Claude Code session
 
@@ -303,7 +308,10 @@ The first contact with existing user files loses nothing.
   - warm init under 2 s
   - no network access from init, update, uninstall, doctor or any hook (stubbed-network test)
 - **State dir.** A test proves that nothing under `.archkeeper/` has a name Claude Code discovers, and that a ripgrep search for template text never matches there.
-- **Doctor.** `doctor` reports zero errors on every fresh-init fixture.
+- **Doctor.**
+  - `doctor` reports zero errors on every fresh-init fixture.
+  - On a project of broken memory files that a test builds in a temp folder, it reports every seeded problem at its file and line, with what is wrong, why it matters and the fix, and no error that was not seeded.
+  - It changes nothing: the project tree, `.archkeeper/` included, is byte-identical after a run.
 - **Compose offers.** `init` offers Superpowers and Spec Kit, off by default. A yes prints the commands and records the choice. Nothing is installed or fetched.
 - **Dogfood.** This repo runs on kit-generated files, and the CI self-check (`update --check` plus `doctor`) is green.
 - **Gate and release.**
@@ -328,7 +336,7 @@ Each section ships in its feature's PR. `live` tapes are recorded locally; CI re
 | Format on edit                      | `format.gif`     | live | M6        |
 | Tests before done (full preset)     | `stop-check.gif` | live | M6        |
 | Works with Superpowers and Spec Kit | `compose.gif`    | CI   | M6        |
-| Doctor                              | `doctor.gif`     | CI   | M7        |
+| Doctor (install and memory files)   | `doctor.gif`     | CI   | M7        |
 | Update and uninstall                | `lifecycle.gif`  | CI   | M7        |
 
 M9 adds three more things:
@@ -345,6 +353,7 @@ M9 adds three more things:
 | The on-disk contract freezes at first publish                                                 | Name decided up front (ADR-0010); dogfood before publish; the kit-next e2e exercises the lock and bases across versions; `lockfileVersion`; `BRAND.legacySlugs` for later renames                           |
 | Base or backup copies get loaded as instructions, or show up in searches and duplicate checks | Bases and backups are compressed, content-addressed blobs under names Claude Code never discovers; a test enforces it; the map seeder and (from v0.2) the duplicate checker skip `.archkeeper/`             |
 | Claude Code behaviour drifts (hook schema, AGENTS.md import, compaction)                      | Live acceptance on every release; nothing from reference §12 is relied on; the event `source` is read defensively; doctor checks the version                                                                |
+| Memory-file checks misread what Claude Code loads, or flag text that is fine                  | Imports read through the kit's port of Claude Code's reader; `doctor` says when it cannot tell; only certain defects are errors; paths and commands are only looked up; this repo dogfoods the checks       |
 | Stop nudges or guard false positives annoy users                                              | At most one nudge per change set, and none without an active feature; ask rather than deny when ambiguous; false-positive suites; `--modules -safety` opt-out; repo-policy options off by default           |
 | Windows exec, path and CRLF issues                                                            | Exec-form node hooks; Node tools via `process.execPath`; no shell and no `.cmd`/`.bat`; LF-normalised hashing; EPERM/EBUSY rename retries; a space and non-ASCII path matrix; a regression test for 6d2d423 |
 | Python-only teammates have no node on PATH                                                    | Hook errors are non-blocking and the deny rules still apply; README Requirements; doctor v0 warns                                                                                                           |
@@ -357,7 +366,7 @@ M9 adds three more things:
 **Goal.** Make the kit safe to keep installed for months, and start proving its value. This phase adds:
 
 - 3-way updates and a standing upgrade gate
-- doctor score, audit mode and badge
+- doctor score, audit mode, badge, memory-file content heuristics and guided fixes
 - TS/JS and Python standards packs
 - quality hooks, permission presets and module toggles
 - a consented Superpowers install
@@ -381,11 +390,24 @@ M9 adds three more things:
 - [ ] test(e2e): N-1 upgrade from the npm `latest` release, required by `release.yml`
 - [ ] feat(core): config and lock migration chain
 
-**M2: Doctor score, audit mode, badge and stale alerts.**
+**M2: Doctor score, audit mode, badge, content heuristics, guided fixes and stale alerts.**
 
 - [ ] feat(cli): doctor health score (weighted 0–100, `--json`, top fixes)
+  - It weighs the memory-file findings, the always-on context and the content heuristics.
 - [ ] feat(cli): doctor audit mode for any Claude Code repo (read-only, no lock needed)
-- [ ] feat(cli): `doctor --badge` (static shields markdown, no network) and a weekly corpus job over about 25 pinned public repos
+  - It runs the v0.1 memory-file checks unchanged, since they need no lock, config or `.archkeeper/`.
+- [ ] feat(cli): doctor memory-file audit checks (deterministic and offline, like the v0.1 checks)
+  - They cover imports of folders, binary files or private files; rule frontmatter and file names Claude Code ignores; `claudeMdExcludes` that drops a project file; secrets and hidden Unicode in loaded text; make and just targets; package-manager mismatches; and instruction files Claude Code loads late or never.
+- [ ] feat(cli): doctor content heuristics for memory files (advisory, never an error)
+  - They flag wording tied to a phase or a date, hand-drawn file trees, missing build or test commands, lines repeated across files, and must-hold rules that nothing enforces.
+- [ ] docs(adr): guided fixes to user-written text (approval of the exact diff, the transactional apply with a backup, and where the backup goes in a repo without the kit)
+- [ ] feat(modules): guided-fix skill for doctor findings in user-written text
+  - It shows a diff for each fix and writes nothing until the user approves that exact diff.
+  - The write goes through the transactional apply with a backup, which refuses a file changed since the diff was shown (ADR-0014).
+  - It leaves kit blocks to `update` and `update --restore`, and asks about judgement calls, such as vague or contradicting instructions, rather than deciding them.
+  - It sets `disable-model-invocation` and is written into the project, as every kit skill is until v0.3 (ADR-0016).
+- [ ] feat(cli): apply step for an approved guided fix, separate from `doctor`, which stays read-only
+- [ ] feat(cli): `doctor --badge` (prints static shields markdown, writes no file, no network) and a weekly corpus job over about 25 pinned public repos
 - [ ] feat(hooks): stale-file alerts for the map and feature memories
 
 **M3: Standards packs for TS/JS and Python.**
@@ -422,9 +444,12 @@ M9 adds three more things:
 - **Upgrade gate.** The N-1 upgrade e2e is a required `release.yml` job. Upgrading an install made by the published 0.1.0 loses 0 user bytes.
 - **Doctor.**
   - It prints a stable 0–100 score with fixes in 3 s or less.
-  - Audit mode runs read-only on a repo without the kit.
-  - `--badge` makes no network call.
+  - Audit mode runs read-only on a repo without the kit, with the same memory-file checks as v0.1.
+  - `--badge` makes no network call and writes no file.
   - The corpus job has 0 crashes.
+  - Content heuristics never make `doctor` exit non-zero.
+  - The guided-fix skill writes nothing until the user approves its diff; the write goes through the transactional apply with a backup, and a file changed since the diff was shown is refused.
+  - `doctor` writes nothing in any mode.
 - **Standards.** Rules have yaml-validated `paths:`, invalid YAML cannot be emitted, and linter configs are create-only.
 - **Quality hooks.**
   - The full preset adds the test guard and the duplicate checker.
@@ -443,7 +468,8 @@ M9 adds three more things:
 | ----------------------------------------------------- | ------------------ | ---- | --------- |
 | Safe updates                                          | `update-merge.gif` | CI   | M1        |
 | Resolving conflicts                                   | `resolve.gif`      | live | M1        |
-| Doctor (refreshed: score, audit mode, badge)          | `doctor.gif`       | CI   | M2        |
+| Doctor (refreshed: score, audit, badge, heuristics)   | `doctor.gif`       | CI   | M2        |
+| Guided fixes to memory files                          | `doctor-fix.gif`   | live | M2        |
 | Stale-file alerts                                     | `stale.gif`        | CI   | M2        |
 | Standards                                             | `standards.gif`    | live | M3        |
 | Linter configs                                        | `lint-configs.gif` | CI   | M3        |
@@ -463,6 +489,8 @@ M9 adds three more things:
 | Generated linter configs clash with team conventions | Created only when none exists; otherwise a suggested diff is printed                |
 | Superpowers install fails or changes its command     | Consent first, a non-fatal failure, and the known-good version recorded             |
 | Benchmark cost and noise                             | Budget cap, fixed prompts, deterministic graders, variance published                |
+| Content heuristics flag text that is fine            | Advisory only, never an error; each finding says why; tuned on the doctor corpus    |
+| A guided fix writes text the user did not approve    | Diff first; written only after approval, via the transactional apply with a backup  |
 
 ---
 
@@ -763,7 +791,7 @@ There is one "Everyday skills" table listing every skill. The planned GIFs are o
 
 - **Overlap with Superpowers and Spec Kit.** Auto-skip, plus doctor overlap checks.
 - **The skill index bloats context.** `disable-model-invocation`, plus the budget test.
-- **Learned rules pollute context.** Confirmation, path scoping, and pruning prompts in doctor.
+- **Learned rules pollute context.** Confirmation, path scoping, and pruning suggestions from doctor.
 
 ---
 
@@ -777,7 +805,7 @@ There is one "Everyday skills" table listing every skill. The planned GIFs are o
 
 - **M1: Static dashboard.**
   - [ ] docs(adr): the dashboard is a self-contained static HTML file written by the CLI, with no server and no new package
-  - [ ] feat(cli): `dashboard` command covering the map graph, decisions timeline and doctor history
+  - [ ] feat(cli): `dashboard` command covering the map graph, decisions timeline and a doctor history that the command records itself, since `doctor` writes nothing
 - **M2: Stats.**
   - [ ] spike: verify the transcript or statusLine usage data source
   - [ ] feat(stats): token and cost tracker, weekly report, mistake patterns and time-saved estimate, kept local and labelled as estimates
@@ -992,7 +1020,7 @@ Every feature in handoff §6, mapped to the phase where it ships.
 | 11   | Component reuse check                                                  | v0.4                                                                                                              |
 | 12   | Accessibility check                                                    | v0.4                                                                                                              |
 | 13   | Screenshot compare                                                     | v0.8 (after a spike)                                                                                              |
-| 14   | `doctor` with health score                                             | v0.1 (install checks); v0.2 (score, audit mode, badge); v0.4 (`--online`)                                         |
+| 14   | `doctor` with health score                                             | v0.1 (install, memory files); v0.2 (score, audit mode, badge, heuristics, guided fixes); v0.4 (`--online`)        |
 | 15   | Local dashboard                                                        | v0.7                                                                                                              |
 | 16   | Stale file alerts                                                      | v0.2                                                                                                              |
 | 17   | Auto stack detection                                                   | v0.1                                                                                                              |
@@ -1077,6 +1105,11 @@ Every feature in handoff §6, mapped to the phase where it ships.
 
 - **Go-ahead.** The owner approved filing this roadmap, its milestones and issues (2026-10-09).
 - **Name.** `archkeeper` for the product, package, CLI, plugin and marketplace (ADR-0010).
+- **Doctor and memory files.** The owner approved checks of the user's own memory files in `doctor` (2026-10-12).
+  - v0.1 M7: `doctor` v0 reports imports that are broken or silently ignored, AGENTS.md not reaching Claude, size, paths that no longer exist, and commands or scripts that do not exist, in CLAUDE.md, `.claude/CLAUDE.md`, `CLAUDE.local.md`, AGENTS.md, `.claude/rules/**/*.md` and the files they import. It stays read-only and offline, and gives each finding as file:line, what is wrong, why it matters and the exact fix.
+  - v0.2 M2: the health score, audit mode, content heuristics and a guided-fix skill.
+  - The kit never rewrites user-written text, meaning everything ADR-0014 leaves to the user: every byte outside the kit's markers in a blocks file, every JSON entry the kit does not own, and every file that is neither owned nor co-owned (a create-only doc is the user's once written). Kit blocks are repaired through `update` and `update --restore`. Fixes for doctor's findings in user-written text are applied only through the guided-fix skill, once the user approves its diff, through the transactional apply with a backup.
+  - Why: these problems appear mid-project and most of them fail silently; deterministic, offline findings can gate CI, which a model-run audit cannot; and a kit that edited user text unasked would lose the trust its never-overwrite contract earns.
 
 ### Proposed defaults (we proceed with these unless the owner objects)
 
@@ -1103,6 +1136,8 @@ Every feature in handoff §6, mapped to the phase where it ships.
 | A   | Which soft-launch channel, and is "at least 5 external installs reporting back" the right bar for the public launch? | v0.1 M9   |
 | B   | Benchmark: which API key, what monthly cap, how many runs per arm, and may raw transcripts be published?             | v0.2 M6   |
 | C   | Launch publicly at v0.3 (plugin, benchmark, design-tokens lite), or wait for live design sync in v0.4?               | v0.3 M6   |
+| D   | Doctor memory-file checks: may warnings fail a run only under `--strict`, and may doctor look above the project?     | v0.1 M7   |
+| E   | Guided fixes: how is approval of the exact diff enforced, and where does the backup go in a repo without the kit?    | v0.2 M2   |
 
 ### Owner actions (tracked as `owner-action` issues)
 
