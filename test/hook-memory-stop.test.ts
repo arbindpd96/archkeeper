@@ -11,6 +11,8 @@ const POINTER = `${BRAND.stateDir}/local/active-feature`;
 const IGNORE_ALL = `${BRAND.stateDir}/local/.gitignore`;
 const LOGIN = 'docs/features/login/MEMORY.md';
 const STOP: Payload = { session_id: 's1', stop_hook_active: false };
+const CONFIRM =
+  'Unless the user chose or confirmed this feature in this session, confirm it with them before editing that file.';
 
 function stop(projectDir: string, payload: Payload = STOP): Answer {
   return memoryStop.answer({ payload }, { projectDir, home: tempDir() });
@@ -34,8 +36,16 @@ describe('memory-stop (#35)', () => {
     writeFiles(dir, { 'src/auth.ts': 'export const refresh = 1;\n' });
     expect(blockReason(stop(dir))).toBe(
       `${BRAND.displayName} feature memory: src/auth.ts changed after ${LOGIN} was last saved. ` +
-        'Run /handoff to record Done and Next step there, or tell the user why this needs no memory update.',
+        'Run /handoff to record Done and Next step there, or tell the user why this needs no memory update. ' +
+        CONFIRM,
     );
+  });
+
+  it('asks Claude to confirm a feature found by its status alone before editing its memory', () => {
+    const dir = tempRepo({ [LOGIN]: memoryText(), 'src/auth.ts': 'export {};\n' });
+    setModified(dir, LOGIN, -3_600_000);
+    writeFiles(dir, { 'src/auth.ts': 'export const refresh = 1;\n' });
+    expect(blockReason(stop(dir))?.endsWith(` ${CONFIRM}`)).toBe(true);
   });
 
   it('asks once per change set, however often the same files change again', () => {

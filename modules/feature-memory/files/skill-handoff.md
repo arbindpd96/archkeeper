@@ -5,7 +5,7 @@ description: Save this session's progress to the active feature's MEMORY.md so t
 
 Save this session's progress in the active feature's memory, editing only its MEMORY.md and `docs/mistakes.md`.
 
-1. Find the active feature. It is the one named in `{{brand.stateDir}}/local/active-feature`, if that file holds one kebab-case name (lowercase letters, digits and single hyphens) and its `docs/features/<name>/MEMORY.md` says `Status: in progress`. Otherwise it is the only MEMORY.md in a kebab-case folder of `docs/features/` that says so, which leaves out `docs/features/_template/`. If several say so, ask which one. If none does, offer `/new-feature <name>` and stop.
+1. Find the active feature. It is the one named in `{{brand.stateDir}}/local/active-feature`, if that file holds one kebab-case name (lowercase letters, digits and single hyphens) and its `docs/features/<name>/MEMORY.md` says `Status: in progress`. Otherwise it is the only MEMORY.md in a kebab-case folder of `docs/features/` that says so, which leaves out `docs/features/_template/`. If several say so, ask which one. If none does, offer `/new-feature <name>` and stop. Unless the user chose or confirmed that feature in this session, confirm it with them before you edit its memory, since a commit can set the pointer or the status too.
 2. Read the file fully, then update it:
    - **Done**: tick what is finished, add new finished items as `- [x]` and keep open ones as `- [ ]`.
    - **Next step**: the single exact next action, naming the file, function or command, so a new session starts without asking.

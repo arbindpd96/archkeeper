@@ -111,6 +111,9 @@ describe('the feature-memory module (#34)', () => {
     );
     expect(skill).toContain(`the one named in \`${POINTER}\`, if that file holds one kebab-case name`);
     expect(skill).toContain('the only MEMORY.md in a kebab-case folder of `docs/features/` that says so');
+    expect(skill).toContain(
+      'Unless the user chose or confirmed that feature in this session, confirm it with them before you edit its memory',
+    );
   });
 
   it('saves progress only into the active MEMORY.md and the mistakes log', () => {
