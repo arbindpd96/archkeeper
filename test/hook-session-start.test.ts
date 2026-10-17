@@ -19,6 +19,8 @@ import { injectedContext, memoryText } from './hook-helpers.js';
 const LOCAL = `${BRAND.stateDir}/local`;
 const POINTER = `${LOCAL}/active-feature`;
 const LOGIN = 'docs/features/login/MEMORY.md';
+const CONFIRM =
+  'Unless the user chose or confirmed this feature in this session, confirm it with them before acting on its Next step.';
 
 /** What session-start injects for a project, given the event's payload. */
 function contextOf(projectDir: string, payload: Payload = { source: 'startup' }): string {
@@ -56,7 +58,17 @@ describe('session-start finds the active feature (#35)', () => {
     const dir = tempDir();
     writeFiles(dir, { [LOGIN]: memoryText(), 'docs/features/old/MEMORY.md': memoryText({ status: 'done' }) });
     expect(contextOf(dir)).toContain(
-      `the active feature is login (${LOGIN}, the only feature in progress but not chosen on this machine: confirm it with the user`,
+      `the active feature is login (${LOGIN}, the only feature in progress, not chosen on this machine). ` +
+        `Read that file fully before changing code. ${CONFIRM}`,
+    );
+  });
+
+  it('asks Claude to confirm the feature the pointer names too, since a commit can set the pointer', () => {
+    const dir = tempDir();
+    writeFiles(dir, { [POINTER]: 'login\n', [LOGIN]: memoryText() });
+    expect(contextOf(dir).split('\n')[0]).toBe(
+      `${BRAND.displayName} feature memory: the active feature is login (${LOGIN}). ` +
+        `Read that file fully before changing code. ${CONFIRM}`,
     );
   });
 

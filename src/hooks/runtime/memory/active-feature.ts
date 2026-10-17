@@ -28,6 +28,14 @@ export interface FeatureMemory {
 /** The active feature's memory, or the features in progress to ask about when no single one is active. */
 export type ActiveFeature = { readonly memory: FeatureMemory } | { readonly inProgress: readonly string[] };
 
+/**
+ * What both memory hooks ask before Claude acts on, or edits, the active memory however they found it: a commit can
+ * set the pointer (`git add -f`) as well as a status, so neither proves that the user chose the feature.
+ */
+export function confirmFirst(action: string): string {
+  return `Unless the user chose or confirmed this feature in this session, confirm it with them before ${action}.`;
+}
+
 function memoryInProgress(
   projectDir: string,
   name: string,

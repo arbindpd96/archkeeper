@@ -5,7 +5,7 @@ import type { HookContext, HookModule, Sample } from '../launch.js';
 import { configPreset } from '../options.js';
 import { readProjectFile, slashed } from '../project.js';
 import { prepareLocalState } from '../state.js';
-import { activeFeature, type FeatureMemory, POINTER_FILE } from './active-feature.js';
+import { activeFeature, confirmFirst, type FeatureMemory, POINTER_FILE } from './active-feature.js';
 import { lastItems, readableMarkdown, sectionText } from './markdown.js';
 import { readSnapshot, type Snapshot, SNAPSHOT_FILE } from './snapshot.js';
 
@@ -26,15 +26,14 @@ const NAMES_SHOWN = 5;
 const ARCHITECTURE = 'docs/architecture.md';
 const MAX_DOC_BYTES = 1_000_000;
 
-// Found by its status alone, a memory may be a teammate's committed one, so Claude confirms it before acting. Names
-// go through the one-line escape, so none can start a line, and with it a heading, of its own.
+// Found by its status alone, a memory may be a teammate's committed one. Names go through the one-line escape, so
+// none can start a line, and with it a heading, of its own.
 function memoryHeader(memory: FeatureMemory): string {
   const found =
-    memory.foundBy === 'pointer'
-      ? ''
-      : ', the only feature in progress but not chosen on this machine: confirm it with the user before acting on its Next step';
+    memory.foundBy === 'pointer' ? '' : ', the only feature in progress, not chosen on this machine';
   const where = `${escapeUnprintable(memory.file)}${found}`;
-  return `${LABEL} the active feature is ${escapeUnprintable(memory.name)} (${where}). Read that file fully before changing code.`;
+  const read = 'Read that file fully before changing code.';
+  return `${LABEL} the active feature is ${escapeUnprintable(memory.name)} (${where}). ${read} ${confirmFirst('acting on its Next step')}`;
 }
 
 function askLine(inProgress: readonly string[]): string {

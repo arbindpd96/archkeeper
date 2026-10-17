@@ -8,7 +8,7 @@ import { type Answer, block, type HookInput, noAnswer, type Payload } from '../i
 import type { HookContext, HookModule, Sample } from '../launch.js';
 import { slashed } from '../project.js';
 import { readState, writeState } from '../state.js';
-import { activeFeature, type FeatureMemory, POINTER_FILE } from './active-feature.js';
+import { activeFeature, confirmFirst, type FeatureMemory, POINTER_FILE } from './active-feature.js';
 
 const STATE = 'memory-stop.json';
 // Docs are not the work a memory records: anything under docs/, and Markdown or text files anywhere.
@@ -74,7 +74,7 @@ function reason(memory: FeatureMemory, files: readonly string[]): string {
   const ask =
     'Run /handoff to record Done and Next step there, or tell the user why this needs no memory update.';
   const file = escapeUnprintable(memory.file);
-  return `${BRAND.displayName} feature memory: ${changed} changed after ${file} was last saved. ${ask}`;
+  return `${BRAND.displayName} feature memory: ${changed} changed after ${file} was last saved. ${ask} ${confirmFirst('editing that file')}`;
 }
 
 function answer(input: HookInput, context: HookContext): Answer {
