@@ -11,6 +11,11 @@ modules/base/files/agents.md
 modules/base/files/claude-code.md
 modules/base/files/claude-import.md
 modules/base/module.json
+modules/feature-memory/files/agents-feature-memory.md
+modules/feature-memory/files/memory-template.md
+modules/feature-memory/files/mistakes.md
+modules/feature-memory/files/skill-handoff.md
+modules/feature-memory/files/skill-new-feature.md
 modules/feature-memory/module.json
 modules/format-on-edit/module.json
 modules/knowledge/module.json

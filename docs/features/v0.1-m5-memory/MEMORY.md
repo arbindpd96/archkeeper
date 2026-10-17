@@ -12,11 +12,19 @@ v0.1 milestone M5 (issues #34 and #35): every feature in a user's project gets a
 - 2026-10-17: Part A builds no hook. The feature-memory module leaves `hooks` empty for part B, which this file's Next step briefs. Why: the brief splits #34 and #35 between two agents.
 - 2026-10-17: Both modules stay `internal: true`, as safety does, until the maintainer records the live GIFs (`why.gif` now, `memory.gif` with part B); no `demo` yet. The README Decisions section waits for the README rewrite in PR #88. Why: the brief; `npm run demos` fails a demo without its GIF and README section, and README.md must not change while #88 is open.
 - 2026-10-17: This repo's own `.claude/` setup stays as it is until M8 (#45). Why: the brief.
+- 2026-10-17: The active-feature pointer, `<state dir>/local/active-feature`, holds one line: the feature's folder name in kebab-case, never a path. It counts only when that folder's MEMORY.md exists and says `Status: in progress`; otherwise the active feature is the only MEMORY.md that says so, leaving out folders whose names start with `_` (the template says it too). With none or several, ask. `/handoff` resolves it this way, and part B's hooks must too. Why: a name checked against a kebab-case pattern can never reach outside `docs/features/`, and a pointer left on a finished feature must not beat the one in progress.
+- 2026-10-17: `/new-feature` writes the pointer, and first writes `<state dir>/local/.gitignore` with `*` when it is missing (a fresh clone). Why: ADR-0014 asks whatever creates `local/` to write its `.gitignore` in the same step, and in a fresh clone the skill is the first writer there.
+- 2026-10-17: `/new-feature` neither creates a branch nor commits on its own, unlike this repo's skill: it records the current branch and offers a new one only on the default branch. Why: users' git workflows differ, and AGENTS.md's surgical-changes rule.
+- 2026-10-17: Generated skills use only ADR-0015's allowlisted frontmatter keys: `name`, `description` and, on `/new-feature` and `/adr`, `disable-model-invocation: true`. No `argument-hint`, which this repo's own skills use but the allowlist leaves out (the static rules refuse it), and no `allowed-tools`, which Read, Grep and Glob do not need. The body says what `$ARGUMENTS` holds. Why: ADR-0015 (see Open questions).
+- 2026-10-17: Each module writes its own AGENTS.md block (`feature-memory`, `knowledge`) naming only its own docs and skills, so each preset's AGENTS.md names only docs it writes; `test/instruction-docs.test.ts` checks AGENTS.md and every written skill per preset. Why: #34; templates are logic-less, so a block cannot depend on which other modules are on.
+- 2026-10-17: The memory template is handoff §5.2 with `Status: in progress | Branch: <branch>` (this repo's `feat/<name>` generalised), 80 lines or fewer (a test holds it), and no HTML comments, so a copied memory carries none and part B reads its sections as written. `/handoff` keeps each memory at 80 lines or fewer.
+- 2026-10-17: Behaviour change: with `.claude` linked outside the project, `--modules -safety` alone no longer gets init past the refusal, because the skills live under `.claude/skills/` too; leaving out feature-memory as well does. Why: path safety refuses every write through such a link (ADR-0014), and the owner's 2026-10-17 sign-off keeps that refusal with no sidecar fallback (see Open questions).
+- 2026-10-17: init's next steps now name `/new-feature` in every preset, since the feature-memory module writes the skill (the M3 sign-off item on #27); `test/init.test.ts` holds it, and its absence with `--modules -feature-memory`.
 
 ## Done
 
 - [x] Feature memory (this file).
-- [ ] feature-memory module: memory template, mistakes log, `new-feature` and `handoff` skills, AGENTS.md block.
+- [x] feature-memory module: memory template, mistakes log, `new-feature` and `handoff` skills, AGENTS.md block, module and docs tests, golden trees, architecture map (the module commit).
 - [ ] knowledge module: decision log, ADR template, glossary, `why` and `adr` skills, AGENTS.md block.
 - [ ] Tests: module tests, snapshots, golden trees, static rules, init's `/new-feature` next step.
 - [ ] `why.tape` (`# live`) and its fixture ADR.
@@ -24,7 +32,7 @@ v0.1 milestone M5 (issues #34 and #35): every feature in a user's project gets a
 
 ## Next step
 
-Write the feature-memory module (`modules/feature-memory/`): manifest, templates, skills and AGENTS.md block, with its test, module snapshot and golden trees, and update `docs/architecture.md` in the same commit.
+Write the knowledge module (`modules/knowledge/`): `docs/decisions.md`, `docs/adr/0000-template.md` and `docs/glossary.md` (create-only), the `why` and `adr` skills (owned) and its AGENTS.md block, with its test, module snapshot and golden trees, and update `docs/architecture.md` in the same commit.
 
 ## Gotchas / don't try again
 
@@ -33,4 +41,5 @@ Write the feature-memory module (`modules/feature-memory/`): manifest, templates
 
 ## Open questions
 
-- None yet.
+- ADR-0015's skill frontmatter allowlist leaves out `argument-hint`, which shows `<name>` beside a skill in the slash menu. Add it to the allowlist (it only displays text)? Until then the kit's skills go without it.
+- A project whose `.claude` links outside it now needs every module that writes under `.claude` left out (safety, feature-memory and, in medium and full, knowledge). Confirm, or have init's refusal name those modules in its hint (today it says to replace or remove the link).

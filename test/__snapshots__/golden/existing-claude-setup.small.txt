@@ -1,5 +1,8 @@
 343cfbecf0eab8a622de43d172727d19e0989861bf82146f941b310089e32703  state        .acmekit/base/343cfbecf0eab8a622de43d172727d19e0989861bf82146f941b310089e32703
+3e2199bdddfd4062eea7f7b6045163e4492ff1acb57ede0058104a82188fee9d  state        .acmekit/base/3e2199bdddfd4062eea7f7b6045163e4492ff1acb57ede0058104a82188fee9d
 3e6f1a905b397a0875312ee4a71c1216586f40c2f7b481ce0bb8e18d71405864  state        .acmekit/base/3e6f1a905b397a0875312ee4a71c1216586f40c2f7b481ce0bb8e18d71405864
+4d2e594fd42281f8dc74e80841b436a2112a7d292670d5e9247700d3e7c44a84  state        .acmekit/base/4d2e594fd42281f8dc74e80841b436a2112a7d292670d5e9247700d3e7c44a84
+69b90be2a09cef53995eb1a81af7a8e89f3e1003eeec3a4003c5c0f42ae41551  state        .acmekit/base/69b90be2a09cef53995eb1a81af7a8e89f3e1003eeec3a4003c5c0f42ae41551
 78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7  state        .acmekit/base/78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7
 863aa344b1d719be44b9cd1b056ad390825da91cb77f8de1f652bfacd66fc7f3  state        .acmekit/base/863aa344b1d719be44b9cd1b056ad390825da91cb77f8de1f652bfacd66fc7f3
 96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1  state        .acmekit/base/96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1
@@ -7,16 +10,20 @@ beab0e8a02e38248bf3c8a2eea8dbbd29b4a2575038107b24811cd42fde5a4af  state        .
 c21a50a58576afdc151c02bcf12b1b86801606d4cd86396998bb1a5d6e1961ab  state        .acmekit/base/c21a50a58576afdc151c02bcf12b1b86801606d4cd86396998bb1a5d6e1961ab
 e2e410aaa403c11a6a46ee154c6c1d8582d22fefa27dd4f9b9d173da37be2f1c  state        .acmekit/config.json
 cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b  state        .acmekit/local/.gitignore
-1a722891d2f089391a3da7f4a7a7030f84d639cc5b9abc7f3f633215546012fd  state        .acmekit/lock.json
+cd96ba38cec7eae40e3e3b1e6308c93a23bb8e5609c8af9e0decfdb11c2b5447  state        .acmekit/lock.json
 96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1  owned        .claude/hooks/acmekit/guard-bash.mjs
 343cfbecf0eab8a622de43d172727d19e0989861bf82146f941b310089e32703  owned        .claude/hooks/acmekit/guard-secrets.mjs
 b00ccf39aaa93704e3044e6a73c3e38c6e41a17db627cbafccc2d1740495bf2a  json         .claude/settings.json
+3e2199bdddfd4062eea7f7b6045163e4492ff1acb57ede0058104a82188fee9d  owned        .claude/skills/handoff/SKILL.md
+69b90be2a09cef53995eb1a81af7a8e89f3e1003eeec3a4003c5c0f42ae41551  owned        .claude/skills/new-feature/SKILL.md
 8244dc2a6667ee91324c707423aa3992578ac192d36e9b1535424931e56db87f  user         .claude/skills/why/SKILL.md
 cd7366ce9cbf42d295cad1b0bfc1900a96028d33afe15008be380ab9bba0265c  blocks       .gitattributes
 491e2e47d3979f026ba67314885071414ac11c06d84e74857f6ba84cc6c98f0b  blocks       .gitignore
 37055c98043228133ffcc5cad7bba5ef6c8f24698a551cae547b90f51d22e519  user         .prettierrc.json
-e4d82ec56505f52e10e75e915496596e876dea7713619198346619d9cd21aeed  blocks       AGENTS.md
+9c192503fbc363b7afd806f378cef3fe9300daefd469d36d7a17eb64b528f123  blocks       AGENTS.md
 4f0c3f78bdba99783b07985121cd5c9c0e5d60756ac8773542eb6c2f155af025  blocks       CLAUDE.md
+4e63c485c075be179b03e75f99367ef85473980862ed524c8ddc8afc1d7b2d24  create-only  docs/features/_template/MEMORY.md
+8416aa35e62721c8e76855f76596ce13a6fbaa5adc15dade6135c94c55632045  create-only  docs/mistakes.md
 50e8b8c2c27258f88f2d265a52dadce1eae4d3f5ffe4365afe9be499a2f8a9a1  user         eslint.config.js
 2f61b4062d90572fa93d4bae12cd14babe06793936a0d2410ed7102cad4b7571  user         package.json
 ddadb22209a4466c1f4c6075e56c0317cfe9a29fed48c6dacdb3241447368efc  user         src/greet.ts
@@ -67,6 +74,18 @@ Rules for AI coding agents, such as Claude Code, Codex, Cursor, Gemini CLI and C
 | `npm run lint` | Lint |
 | `npm run format` | Format |
 <!-- acmekit:end agent-rules -->
+
+<!-- acmekit:begin feature-memory -->
+## Feature memory
+
+Each feature keeps its working memory in `docs/features/<feature>/MEMORY.md`: the goal, decisions, progress and next step, so any session can resume it.
+
+- Before changing code, read the active feature's MEMORY.md fully. If you do not know which feature is active, ask, and offer `/new-feature <name>` to start one.
+- After an important decision, append it to **Decisions** with the date and the reason.
+- Before ending a session, or when the context grows large, update **Done** and **Next step** (`/handoff` does both).
+- Never contradict a recorded decision without asking the user first.
+- Record approaches that failed in `docs/mistakes.md`, so nobody tries them again.
+<!-- acmekit:end feature-memory -->
 
 <!-- acmekit:begin safety -->
 ## Safety guards
