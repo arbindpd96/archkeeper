@@ -23,18 +23,19 @@ v0.1 milestone M5 (issues #34 and #35): every feature in a user's project gets a
 - 2026-10-17: `/why` is model-invocable, like this repo's own, since it only reads; `/new-feature` and `/adr` write files and stay user-only (#34). `/why` searches the decision log and ADRs, the MEMORY.md Decisions sections and the mistakes log, skipping what a project lacks, then `git log --grep` only when those do not answer (a Bash call prompts, reading docs does not), and cites `path:line` or a short hash. `/adr` numbers ADRs with four digits from the template, sets `accepted` only when the user agreed, marks the ADR it supersedes and adds a row to the decision log; like `/new-feature`, it does not commit. Why: #34 and reference §3.1; users' git workflows differ.
 - 2026-10-17: The knowledge module requires only base, not feature-memory. Why: `/why` skips the records a project lacks, and a requirement would make `--modules -feature-memory` on medium an error unless knowledge goes too, since resolution refuses a removed requirement.
 - 2026-10-17: The existing-claude-setup fixture's own `why` skill now meets the knowledge module's in medium and full: init keeps the user's skill, writes the kit's beside it as a sidecar and exits 2 (ADR-0014's first contact), and a second run still plans only skips. The golden, init-existing and context-budget tests expect it. Why: M3 gave the fixture a `why` skill, and this is what a user with their own `/why` sees.
+- 2026-10-17: `why.tape` is `# live` and runs on ts-app, which now holds `docs/adr/0001-run-tests-with-vitest.md` for `/why` to cite; init leaves that ADR alone and writes the kit's decision log beside it. Why: typing an ADR in the tape would take most of a GIF's 20 s; ts-app is the fixture `init.tape` and `guard.tape` use; detection reads only root docs, so AGENTS.md does not change, and the ts-app and existing-setup golden trees gain one user line.
 
 ## Done
 
 - [x] Feature memory (this file).
 - [x] feature-memory module: memory template, mistakes log, `new-feature` and `handoff` skills, AGENTS.md block, module and docs tests, golden trees, architecture map (6abe62e).
-- [x] knowledge module: decision log, ADR template, glossary, `why` and `adr` skills, AGENTS.md block, module test, golden trees with the existing setup's `why` sidecar, architecture map (the knowledge commit).
-- [ ] `why.tape` (`# live`) and its fixture ADR.
+- [x] knowledge module: decision log, ADR template, glossary, `why` and `adr` skills, AGENTS.md block, module test, golden trees with the existing setup's `why` sidecar, architecture map (0deec75); `/why` reaches for `git log` only when the docs do not answer (f3af34c).
+- [x] `why.tape` (`# live`) and the ts-app ADR it cites (the tape commit).
 - [ ] Docs: decisions, ROADMAP, changeset, this file.
 
 ## Next step
 
-Write `docs/media/tapes/why.tape` (`# live`): init on ts-app, then `/why` in Claude Code citing an ADR by path:line, with the ADR it cites added to `examples/ts-app/docs/adr/`.
+Record the larger choices in `docs/decisions.md`, tick #34 in `docs/ROADMAP.md` as M4 did for safety, and add a changeset for the two modules.
 
 ## Gotchas / don't try again
 
