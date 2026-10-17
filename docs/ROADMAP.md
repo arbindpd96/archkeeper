@@ -242,7 +242,7 @@ The first contact with existing user files loses nothing.
 
 **M5: Feature memory and decisions.** Every session starts knowing the active feature's goal, decisions and next step, including the first turn after compaction. Past decisions are searchable.
 
-- [ ] feat(modules): feature-memory and knowledge modules with their docs and skills
+- [x] feat(modules): feature-memory and knowledge modules with their docs and skills (both modules stay `internal` until the maintainer records the live `why.gif` and `memory.gif`; the README Decisions section waits for the README rewrite in PR #88)
 - [ ] feat(hooks): session-start, pre-compact and stop memory hooks
   - `--self-test` runs every hook's samples against a temp folder, never the project, so the state these hooks write never lands there when `doctor` runs the self-tests. M4 runs the samples in the hook's own folder, which is inside the project, so M5 moves them; a temp folder has no project config either, which is what M4 needed.
 
