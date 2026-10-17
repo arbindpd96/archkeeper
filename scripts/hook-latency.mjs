@@ -21,6 +21,7 @@ const EDITED_FILE = 'src/latency.ts';
 // Built at run time, so this script holds no likely secret.
 const TOKEN = `ghp_${'a'.repeat(36)}`;
 const bash = (command) => ({ tool_name: 'Bash', tool_input: { command } });
+const GIT_IDENTITY = ['-c', 'user.name=latency', '-c', 'user.email=latency@example.invalid'];
 const write = (content) => ({ tool_name: 'Write', tool_input: { file_path: 'src/new.ts', content } });
 
 // What each hook answers while it is timed: a common call, one it blocks and the heaviest it accepts.
@@ -38,6 +39,7 @@ const SAMPLES = {
       tool_input: { file_path: EDITED_FILE, old_string: 'line 900', new_string: 'line 9000' },
     },
   ],
+  'pre-compact': [{ trigger: 'manual' }, { trigger: 'auto' }],
 };
 
 /** Reads the command line: the repository root, whether to gate on the budget, and the runs per payload. */
@@ -69,12 +71,33 @@ function readBudget(root) {
   );
 }
 
-/** A throwaway project the hooks run in, holding the file the guard-secrets sample edits. */
-function project() {
-  const dir = mkdtempSync(path.join(tmpdir(), 'hook-latency-'));
-  mkdirSync(path.join(dir, 'src'));
+/** Runs git in the throwaway project with no user or system config, so none of their hooks or templates run. */
+function projectGit(work, dir, args) {
+  const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => !/^GIT_/i.test(name)));
+  const run = spawnSync('git', [...GIT_IDENTITY, ...args], {
+    cwd: dir,
+    encoding: 'utf8',
+    env: { ...env, GIT_CONFIG_GLOBAL: path.join(work, 'gitconfig'), GIT_CONFIG_NOSYSTEM: '1' },
+  });
+  if (run.status !== 0) {
+    exitWith(`hook-latency: git ${args[0]} failed in the timing project: ${run.stderr}`, 1);
+  }
+}
+
+/**
+ * A throwaway git repository the hooks run in: the file the guard-secrets sample edits, committed and then
+ * changed, so the hooks that read git status time a real one.
+ */
+function project(work) {
+  const dir = path.join(work, 'project');
+  mkdirSync(path.join(dir, 'src'), { recursive: true });
+  writeFileSync(path.join(work, 'gitconfig'), '');
   const lines = Array.from({ length: 2_000 }, (_, index) => `// line ${index}`);
   writeFileSync(path.join(dir, EDITED_FILE), `${lines.join('\n')}\n`);
+  projectGit(work, dir, ['init', '-q', '-b', 'main']);
+  projectGit(work, dir, ['add', '-A']);
+  projectGit(work, dir, ['commit', '-q', '-m', 'start']);
+  appendFileSync(path.join(dir, EDITED_FILE), '// changed\n');
   return dir;
 }
 
@@ -131,13 +154,14 @@ if (unsampled.length > 0) {
   exitWith(`hook-latency: add sample payloads for ${unsampled.join(', ')} to SAMPLES.`, 1);
 }
 
-const work = project();
+const work = mkdtempSync(path.join(tmpdir(), 'hook-latency-'));
 process.on('exit', () => rmSync(work, { recursive: true, force: true }));
+const dir = project(work);
 const rows = [];
 const problems = [];
 for (const file of hooks) {
   const name = path.basename(file, '.mjs');
-  const { p50, p95 } = measure(path.join(hooksDir, file), SAMPLES[name], work, options.runs);
+  const { p50, p95 } = measure(path.join(hooksDir, file), SAMPLES[name], dir, options.runs);
   rows.push(`| ${name} | ${p50.toFixed(1)} ms | ${p95.toFixed(1)} ms | ${budget} ms |`);
   if (p95 > budget) problems.push(`${name} has a p95 of ${p95.toFixed(1)} ms, over its ${budget} ms.`);
 }

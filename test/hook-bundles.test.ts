@@ -11,6 +11,8 @@ const HOOK_SOURCES = readdirSync(path.join(REPO_ROOT, 'src/hooks'))
   .filter((file) => file.endsWith('.ts'))
   .map((file) => path.basename(file, '.ts'))
   .sort();
+const GUARDS = HOOK_SOURCES.filter((hook) => FAILURE_POLICY[hook] === 'ask');
+const OPEN_HOOKS = HOOK_SOURCES.filter((hook) => FAILURE_POLICY[hook] === 'open');
 // A bundle's static imports, one per line as tsdown writes them; its dynamic imports are inlined.
 const STATIC_IMPORT = /^import\s(?:[^'"]*\sfrom\s*)?["']([^"']+)["']/gm;
 const NETWORK = /node:(?:net|http|https|http2|tls|dgram|dns)\b|\bfetch\(|\bWebSocket\b/;
@@ -57,10 +59,10 @@ function run(
 }
 
 describe('hook bundles (#30, ADR-0015)', () => {
-  it('give every hook a failure policy, both guards failing closed with ask', () => {
+  it('give every hook a failure policy, both guards failing closed with ask and the memory hooks open', () => {
     expect(Object.keys(FAILURE_POLICY).sort()).toEqual(HOOK_SOURCES);
-    expect(FAILURE_POLICY['guard-bash']).toBe('ask');
-    expect(FAILURE_POLICY['guard-secrets']).toBe('ask');
+    expect(GUARDS).toEqual(['guard-bash', 'guard-secrets']);
+    expect(OPEN_HOOKS).toEqual(HOOK_SOURCES.filter((hook) => !GUARDS.includes(hook)));
   });
 
   it.each(HOOK_SOURCES)('%s imports only node: built-ins and names no network API', (hook) => {
@@ -87,7 +89,7 @@ describe('hook bundles (#30, ADR-0015)', () => {
     expect(result.status).toBe(0);
   });
 
-  it.each(HOOK_SOURCES)(
+  it.each(GUARDS)(
     '%s answers with exit 0 and JSON, never with exit 2, and asks on input it cannot read',
     (hook) => {
       const result = run(isolatedCopy(hook), 'not json');
@@ -96,6 +98,17 @@ describe('hook bundles (#30, ADR-0015)', () => {
       expect(output.hookSpecificOutput?.permissionDecision).toBe('ask');
     },
   );
+
+  it.each(OPEN_HOOKS)('%s answers input it cannot read with exit 0, never asking or blocking', (hook) => {
+    const result = run(isolatedCopy(hook), 'not json');
+    expect(result.status).toBe(0);
+    const output = (result.stdout === '' ? {} : JSON.parse(result.stdout)) as {
+      decision?: string;
+      hookSpecificOutput?: { permissionDecision?: string };
+    };
+    expect(output.decision).toBeUndefined();
+    expect(output.hookSpecificOutput?.permissionDecision).toBeUndefined();
+  });
 
   it.each(HOOK_SOURCES)('%s reaches for no network while it answers its samples', (hook) => {
     const stub = path.join(tempDir(), 'stub-network.mjs');
