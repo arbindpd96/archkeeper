@@ -20,8 +20,9 @@ const SETTINGS = readFileSync(path.join(REPO_ROOT, 'docs/media/tapes/_settings.t
 const DEMO_TAPE = '# fixture: app\nSet TypingSpeed 10ms\nType "{{brand.binName}} --version"\nEnter\n';
 const GIF = gifBytes([100, 200]);
 
-// A stand-in for vhs: it logs the tape it was given, what the packed CLI printed and the environment it
-// got, which VHS hands on to the tape's shell, then writes a GIF.
+// A stand-in for vhs: it logs the tape it was given, what the packed CLI printed, the environment it got,
+// which VHS hands on to the tape's shell, and the fixture copy's commits and status when it is a git
+// repository, then writes a GIF.
 const FAKE_VHS = `#!/usr/bin/env node
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -33,7 +34,11 @@ if (arg === '--version') {
 if (fs.existsSync(__dirname + '/fail')) process.exit(1);
 const tape = fs.readFileSync(arg, 'utf8');
 const printed = execFileSync('${BRAND.binName}', ['--version'], { encoding: 'utf8' }).trim();
-const run = { tape, cwd: process.cwd(), printed, env: process.env };
+const gitOutput = (args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
+const repo = fs.existsSync('.git')
+  ? { commits: gitOutput(['rev-list', '--count', 'HEAD']), status: gitOutput(['status', '--porcelain']) }
+  : null;
+const run = { tape, cwd: process.cwd(), printed, env: process.env, repo };
 fs.appendFileSync(__dirname + '/vhs.log', JSON.stringify(run) + '\\n');
 fs.writeFileSync(JSON.parse(/^Output (.*)$/m.exec(tape)[1]), Buffer.from('${GIF.toString('base64')}', 'base64'));
 `;
@@ -43,6 +48,7 @@ interface VhsRun {
   cwd: string;
   printed: string;
   env: Record<string, string>;
+  repo: { commits: string; status: string } | null;
 }
 
 const OUTSIDE_SECRETS = {
@@ -141,6 +147,15 @@ describe.skipIf(process.platform === 'win32')('render-tapes', () => {
     expect(run?.printed).toBe('9.9.9');
     expect(readFileSync(path.join(out, 'demo.gif'))).toEqual(GIF);
     expect(existsSync(path.join(out, 'recorded.gif'))).toBe(false);
+  });
+
+  it('runs a tape marked # repo in a fixture copy that is a git repository with one commit', () => {
+    const root = project({ 'committed.tape': `# repo\n${DEMO_TAPE}`, 'plain.tape': DEMO_TAPE });
+    const result = renderTapes(root, ['--out', path.join(root, 'gifs'), '--tarball', packedCli()]);
+    expect(result.status).toBe(0);
+    const repoByTape = new Map(result.runs.map((run) => [path.basename(path.dirname(run.cwd)), run.repo]));
+    expect(repoByTape.get('committed')).toEqual({ commits: '1', status: '' });
+    expect(repoByTape.get('plain')).toBeNull();
   });
 
   it('renders the same GIF again over an existing one', () => {
