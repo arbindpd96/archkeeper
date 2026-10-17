@@ -11,8 +11,9 @@ import { readState, writeState } from '../state.js';
 import { activeFeature, confirmFirst, type FeatureMemory, POINTER_FILE } from './active-feature.js';
 
 const STATE = 'memory-stop.json';
-// Docs are not the work a memory records: anything under docs/, and Markdown or text files anywhere.
-const DOC_FILE = /\.(?:md|mdx|markdown|rst|adoc|txt)$/i;
+// Docs are not the work a memory records: anything under docs/, and Markdown and other markup anywhere. A .txt file
+// counts as work, since requirements.txt and CMakeLists.txt are code.
+const DOC_FILE = /\.(?:md|mdx|markdown|rst|adoc)$/i;
 const NAMES_SHOWN = 3;
 
 /** The work a Stop finds unsaved in the memory, and the change set it belongs to. */
@@ -62,7 +63,8 @@ function askedBefore(projectDir: string, changeSet: string): boolean {
   }
 }
 
-// Claude Code sets it while a Stop hook's block keeps Claude working; anything but false counts, so no loop.
+// Claude Code sets it while a Stop hook's block keeps Claude working. Any value but false ends the hook at once, so it
+// never loops; a missing field reads as false.
 function keptWorking(payload: Payload): boolean {
   const active = payload.stop_hook_active;
   return active !== undefined && active !== false;
@@ -106,7 +108,7 @@ const SAMPLES: readonly Sample[] = [
   },
   { name: 'a stop with no active feature', payload: { stop_hook_active: false }, expect: 'allow' },
   {
-    name: 'a stop where git shows no tracked change',
+    name: 'a stop outside a git repository',
     payload: { stop_hook_active: false },
     expect: 'allow',
     files: FEATURE,

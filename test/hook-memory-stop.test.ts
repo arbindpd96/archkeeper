@@ -81,21 +81,30 @@ describe('memory-stop (#35)', () => {
     expect(stop(dir)).toEqual({ kind: 'done' });
   });
 
-  it("never counts docs, Markdown or text files, or the kit's own state", () => {
+  it("never counts docs, Markdown or other markup files, or the kit's own state", () => {
     const dir = featureRepo({
       'README.md': '# App\n',
       'docs/site/page.tsx': 'export {};\n',
-      'notes.txt': 'x\n',
+      'guide.rst': 'x\n',
       [`${BRAND.stateDir}/config.json`]: '{}\n',
     });
     writeFiles(dir, {
       'README.md': '# App, edited\n',
       'docs/site/page.tsx': 'export const page = 1;\n',
-      'notes.txt': 'y\n',
+      'guide.rst': 'y\n',
       [`${BRAND.stateDir}/config.json`]: '{"preset":"small"}\n',
     });
     expect(stop(dir)).toEqual({ kind: 'done' });
   });
+
+  it.each(['requirements.txt', 'CMakeLists.txt'])(
+    'counts %s as work, since a .txt file can be code',
+    (file) => {
+      const dir = featureRepo({ [file]: 'x\n' });
+      writeFiles(dir, { [file]: 'y\n' });
+      expect(blockReason(stop(dir))).toContain(`${file} changed after`);
+    },
+  );
 
   it('counts a new file only once it is tracked', () => {
     const dir = featureRepo();
