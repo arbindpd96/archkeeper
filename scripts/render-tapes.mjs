@@ -28,6 +28,7 @@ import {
 const VHS_VERSION = '0.12.1';
 const FIXTURE = /^#\s*fixture:\s*(\S+)\s*$/m;
 const LIVE = /^#\s*live\s*$/m;
+const REPO = /^#\s*repo\s*$/m;
 // Everything else, such as tokens, SSH_AUTH_SOCK, cloud keys and npm config, stays out of the tape's shell.
 const PASSED_ENV = /^(?:PATH|TERM|COLORTERM|LANG|LC_\w+|TZ|TMPDIR|VHS_\w+)$/;
 const USAGE =
@@ -59,7 +60,27 @@ function readTape(root, feature) {
     return exitWith(`render-tapes: there is no tape ${TAPES}/${feature}.tape.`, 1);
   }
   const text = readFileSync(file, 'utf8');
-  return { feature, text, live: LIVE.test(text), fixture: FIXTURE.exec(text)?.[1] };
+  return { feature, text, live: LIVE.test(text), repo: REPO.test(text), fixture: FIXTURE.exec(text)?.[1] };
+}
+
+/** Makes a fixture copy a git repository with one commit, as a real project is, for a tape marked `# repo`. */
+function commitFixture(project) {
+  const options = {
+    cwd: project,
+    action: 'commit the fixture copy',
+    nextStep: 'Check that git is installed.',
+  };
+  git(['-c', 'init.defaultBranch=main', 'init', '-q'], options);
+  git(['add', '-A'], options);
+  const identity = [
+    '-c',
+    'user.name=Demo',
+    '-c',
+    'user.email=demo@example.com',
+    '-c',
+    'commit.gpgsign=false',
+  ];
+  git([...identity, 'commit', '-q', '-m', 'Start'], options);
 }
 
 /** Picks the tapes to render: one live tape with --live, else the named or all tapes not marked live. */
@@ -166,6 +187,7 @@ function render(tape, { root, work, env, settings, out }) {
   const gif = path.join(work, 'gifs', `${tape.feature}.gif`);
   const script = path.join(work, 'tapes', `${tape.feature}.tape`);
   cpSync(path.join(root, 'examples', tape.fixture), project, { recursive: true });
+  if (tape.repo) commitFixture(project);
   mkdirSync(path.dirname(gif), { recursive: true });
   mkdirSync(path.dirname(script), { recursive: true });
   writeFileSync(script, renderedTape(settings, tape, gif));
