@@ -40,8 +40,10 @@ describe('the knowledge module (#34)', () => {
   });
 
   it('starts the decision log and the glossary with the empty tables the skills and the team fill in', () => {
-    expect(written(DECISIONS)).toContain('| ADR | Decision | Status | Date |');
-    expect(written(GLOSSARY)).toContain('| Term | Meaning |');
+    expect(
+      written(DECISIONS).endsWith('| ADR | Decision | Status | Date |\n| --- | -------- | ------ | ---- |\n'),
+    ).toBe(true);
+    expect(written(GLOSSARY).endsWith('| Term | Meaning |\n| ---- | ------- |\n')).toBe(true);
   });
 
   it('lets Claude answer why from the records on its own, the docs first and the commits last, citing path:line', () => {
@@ -51,7 +53,7 @@ describe('the knowledge module (#34)', () => {
       `\`${DECISIONS}\` and the ADRs in \`docs/adr/\``,
       'the **Decisions** sections of `docs/features/*/MEMORY.md`',
       '`docs/mistakes.md`',
-      '`git log --grep=<keyword> -i --oneline`',
+      "`git log --grep='<keyword>' -i --oneline`",
     ];
     const positions = sources.map((source) => skill.indexOf(source));
     expect(positions.every((position) => position >= 0)).toBe(true);
@@ -59,15 +61,24 @@ describe('the knowledge module (#34)', () => {
     expect(skill).toContain('Cite each source as `path:line`');
     expect(skill).toContain('skipping any that do not exist');
     expect(skill).toContain('If they do not answer it, search the commit history');
+    expect(skill).toContain('one keyword at a time, a single word in single quotes');
   });
 
   it('records an ADR only when the user asks, from the template, numbered and listed in the decision log', () => {
     const skill = written('.claude/skills/adr/SKILL.md');
     expect(frontmatterOf(skill)?.get('disable-model-invocation')).toBe('true');
     expect(skill).toContain(`Copy \`${ADR_TEMPLATE}\` to \`docs/adr/<NNNN>-<title>.md\``);
+    expect(skill).toContain('the title in kebab-case: lowercase letters, digits and single hyphens');
     expect(skill).toContain('written with four digits');
     expect(skill).toContain(`Add a row for it to the table in \`${DECISIONS}\``);
     expect(skill).toContain('Set `Status: accepted` only when the user has agreed to the decision');
+  });
+
+  it('marks the ADR a new one supersedes, in its file and in its row of the decision log', () => {
+    const skill = written('.claude/skills/adr/SKILL.md');
+    expect(skill).toContain(
+      `set that ADR's status, and the status in its row of \`${DECISIONS}\`, to \`superseded by ADR-<NNNN>\``,
+    );
   });
 
   it('tells agents where decisions and terms live, and to ask before contradicting an accepted ADR', () => {
