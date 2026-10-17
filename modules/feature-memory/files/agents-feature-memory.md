@@ -1,6 +1,6 @@
 ## Feature memory
 
-Each feature keeps its working memory in `docs/features/<feature>/MEMORY.md`: the goal, decisions, progress and next step, so any session can resume it.
+Each feature keeps its working memory in `docs/features/<feature>/MEMORY.md`: the goal, decisions, progress and next step, so any session can resume it. The active feature is the one named in `{{brand.stateDir}}/local/active-feature`, else the only MEMORY.md that says `Status: in progress`.
 
 - Before changing code, read the active feature's MEMORY.md fully. If you do not know which feature is active, ask, and offer `/new-feature <name>` to start one.
 - After an important decision, append it to **Decisions** with the date and the reason.
