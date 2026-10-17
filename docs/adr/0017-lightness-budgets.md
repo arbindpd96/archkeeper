@@ -47,8 +47,8 @@ The first three budgets are enforced from v0.0 by `scripts/check-package.mjs` (i
 
 ## Notes
 
-- **2026-10-10, v0.1 M4: guard-bash gets its own bundle budget of 120 kB** (`budgets.json` `hookBundle.overrides`); every other hook keeps 30 kB. Pending the owner's sign-off ([v0.1-m4-safety memory](../features/v0.1-m4-safety/MEMORY.md)).
+- **2026-10-10, v0.1 M4: guard-bash gets its own bundle budget of 120 kB** (`budgets.json` `hookBundle.overrides`); every other hook keeps 30 kB. Signed off by the owner on 2026-10-17, when #30's 30 kB became per-hook budgets ([v0.1-m4-safety memory](../features/v0.1-m4-safety/MEMORY.md)).
   - Measured: the faithful port of this repository's hardened guard (#31, the #65 hardening and the R3 review rules) bundles to 109.7 kB as built, 102.3 kB without comments, 79.2 kB minified with its names kept and 54.0 kB fully minified. No build reaches 30 kB without dropping rules; the reference guard itself bundles to 91.6 kB.
   - Hook bundles stay unminified. They are committed in users' repositories, so a readable file keeps the guard auditable and each kit update's diff reviewable, and a stack trace from a user's machine points at readable code. Minifying saved no measurable latency: 36 ms p50 and 43 ms p95 either way, against the 200 ms latency budget.
   - The tarball stays far inside its 300 kB budget, since the bundle compresses to about 32 kB.
-  - Current size, after the M4 review rounds added the guard-file, decoded-script and git-writer rules: 115.9 kB as built without JSDoc (`hookBuilds` drops it), measured 2026-10-11. The sign-off is for this number against the 120 kB budget.
+  - Current size, after the M4 review rounds added the guard-file, decoded-script and git-writer rules: 115.9 kB as built without JSDoc (`hookBuilds` drops it), measured 2026-10-11. The owner signed off this number against the 120 kB budget on 2026-10-17.

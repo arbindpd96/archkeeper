@@ -234,7 +234,7 @@ The first contact with existing user files loses nothing.
 
 **M4: Safety: hook runtime, guards and native deny rules.** Claude is blocked from destructive commands and from writing secrets, with prefix deny rules as a second layer.
 
-- [x] feat(hooks): shared hook runtime with self-test and per-hook failure policy (guard-bash's bundle is 113.2 kB, under its own 120 kB budget pending the owner's sign-off; see the ADR-0017 note)
+- [x] feat(hooks): shared hook runtime with self-test and per-hook failure policy (guard-bash's bundle is 115.9 kB, under its own 120 kB budget, which the owner signed off on 2026-10-17; see the ADR-0017 note)
 - [x] feat(hooks): guard-bash PreToolUse hook
 - [x] feat(hooks): guard-secrets PreToolUse hook that fails closed
 - [x] feat(modules): safety module with any-depth .env deny rules (the module stays `internal` until the maintainer records the live `guard.gif`)
