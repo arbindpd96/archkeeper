@@ -25,8 +25,19 @@
       "strategy": "owned",
       "target": "project"
     },
+    { "to": ".claude/settings.json", "strategy": "json", "target": "project" },
     { "to": "AGENTS.md", "strategy": "blocks", "target": "project" }
   ],
   "blocks": [{ "file": "AGENTS.md", "id": "feature-memory", "template": "agents-feature-memory.md" }],
+  "hooks": [
+    {
+      "event": "SessionStart",
+      "matcher": "startup|resume|clear|compact",
+      "script": "dist/hooks/session-start.mjs",
+      "timeout": 10
+    },
+    { "event": "PreCompact", "script": "dist/hooks/pre-compact.mjs", "timeout": 10 },
+    { "event": "Stop", "script": "dist/hooks/memory-stop.mjs", "timeout": 10 }
+  ],
   "internal": true
 }

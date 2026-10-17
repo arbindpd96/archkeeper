@@ -1,7 +1,12 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { existsSync, readFileSync, utimesSync } from 'node:fs';
 import path from 'node:path';
+import { parse } from 'jsonc-parser';
 import { describe, expect, it } from 'vitest';
-import { fixtureCopy, writeFiles } from './helpers.js';
+import { readKit } from '../src/cli/kit.js';
+import { BRAND } from '../src/core/brand.js';
+import { fixtureCopy, git, REPO_ROOT, withEnv, writeFiles } from './helpers.js';
+import { memoryText } from './hook-helpers.js';
 import { projectText } from './install-helpers.js';
 import { moduleContent, moduleEntries, renderedKit, runInit } from './init-helpers.js';
 import { TEST_BRAND } from './kit-fixtures.js';
@@ -11,6 +16,40 @@ const TEMPLATE = 'docs/features/_template/MEMORY.md';
 const MISTAKES = 'docs/mistakes.md';
 const POINTER = `${TEST_BRAND.stateDir}/local/active-feature`;
 const TREE = renderedKit(['base', 'feature-memory']);
+const KIT_ON_DISK = readKit(REPO_ROOT);
+const LOGIN = 'docs/features/login/MEMORY.md';
+const MEMORY_EVENTS = ['SessionStart', 'PreCompact', 'Stop'];
+
+interface Handler {
+  readonly command: string;
+  readonly args: readonly string[];
+}
+
+/** Each registered hook's event and its arguments, with the project folder filled in as Claude Code does. */
+function registered(dir: string): [string, string[]][] {
+  const settings = parse(readFileSync(path.join(dir, '.claude/settings.json'), 'utf8')) as {
+    hooks: Record<string, { hooks: Handler[] }[]>;
+  };
+  return Object.entries(settings.hooks).flatMap(([event, groups]) =>
+    groups.flatMap((group) =>
+      group.hooks.map((handler): [string, string[]] => {
+        expect(handler.command).toBe('node');
+        return [event, handler.args.map((arg) => arg.replace('${CLAUDE_PROJECT_DIR}', dir))];
+      }),
+    ),
+  );
+}
+
+function runHook(dir: string, args: readonly string[], payload: unknown): string {
+  const run = spawnSync(process.execPath, args, {
+    cwd: dir,
+    input: JSON.stringify(payload),
+    encoding: 'utf8',
+    env: withEnv({ CLAUDE_PROJECT_DIR: dir }),
+  });
+  expect(run.status).toBe(0);
+  return run.stdout;
+}
 
 function written(file: string): string {
   return moduleContent(TREE, 'feature-memory', file);
@@ -21,8 +60,12 @@ function read(dir: string, file: string): string {
 }
 
 describe('the feature-memory module (#34)', () => {
-  it('writes the memory template and the mistakes log once, and owns its two skills and AGENTS.md block', () => {
+  it('writes the memory template and the mistakes log once, and owns its hooks, two skills and AGENTS.md block', () => {
     expect(moduleEntries(TREE, 'feature-memory')).toEqual([
+      [`${TEST_BRAND.hookDir}/memory-stop.mjs`, 'owned', ''],
+      [`${TEST_BRAND.hookDir}/pre-compact.mjs`, 'owned', ''],
+      [`${TEST_BRAND.hookDir}/session-start.mjs`, 'owned', ''],
+      ['.claude/settings.json', 'json', ''],
       ['.claude/skills/handoff/SKILL.md', 'owned', ''],
       ['.claude/skills/new-feature/SKILL.md', 'owned', ''],
       ['AGENTS.md', 'blocks', 'feature-memory'],
@@ -86,6 +129,42 @@ describe('the feature-memory module (#34)', () => {
     expect(block).toContain('`/handoff`');
     expect(block).toContain(`\`${MISTAKES}\``);
     expect(block).toContain('Never contradict a recorded decision without asking the user first.');
+  });
+});
+
+describe('the memory hooks (#35, ADR-0015)', () => {
+  const manifest = KIT_ON_DISK.modules.get('feature-memory')?.manifest;
+
+  it('registers session-start on every session start, pre-compact and memory-stop, each with a 10-second timeout', () => {
+    expect(
+      manifest?.hooks.map(({ event, matcher, script, timeout }) => [event, matcher, script, timeout]),
+    ).toEqual([
+      ['SessionStart', 'startup|resume|clear|compact', 'dist/hooks/session-start.mjs', 10],
+      ['PreCompact', undefined, 'dist/hooks/pre-compact.mjs', 10],
+      ['Stop', undefined, 'dist/hooks/memory-stop.mjs', 10],
+    ]);
+  });
+
+  it('run as Claude Code runs them, from the real bundles under a path with a space', async () => {
+    const { dir } = fixtureCopy('ts-app');
+    expect((await runInit(dir, ['--yes', '--preset', 'small'], { catalog: KIT_ON_DISK })).code).toBe(0);
+    writeFiles(dir, { [LOGIN]: memoryText() });
+    git(dir, 'init', '-q', '-b', 'main');
+    git(dir, 'add', '-A');
+    git(dir, 'commit', '-q', '-m', 'start');
+    writeFiles(dir, { [`${BRAND.stateDir}/local/active-feature`]: 'login\n' });
+    const hourAgo = new Date(Date.now() - 3_600_000);
+    utimesSync(path.join(dir, LOGIN), hourAgo, hourAgo);
+    writeFiles(dir, { 'src/greet.ts': 'export const greet = (name: string): string => `Hi ${name}`;\n' });
+    const hooks = new Map(registered(dir).filter(([event]) => MEMORY_EVENTS.includes(event)));
+    expect([...hooks.keys()].sort()).toEqual([...MEMORY_EVENTS].sort());
+    const run = (event: string, payload: unknown): string => runHook(dir, hooks.get(event) ?? [], payload);
+    expect(run('PreCompact', { trigger: 'manual' })).toBe('');
+    const context = run('SessionStart', { source: 'compact' });
+    expect(context).toContain(`the active feature is login (${LOGIN})`);
+    expect(context).toContain('M src/greet.ts');
+    expect(JSON.parse(run('Stop', { stop_hook_active: false }))).toMatchObject({ decision: 'block' });
+    expect(run('Stop', { stop_hook_active: true })).toBe('');
   });
 });
 

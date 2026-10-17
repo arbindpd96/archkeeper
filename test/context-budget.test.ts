@@ -3,7 +3,9 @@ import path from 'node:path';
 import { describe, expect, it, onTestFinished } from 'vitest';
 import budgets from '../budgets.json' with { type: 'json' };
 import { alwaysOnContext, importsOf } from '../scripts/context-rules.mjs';
+import { BRAND } from '../src/core/brand.js';
 import { fixtureCopy, runScript, tempDir, writeFiles } from './helpers.js';
+import { memoryText } from './hook-helpers.js';
 import { doneCode, existingClaudeSetup, KIT, runInit } from './init-helpers.js';
 
 const BUDGETS = new Map(
@@ -115,6 +117,37 @@ describe('the always-on context budget (ADR-0017)', () => {
   it('has a budget for every preset', () => {
     expect(KIT.presets.map((preset) => typeof BUDGETS.get(preset.name))).not.toContain('undefined');
   });
+
+  // The real bundle reads the brand's own config, which init with the test brand does not write, so it is set here.
+  it.each(KIT.presets.map((preset) => preset.name))(
+    'holds %s with the session-start hook installed, whose real output never passes its cap',
+    async (name) => {
+      const { dir } = fixtureCopy('ts-app');
+      expect((await runInit(dir, ['--yes', '--preset', name])).code).toBe(0);
+      const long = 'word '.repeat(2_000);
+      writeFiles(dir, {
+        [`${BRAND.stateDir}/config.json`]: JSON.stringify({ preset: name }),
+        [`${BRAND.stateDir}/local/active-feature`]: 'login\n',
+        [`${BRAND.stateDir}/local/snapshots/latest.json`]: JSON.stringify({
+          savedAt: '2026-10-17T10:00:00.000Z',
+          branch: 'main',
+          status: Array.from({ length: 50 }, (_, index) => `?? f${String(index)}.ts`),
+          more: 0,
+        }),
+        'docs/features/login/MEMORY.md': memoryText({ next: long, goal: long, decisions: [`- ${long}`] }),
+        'docs/architecture.md': `# Map\n\n## Overview\n\n${long}\n`,
+      });
+      const run = runScript('dist/hooks/session-start.mjs', {
+        payload: { source: 'compact' },
+        env: { CLAUDE_PROJECT_DIR: dir },
+      });
+      const output = JSON.parse(run.stdout) as { hookSpecificOutput: { additionalContext: string } };
+      const injected = output.hookSpecificOutput.additionalContext.length;
+      const cap = KIT.presets.find((preset) => preset.name === name)?.defaults.sessionStartCap;
+      expect(injected).toBe(cap);
+      expect(alwaysOnContext(dir, injected).tokens).toBeLessThanOrEqual(BUDGETS.get(name) ?? 0);
+    },
+  );
 
   it('is checked on the built CLI by scripts/context-budget.mjs, which needs a build first', () => {
     const result = runScript('scripts/context-budget.mjs', { cwd: tempDir() });

@@ -1,4 +1,58 @@
 ##### feature-memory on examples/ts-app
+=== .claude/hooks/acmekit/memory-stop.mjs (owned, feature-memory)
+// Stand-in for the memory-stop bundle that npm run build makes.
+=== .claude/hooks/acmekit/pre-compact.mjs (owned, feature-memory)
+// Stand-in for the pre-compact bundle that npm run build makes.
+=== .claude/hooks/acmekit/session-start.mjs (owned, feature-memory)
+// Stand-in for the session-start bundle that npm run build makes.
+=== .claude/settings.json (json, feature-memory)
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/session-start.mjs"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/pre-compact.mjs"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/memory-stop.mjs"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
 === .claude/skills/handoff/SKILL.md (owned, feature-memory)
 ---
 name: handoff
@@ -114,6 +168,60 @@ Approaches that failed, so nobody tries them again. Newest first.
 Format: `- YYYY-MM-DD: <what we tried> → <what went wrong> → <what to do instead>`
 
 ##### feature-memory on examples/py-app
+=== .claude/hooks/acmekit/memory-stop.mjs (owned, feature-memory)
+// Stand-in for the memory-stop bundle that npm run build makes.
+=== .claude/hooks/acmekit/pre-compact.mjs (owned, feature-memory)
+// Stand-in for the pre-compact bundle that npm run build makes.
+=== .claude/hooks/acmekit/session-start.mjs (owned, feature-memory)
+// Stand-in for the session-start bundle that npm run build makes.
+=== .claude/settings.json (json, feature-memory)
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/session-start.mjs"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/pre-compact.mjs"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/memory-stop.mjs"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
 === .claude/skills/handoff/SKILL.md (owned, feature-memory)
 ---
 name: handoff
