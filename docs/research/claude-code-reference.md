@@ -171,7 +171,7 @@ Every event sends these common fields: `session_id`, `prompt_id`, `transcript_pa
 
 **Keys the kit cares about** [src](https://code.claude.com/docs/en/settings-reference):
 - `model`
-- `attribution.{commit, pr, sessionUrl}`: each a string or `false` (`includeCoAuthoredBy` is deprecated) [src](https://code.claude.com/docs/en/settings-reference)
+- `attribution.commit` and `attribution.pr`: the text added to commits and PR descriptions; an empty string hides it. Claude Code 2.1.302 rejects `false` for both ("Expected string, but received boolean") and then ignores the setting. `attribution.sessionUrl`: `false` stops appending the session link. `includeCoAuthoredBy` is deprecated. [src](https://code.claude.com/docs/en/settings-reference)
 - `permissions.{defaultMode, allow, ask, deny}`
 - `autoMode`
 - `hooks`
