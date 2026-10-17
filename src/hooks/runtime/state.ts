@@ -77,22 +77,25 @@ function writeExclusively(file: string, content: string, rootReal: string): void
   }
 }
 
-// Whatever creates local/ writes its .gitignore of `*`, which ignores the folder and itself (ADR-0014).
-function ensureIgnoreAll(local: string, rootReal: string): void {
+// Whatever creates local/ writes its .gitignore of `*`, which ignores the folder and itself (ADR-0014). A read finds
+// local/ only as a write leaves it, so state that a refused write could not have made, or replace, is never read.
+function ensureIgnoreAll(local: string, rootReal: string, create: boolean): void {
   const ignore = path.join(local, IGNORE_FILE);
   const stats = lstatSync(ignore, { throwIfNoEntry: false });
   if (stats !== undefined && !stats.isFile()) refused(ignore, 'is not a regular file');
   const text = stats === undefined ? null : readRegularFile(ignore, MAX_STATE_BYTES);
-  if (text?.replaceAll('\r', '').trim() !== '*') writeExclusively(ignore, IGNORE_ALL, rootReal);
+  if (text?.replaceAll('\r', '').trim() === '*') return;
+  if (!create) refused(ignore, 'does not ignore everything');
+  writeExclusively(ignore, IGNORE_ALL, rootReal);
 }
 
-/** `<state dir>/local/`, checked to be a real folder inside the project, and created with its `.gitignore` if asked. */
+/** `<state dir>/local/`, checked to be a real folder inside the project that ignores all, and created so if asked. */
 function localFolder(projectDir: string, brand: Brand, create: boolean): { local: string; rootReal: string } {
   const rootReal = realpathSync.native(projectDir);
   const local = path.join(projectDir, brand.stateDir, 'local');
   ensureRealFolder(path.dirname(local), rootReal, create);
   ensureRealFolder(local, rootReal, create);
-  if (create) ensureIgnoreAll(local, rootReal);
+  ensureIgnoreAll(local, rootReal, create);
   return { local, rootReal };
 }
 
@@ -148,7 +151,10 @@ export function prepareLocalState(projectDir: string, brand: Brand = BRAND): Sta
   }
 }
 
-/** Reads hook state from `<state dir>/local/<name>`, or null when it is missing, refused or not a small regular file. */
+/**
+ * Reads hook state from `<state dir>/local/<name>`, or null when it is missing or not a small regular file, or when
+ * `local/` is not as a write leaves it: a real folder inside the project whose `.gitignore` ignores everything.
+ */
 export function readState(projectDir: string, name: string, brand: Brand = BRAND): string | null {
   try {
     return readRegularFile(stateFile(projectDir, name, brand, false).file, MAX_STATE_BYTES);

@@ -99,6 +99,17 @@ describe('hook state under the local state folder (ADR-0014, ADR-0015)', () => {
     expect(writeState(dir, '.gitignore', '!*\n', TEST_BRAND)).toMatchObject({ written: false });
     expect(readdirSync(dir)).toEqual([]);
   });
+
+  it('reads state only from a local folder as a write leaves it, whose .gitignore ignores everything', () => {
+    const dir = tempDir();
+    writeFiles(dir, { [`${LOCAL}/state`]: 'planted' });
+    expect(readState(dir, 'state', TEST_BRAND)).toBeNull();
+    writeFiles(dir, { [`${LOCAL}/.gitignore`]: '!state\n' });
+    expect(readState(dir, 'state', TEST_BRAND)).toBeNull();
+    writeFiles(dir, { [`${LOCAL}/.gitignore`]: '*\r\n' });
+    expect(readState(dir, 'state', TEST_BRAND)).toBe('planted');
+    expect(readdirSync(path.join(dir, LOCAL)).sort()).toEqual(['.gitignore', 'state']);
+  });
 });
 
 describe.skipIf(!canSymlink())('hook state through symlinks', () => {
@@ -128,6 +139,16 @@ describe.skipIf(!canSymlink())('hook state through symlinks', () => {
     symlinkSync(outside, path.join(dir, LOCAL, 'state'));
     expect(writeState(dir, 'state', 'hook', TEST_BRAND)).toMatchObject({ written: false });
     expect(readFileSync(outside, 'utf8')).toBe('mine\n');
+    expect(readState(dir, 'state', TEST_BRAND)).toBeNull();
+  });
+
+  it('reads no state where a write is refused because local/.gitignore is a symlink', () => {
+    const dir = tempDir();
+    const outside = path.join(tempDir(), 'ignore');
+    writeFileSync(outside, '*\n');
+    writeFiles(dir, { [`${LOCAL}/state`]: 'planted' });
+    symlinkSync(outside, path.join(dir, LOCAL, '.gitignore'));
+    expect(writeState(dir, 'other', 'hook', TEST_BRAND)).toMatchObject({ written: false });
     expect(readState(dir, 'state', TEST_BRAND)).toBeNull();
   });
 });
