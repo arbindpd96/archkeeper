@@ -30,12 +30,20 @@ v0.1 milestone M5 (issues #34 and #35): every feature in a user's project gets a
 - [x] Feature memory (this file).
 - [x] feature-memory module: memory template, mistakes log, `new-feature` and `handoff` skills, AGENTS.md block, module and docs tests, golden trees, architecture map (6abe62e).
 - [x] knowledge module: decision log, ADR template, glossary, `why` and `adr` skills, AGENTS.md block, module test, golden trees with the existing setup's `why` sidecar, architecture map (0deec75); `/why` reaches for `git log` only when the docs do not answer (f3af34c).
-- [x] `why.tape` (`# live`) and the ts-app ADR it cites (the tape commit).
-- [ ] Docs: decisions, ROADMAP, changeset, this file.
+- [x] `why.tape` (`# live`) and the ts-app ADR it cites (4f99ca3).
+- [x] Changeset (81c0ee2); decisions, ROADMAP and this file (the docs commit).
+- [x] `npm run check` green before every commit. Measured after part A: always-on context small 1,065, medium 1,678, full 1,928 tokens (1,500 / 3,000 / 4,500), up from 841, 1,291 and 1,541; warm init 270 ms (2,000 ms); tarball 211.5 kB (300 kB); 2,980 tests in 85 files.
+- [ ] Part B (#35): the memory hooks, `memory.tape` and their docs.
 
 ## Next step
 
-Record the larger choices in `docs/decisions.md`, tick #34 in `docs/ROADMAP.md` as M4 did for safety, and add a changeset for the two modules.
+1. Part B (#35), on this branch:
+   - Add `src/hooks/session-start.ts`, `pre-compact.ts` and a memory stop hook, each a two-line `launch` entry with its logic under `src/hooks/runtime/`. Add each to `FAILURE_POLICY` (open), give it `--self-test` samples and a `scripts/hook-latency.mjs` `SAMPLES` entry, keep its bundle within 30 kB, and write state only through `writeState`. Move every hook's self-test samples into a temp folder (ROADMAP M5).
+   - Register them in `modules/feature-memory/module.json`: declare `.claude/settings.json` (json) in `files`, then `hooks` for SessionStart (matcher `startup|resume|clear|compact`), PreCompact and Stop (no matcher), each with a timeout.
+   - Find the active feature as the pointer decision above says: check the pointer is a kebab-case name, read only regular files inside the project, and skip `_` folders in the `Status: in progress` fallback, since the template says it too.
+   - Read MEMORY.md sections by heading prefix (the template's is `## Decisions (never undo without asking)`). The SessionStart cap follows the config's `preset` (1,200 / 3,000 / 4,000 in `modules/presets.json`), which a bundle cannot read: keep a table in the runtime and a test that it matches.
+   - Then `memory.tape` (`# live`), golden trees, the architecture map, a changeset and this file; the README Feature memory section waits for PR #88.
+2. The maintainer, once #88 merges: record `why.gif` live (`npm run build`, then `node scripts/render-tapes.mjs --live why`; at most 2 MB and 20 s; adjust the tape's `Sleep` or `Wait` if Claude Code asks to trust the folder or to run a command) and commit `docs/media/why.gif`. In the same commit, replace `"internal": true` in `modules/knowledge/module.json` with `"demo": { "tape": "why", "section": "Decisions" }`, add the README Decisions section with the GIF, drop `knowledge` from the architecture map's list of internal modules, and run `npm run demos` and `npm run check`. The medium plan in `init.gif` now lists more files: refresh it from a demo-gifs run with `npm run gifs:pull`.
 
 ## Gotchas / don't try again
 
@@ -47,3 +55,4 @@ Record the larger choices in `docs/decisions.md`, tick #34 in `docs/ROADMAP.md` 
 
 - ADR-0015's skill frontmatter allowlist leaves out `argument-hint`, which shows `<name>` beside a skill in the slash menu. Add it to the allowlist (it only displays text)? Until then the kit's skills go without it.
 - A project whose `.claude` links outside it now needs every module that writes under `.claude` left out (safety, feature-memory and, in medium and full, knowledge). Confirm, or have init's refusal name those modules in its hint (today it says to replace or remove the link).
+- Sign-off (#34, blocks closing it): "the README Decisions section ship in this PR" and "the knowledge module's `demo` is `why`" wait on PR #88 and the live `why.gif` (Next step 2), so the PR says "Refs #34" until then, as M4's did for #33.
