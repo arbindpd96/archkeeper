@@ -8,16 +8,19 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { parseArgs } from 'node:util';
+import { BRAND } from '../src/core/brand.ts';
 import { exitWith } from './lib.mjs';
 
 const USAGE = 'Usage: node scripts/hook-latency.mjs [<root>] [--gate] [--runs <n>]';
 const EDITED_FILE = 'src/latency.ts';
+const MEMORY_FILE = 'docs/features/latency/MEMORY.md';
 // Built at run time, so this script holds no likely secret.
 const TOKEN = `ghp_${'a'.repeat(36)}`;
 const bash = (command) => ({ tool_name: 'Bash', tool_input: { command } });
@@ -40,6 +43,40 @@ const SAMPLES = {
     },
   ],
   'pre-compact': [{ trigger: 'manual' }, { trigger: 'auto' }],
+  'session-start': [{ source: 'startup' }, { source: 'compact' }, { source: 'resume' }],
+};
+
+// A feature memory at the template's 80-line limit, and a map with an Overview, for the memory hooks to read.
+const DECISIONS = Array.from(
+  { length: 40 },
+  (_, index) => `- 2026-09-${String((index % 28) + 1).padStart(2, '0')}: Decision ${index}. Why: a reason.`,
+);
+const MEMORY = [
+  '# Feature: latency',
+  '',
+  'Status: in progress | Branch: main',
+  '',
+  '## Goal',
+  '',
+  'Time the hooks.',
+];
+const PROJECT_FILES = {
+  '.gitignore': `${BRAND.stateDir}/local/\n`,
+  [`${BRAND.stateDir}/config.json`]: '{ "preset": "full" }\n',
+  [`${BRAND.stateDir}/local/active-feature`]: 'latency\n',
+  [MEMORY_FILE]: [
+    ...MEMORY,
+    '',
+    '## Decisions',
+    '',
+    ...DECISIONS,
+    '',
+    '## Next step',
+    '',
+    'Measure.',
+    '',
+  ].join('\n'),
+  'docs/architecture.md': `# Map\n\n## Overview\n\n${'The app has layers. '.repeat(200)}\n`,
 };
 
 /** Reads the command line: the repository root, whether to gate on the budget, and the runs per payload. */
@@ -85,18 +122,22 @@ function projectGit(work, dir, args) {
 }
 
 /**
- * A throwaway git repository the hooks run in: the file the guard-secrets sample edits, committed and then
- * changed, so the hooks that read git status time a real one.
+ * A throwaway git repository the hooks run in: an active feature's memory, and the file the guard-secrets sample
+ * edits, committed and then changed after the memory, so the hooks that read git status time a real one.
  */
 function project(work) {
   const dir = path.join(work, 'project');
-  mkdirSync(path.join(dir, 'src'), { recursive: true });
   writeFileSync(path.join(work, 'gitconfig'), '');
   const lines = Array.from({ length: 2_000 }, (_, index) => `// line ${index}`);
-  writeFileSync(path.join(dir, EDITED_FILE), `${lines.join('\n')}\n`);
+  for (const [file, text] of Object.entries({ ...PROJECT_FILES, [EDITED_FILE]: `${lines.join('\n')}\n` })) {
+    mkdirSync(path.dirname(path.join(dir, file)), { recursive: true });
+    writeFileSync(path.join(dir, file), text);
+  }
   projectGit(work, dir, ['init', '-q', '-b', 'main']);
   projectGit(work, dir, ['add', '-A']);
   projectGit(work, dir, ['commit', '-q', '-m', 'start']);
+  const hourAgo = new Date(Date.now() - 3_600_000);
+  utimesSync(path.join(dir, MEMORY_FILE), hourAgo, hourAgo);
   appendFileSync(path.join(dir, EDITED_FILE), '// changed\n');
   return dir;
 }

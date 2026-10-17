@@ -11,6 +11,7 @@ import {
   permission,
   readInput,
   respond,
+  withNote,
 } from './io.js';
 import { isRecord } from '../../core/text.js';
 import { projectDirOf, slashed } from './project.js';
@@ -23,6 +24,7 @@ export const FAILURE_POLICY: Readonly<Record<string, FailurePolicy>> = {
   'guard-bash': 'ask',
   'guard-secrets': 'ask',
   'pre-compact': 'open',
+  'session-start': 'open',
 };
 
 /** Where a hook runs: the project folder Claude Code names and the user's home folder. */
@@ -147,8 +149,10 @@ function failure(name: string, policy: FailurePolicy, error: unknown): Answer {
   const kind = error instanceof Error ? error.name : typeof error;
   const note = `${name}: could not do its job (${kind})`;
   if (policy === 'open') return noAnswer(note);
-  const answer = permission('ask', `${name} could not check this call, so it asks. Confirm with the user.`);
-  return answer.kind === 'done' ? { ...answer, note } : answer;
+  return withNote(
+    permission('ask', `${name} could not check this call, so it asks. Confirm with the user.`),
+    note,
+  );
 }
 
 /**
