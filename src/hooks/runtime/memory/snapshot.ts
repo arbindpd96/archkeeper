@@ -4,7 +4,7 @@ import { projectStatus, type StatusEntry } from '../git-status.js';
 import { readState, type StateWrite, writeState } from '../state.js';
 
 /** The snapshot's state name under `<state dir>/local/` (ADR-0014). */
-export const SNAPSHOT_STATE = 'snapshots/latest.json';
+const SNAPSHOT_STATE = 'snapshots/latest.json';
 /** The snapshot's project-relative path, as hooks name it. */
 export const SNAPSHOT_FILE = `${BRAND.stateDir}/local/${SNAPSHOT_STATE}`;
 const MAX_STATUS_LINES = 50;

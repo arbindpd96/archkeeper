@@ -13,12 +13,13 @@ import { readSnapshot, type Snapshot, SNAPSHOT_FILE } from './snapshot.js';
  * Each preset's SessionStart cap in characters, as `modules/presets.json` sets it (ADR-0015, ADR-0017). A hook
  * bundle cannot read that file, so a test keeps the two equal; a preset missing here gets small's cap.
  */
-export const SESSION_START_CAPS: Readonly<Record<string, number>> = { small: 1200, medium: 3000, full: 4000 };
+export const SESSION_START_CAPS = { small: 1200, medium: 3000, full: 4000 } as const;
 /** The presets whose context ends with the architecture Overview: those with the architecture-map module (#35). */
 export const OVERVIEW_PRESETS: readonly string[] = ['medium', 'full'];
 
-const FALLBACK_PRESET = 'small';
-const FALLBACK_CAP = 1200;
+type Preset = keyof typeof SESSION_START_CAPS;
+
+const FALLBACK_PRESET: Preset = 'small';
 const LABEL = `${BRAND.displayName} feature memory:`;
 const DECISIONS_SHOWN = 5;
 const SNAPSHOT_LINES = 20;
@@ -95,7 +96,7 @@ function overviewSection(projectDir: string): string[] {
 }
 
 // In priority order, so the cut at the cap drops the least important content first (ADR-0015).
-function contextText(projectDir: string, compact: boolean, preset: string): string {
+function contextText(projectDir: string, compact: boolean, preset: Preset): string {
   const found = activeFeature(projectDir);
   const snapshot = compact ? snapshotSection(readSnapshot(projectDir, Date.now())) : [];
   if (!('memory' in found)) return [askLine(found.inProgress), ...snapshot].join('\n\n');
@@ -103,9 +104,12 @@ function contextText(projectDir: string, compact: boolean, preset: string): stri
   return [memoryHeader(found.memory), ...memorySections(found.memory), ...snapshot, ...overview].join('\n\n');
 }
 
-function presetOf(projectDir: string): string {
+const isPreset = (name: string | undefined): name is Preset =>
+  name !== undefined && Object.hasOwn(SESSION_START_CAPS, name);
+
+function presetOf(projectDir: string): Preset {
   const preset = configPreset(projectDir);
-  return preset !== undefined && Object.hasOwn(SESSION_START_CAPS, preset) ? preset : FALLBACK_PRESET;
+  return isPreset(preset) ? preset : FALLBACK_PRESET;
 }
 
 // The source field is unverified (reference §12): anything but `compact` starts a session as `startup` does.
@@ -114,7 +118,7 @@ function answer(input: HookInput, context: HookContext): Answer {
   const compact = stringField(input.payload, 'source') === 'compact';
   const prepared = prepareLocalState(context.projectDir);
   const text = escapeUnprintableKeepingLines(contextText(context.projectDir, compact, preset));
-  const answered = additionalContext('SessionStart', text, SESSION_START_CAPS[preset] ?? FALLBACK_CAP);
+  const answered = additionalContext('SessionStart', text, SESSION_START_CAPS[preset]);
   return prepared.written ? answered : withNote(answered, `session-start: ${slashed(prepared.problem)}`);
 }
 

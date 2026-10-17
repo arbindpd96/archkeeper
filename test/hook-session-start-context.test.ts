@@ -92,7 +92,7 @@ describe('the SessionStart caps (ADR-0015, ADR-0017)', () => {
 
   it('cuts the Next step itself, marking the cut, when it alone is longer than the cap', () => {
     const context = contextOf(projectOf('small', 5_000));
-    expect(context).toHaveLength(SESSION_START_CAPS.small ?? 0);
+    expect(context).toHaveLength(SESSION_START_CAPS.small);
     expect(context).toMatch(/## Next step\nnext next[\s\S]*\n…\(truncated\)$/);
   });
 
@@ -103,7 +103,7 @@ describe('the SessionStart caps (ADR-0015, ADR-0017)', () => {
     ['an unknown preset', '{"preset":"huge"}'],
   ])('keeps the smallest cap, without the Overview, for %s', (_name, config) => {
     const context = contextOf(projectOf('full', 5_000, config));
-    expect(context).toHaveLength(SESSION_START_CAPS.small ?? 0);
+    expect(context).toHaveLength(SESSION_START_CAPS.small);
     expect(contextOf(projectOf('full', 100, config))).not.toContain('## Architecture overview');
   });
 });
