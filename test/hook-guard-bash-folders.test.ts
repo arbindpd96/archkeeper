@@ -107,7 +107,12 @@ describe('guard-bash: protected folders under their real paths', () => {
     mkdirSync(realProject, { recursive: true });
     const link = path.join(root, 'link');
     symlinkSync(path.join(root, 'real'), link);
-    const payload = { tool_name: 'Bash', tool_input: { command: `rm -rf ${realpathSync(realProject)}` } };
+    // Quoted because Git Bash drops a Windows path's unquoted backslashes; native because a Windows runner's
+    // temp path holds an 8.3 short name, which only the native real path expands, as the guard's does.
+    const payload = {
+      tool_name: 'Bash',
+      tool_input: { command: `rm -rf '${realpathSync.native(realProject)}'` },
+    };
     expect(hookAnswer(guardBash, payload, { projectDir: path.join(link, 'proj') }).outcome).toBe('deny');
   });
 
