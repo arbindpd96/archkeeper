@@ -44,7 +44,7 @@ describe('the knowledge module (#34)', () => {
     expect(written(GLOSSARY)).toContain('| Term | Meaning |');
   });
 
-  it('lets Claude answer why from the records on its own, searching each kind in order and citing path:line', () => {
+  it('lets Claude answer why from the records on its own, the docs first and the commits last, citing path:line', () => {
     const skill = written('.claude/skills/why/SKILL.md');
     expect(frontmatterOf(skill)?.has('disable-model-invocation')).toBe(false);
     const sources = [
@@ -58,6 +58,7 @@ describe('the knowledge module (#34)', () => {
     expect([...positions].sort((left, right) => left - right)).toEqual(positions);
     expect(skill).toContain('Cite each source as `path:line`');
     expect(skill).toContain('skipping any that do not exist');
+    expect(skill).toContain('If they do not answer it, search the commit history');
   });
 
   it('records an ADR only when the user asks, from the template, numbered and listed in the decision log', () => {
