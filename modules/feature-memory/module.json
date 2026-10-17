@@ -5,5 +5,28 @@
   "description": "A MEMORY.md per feature, a mistakes log, memory hooks and the /new-feature and /handoff skills.",
   "presets": ["small", "medium", "full"],
   "requires": ["base"],
+  "files": [
+    {
+      "from": "memory-template.md",
+      "to": "docs/features/_template/MEMORY.md",
+      "strategy": "create-only",
+      "target": "project"
+    },
+    { "from": "mistakes.md", "to": "docs/mistakes.md", "strategy": "create-only", "target": "project" },
+    {
+      "from": "skill-new-feature.md",
+      "to": ".claude/skills/new-feature/SKILL.md",
+      "strategy": "owned",
+      "target": "project"
+    },
+    {
+      "from": "skill-handoff.md",
+      "to": ".claude/skills/handoff/SKILL.md",
+      "strategy": "owned",
+      "target": "project"
+    },
+    { "to": "AGENTS.md", "strategy": "blocks", "target": "project" }
+  ],
+  "blocks": [{ "file": "AGENTS.md", "id": "feature-memory", "template": "agents-feature-memory.md" }],
   "internal": true
 }

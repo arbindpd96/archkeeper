@@ -140,9 +140,17 @@ describe.skipIf(!canSymlink())(
       expect(read(dotfiles, 'settings.json')).toBe('{}\n');
     });
 
-    it('sets up the rest of the project without reading through the link when safety is left out', async () => {
+    it('still refuses with only safety left out, since the skills live under .claude too', async () => {
       const { dir } = linkedClaudeFolder();
       const result = await runInit(dir, ['--yes', '--modules', '-safety']);
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain('".claude/skills/');
+      expect(existsSync(path.join(dir, 'CLAUDE.md'))).toBe(false);
+    });
+
+    it('sets up the rest of the project without reading through the link when the modules writing under .claude are left out', async () => {
+      const { dir } = linkedClaudeFolder();
+      const result = await runInit(dir, ['--yes', '--modules', '-safety,-feature-memory']);
       expect(result.code).toBe(0);
       expect(read(dir, 'CLAUDE.md')).toContain('@AGENTS.md');
     });
