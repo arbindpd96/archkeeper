@@ -148,11 +148,11 @@ describe.skipIf(!canSymlink())(
       expect(read(dotfiles, 'settings.json')).toBe('{}\n');
     });
 
-    it('still refuses with only safety left out, since the skills live under .claude too', async () => {
+    it('still refuses with only safety left out, since the memory hooks and skills live under .claude too', async () => {
       const { dir } = linkedClaudeFolder();
       const result = await runInit(dir, ['--yes', '--modules', '-safety']);
       expect(result.code).toBe(1);
-      expect(result.stderr).toContain('".claude/skills/');
+      expect(result.stderr).toMatch(/"\.claude\/(?:hooks|skills)\//);
       expect(existsSync(path.join(dir, 'CLAUDE.md'))).toBe(false);
     });
 

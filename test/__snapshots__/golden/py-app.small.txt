@@ -1,20 +1,26 @@
+1d6f9505476c4f0a62d416fc4eb76b6df678edb5fd5c5a5193a0f93600017c21  state        .acmekit/base/1d6f9505476c4f0a62d416fc4eb76b6df678edb5fd5c5a5193a0f93600017c21
 30df621d454b3cc7a4abeb25698873da63110040fced62cba16b2281093f6d13  state        .acmekit/base/30df621d454b3cc7a4abeb25698873da63110040fced62cba16b2281093f6d13
 336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49  state        .acmekit/base/336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49
 343cfbecf0eab8a622de43d172727d19e0989861bf82146f941b310089e32703  state        .acmekit/base/343cfbecf0eab8a622de43d172727d19e0989861bf82146f941b310089e32703
 3b6d7e0ce5ff3498d7cabe75fe5bd24fa4e4ad0e66232f2dd863d06b97216e56  state        .acmekit/base/3b6d7e0ce5ff3498d7cabe75fe5bd24fa4e4ad0e66232f2dd863d06b97216e56
+3e29d58c0ddc4477a32509ccad081945c22b968c9d6639b09ad9faea3761e428  state        .acmekit/base/3e29d58c0ddc4477a32509ccad081945c22b968c9d6639b09ad9faea3761e428
 78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7  state        .acmekit/base/78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7
 863aa344b1d719be44b9cd1b056ad390825da91cb77f8de1f652bfacd66fc7f3  state        .acmekit/base/863aa344b1d719be44b9cd1b056ad390825da91cb77f8de1f652bfacd66fc7f3
 96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1  state        .acmekit/base/96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1
+afd2a94d066fc1670fbeffc984dd72d35f0e58006dc803678a5b0cf76f2fcd2e  state        .acmekit/base/afd2a94d066fc1670fbeffc984dd72d35f0e58006dc803678a5b0cf76f2fcd2e
 b14df213662c8f70aa222047cc5093c9975c21005343db864945fe72a13946b4  state        .acmekit/base/b14df213662c8f70aa222047cc5093c9975c21005343db864945fe72a13946b4
 beab0e8a02e38248bf3c8a2eea8dbbd29b4a2575038107b24811cd42fde5a4af  state        .acmekit/base/beab0e8a02e38248bf3c8a2eea8dbbd29b4a2575038107b24811cd42fde5a4af
 c21a50a58576afdc151c02bcf12b1b86801606d4cd86396998bb1a5d6e1961ab  state        .acmekit/base/c21a50a58576afdc151c02bcf12b1b86801606d4cd86396998bb1a5d6e1961ab
 c36b483b6893c8446c7149f858e2de81c843421eb167d7927eee2dd5717442c7  state        .acmekit/base/c36b483b6893c8446c7149f858e2de81c843421eb167d7927eee2dd5717442c7
 e2e410aaa403c11a6a46ee154c6c1d8582d22fefa27dd4f9b9d173da37be2f1c  state        .acmekit/config.json
 cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b  state        .acmekit/local/.gitignore
-a690ba111c2fa54fc6228e8326f00c4c1b8f6b25466bdf8a34b806baf63c8c31  state        .acmekit/lock.json
+60acb4d3878aa3a9a6e9d7c888e4ea64aec8c330d0f50f5abd5a074667672d93  state        .acmekit/lock.json
 96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1  owned        .claude/hooks/acmekit/guard-bash.mjs
 343cfbecf0eab8a622de43d172727d19e0989861bf82146f941b310089e32703  owned        .claude/hooks/acmekit/guard-secrets.mjs
-e668a86ebaaca5b0f108267ea8e3748cc7bb233b0fd9fc636f1018072fecbf21  json         .claude/settings.json
+afd2a94d066fc1670fbeffc984dd72d35f0e58006dc803678a5b0cf76f2fcd2e  owned        .claude/hooks/acmekit/memory-stop.mjs
+1d6f9505476c4f0a62d416fc4eb76b6df678edb5fd5c5a5193a0f93600017c21  owned        .claude/hooks/acmekit/pre-compact.mjs
+3e29d58c0ddc4477a32509ccad081945c22b968c9d6639b09ad9faea3761e428  owned        .claude/hooks/acmekit/session-start.mjs
+b5f62c0a7a102efbbd554bcb2ef94ec304b4e04b1c436fa580e722ef0380b5f8  json         .claude/settings.json
 3b6d7e0ce5ff3498d7cabe75fe5bd24fa4e4ad0e66232f2dd863d06b97216e56  owned        .claude/skills/handoff/SKILL.md
 30df621d454b3cc7a4abeb25698873da63110040fced62cba16b2281093f6d13  owned        .claude/skills/new-feature/SKILL.md
 cd7366ce9cbf42d295cad1b0bfc1900a96028d33afe15008be380ab9bba0265c  blocks       .gitattributes
@@ -90,6 +96,49 @@ Hooks guard this repository unless its config opts one out. guard-bash denies de
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/session-start.mjs"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/pre-compact.mjs"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/memory-stop.mjs"
+            ],
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",

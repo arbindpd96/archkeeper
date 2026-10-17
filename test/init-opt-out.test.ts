@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { parse } from 'jsonc-parser';
 import { describe, expect, it } from 'vitest';
@@ -11,6 +11,7 @@ const CONFIG = `${TEST_BRAND.stateDir}/config.json`;
 const SETTINGS = '.claude/settings.json';
 const GUARD_BASH = `${TEST_BRAND.hookDir}/guard-bash.mjs`;
 const WARNING = 'leaves out safety: Bash(rm -rf:*), safety: guard-bash';
+const MEMORY_HOOKS = ['memory-stop.mjs', 'pre-compact.mjs', 'session-start.mjs'];
 
 interface Settings {
   readonly permissions?: { readonly deny?: readonly string[] };
@@ -113,11 +114,19 @@ describe('init with the safety optOut option (#33, ADR-0014)', () => {
 });
 
 describe('init with the safety module left out (#33)', () => {
-  it('writes no settings, hook scripts or safety block', async () => {
+  it('writes no deny rule, guard or safety block, only the memory hooks', async () => {
     const { dir } = fixtureCopy('ts-app');
     expect((await runInit(dir, ['--yes', '--modules', '-safety'])).code).toBe(0);
+    expect(settingsOf(dir).permissions).toBeUndefined();
+    expect(settingsOf(dir).hooks?.PreToolUse).toBeUndefined();
+    expect(readdirSync(path.join(dir, TEST_BRAND.hookDir)).sort()).toEqual(MEMORY_HOOKS);
+    expect(readFileSync(path.join(dir, 'AGENTS.md'), 'utf8')).not.toContain('Safety guards');
+  });
+
+  it('writes no settings or hook scripts at all once feature memory is left out too', async () => {
+    const { dir } = fixtureCopy('ts-app');
+    expect((await runInit(dir, ['--yes', '--modules', '-safety,-feature-memory'])).code).toBe(0);
     expect(existsSync(path.join(dir, SETTINGS))).toBe(false);
     expect(existsSync(path.join(dir, TEST_BRAND.hookDir))).toBe(false);
-    expect(readFileSync(path.join(dir, 'AGENTS.md'), 'utf8')).not.toContain('Safety guards');
   });
 });
