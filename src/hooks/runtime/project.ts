@@ -41,28 +41,31 @@ export function isInside(root: string, real: string): boolean {
   );
 }
 
-// Reads one byte past the cap, so a file that grew after its fstat is refused instead of read to its end.
-function readCapped(descriptor: number, maxBytes: number): string | null {
-  const buffer = Buffer.alloc(maxBytes + 1);
+// Reads one byte past the limit, so a file that grew after its fstat is refused instead of read to its end, or cut
+// at the limit when only its head is wanted.
+function readCapped(descriptor: number, limit: number, head: boolean): string | null {
+  const buffer = Buffer.alloc(limit + 1);
   let length = 0;
   let read: number;
   do {
     read = readSync(descriptor, buffer, length, buffer.length - length, null);
     length += read;
   } while (read > 0 && length < buffer.length);
-  return length > maxBytes ? null : buffer.toString('utf8', 0, length);
+  if (length > limit && !head) return null;
+  return buffer.toString('utf8', 0, Math.min(length, limit));
 }
 
 /**
- * Reads a regular file of at most `maxBytes` through one descriptor that follows no symlink and never waits on a
- * FIFO; null for anything else, or for a file that grew past the cap. Throws when the path cannot be opened.
+ * Reads a regular file of at most `maxBytes`, or with `head` the first `maxBytes` of a larger one, through one
+ * descriptor that follows no symlink and never waits on a FIFO; null for anything else, or for a file that grew while
+ * it was read. Throws when the path cannot be opened.
  */
-export function readRegularFile(file: string, maxBytes: number): string | null {
+export function readRegularFile(file: string, maxBytes: number, head = false): string | null {
   const descriptor = openSync(file, SAFE_READ);
   try {
     const stats = fstatSync(descriptor);
-    if (!stats.isFile() || stats.size > maxBytes) return null;
-    return readCapped(descriptor, maxBytes);
+    if (!stats.isFile() || (stats.size > maxBytes && !head)) return null;
+    return readCapped(descriptor, Math.min(stats.size, maxBytes), head);
   } finally {
     closeSync(descriptor);
   }
@@ -74,9 +77,14 @@ export type ProjectRead =
 
 /**
  * Reads a file of the project by its project-relative path, only when it is a regular file of at most `maxBytes`
- * whose real path is inside the project and which is no symlink (ADR-0015).
+ * (or, with `head`, its first `maxBytes`) whose real path is inside the project and which is no symlink (ADR-0015).
  */
-export function readProjectFile(projectDir: string, relative: string, maxBytes: number): ProjectRead {
+export function readProjectFile(
+  projectDir: string,
+  relative: string,
+  maxBytes: number,
+  head = false,
+): ProjectRead {
   const file = path.join(projectDir, ...relative.split('/'));
   try {
     const stats = lstatSync(file, { throwIfNoEntry: false });
@@ -85,7 +93,7 @@ export function readProjectFile(projectDir: string, relative: string, maxBytes: 
     if (!isInside(realpathSync.native(projectDir), realpathSync.native(file))) {
       return { problem: 'it resolves outside the project' };
     }
-    const text = readRegularFile(file, maxBytes);
+    const text = readRegularFile(file, maxBytes, head);
     return text === null ? { problem: 'it is not a regular file of a readable size' } : { text };
   } catch {
     return { problem: 'it could not be read' };

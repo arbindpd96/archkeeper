@@ -167,6 +167,13 @@ describe('project files a hook reads', () => {
     expect(readProjectFile(dir, 'big.txt', 100)).toMatchObject({ problem: expect.any(String) as string });
   });
 
+  it('reads only the head of a file when asked, however large the file is', () => {
+    const dir = tempDir();
+    writeFiles(dir, { 'big.txt': `Status: x\n${'y'.repeat(10_000)}`, 'small.txt': 'hi' });
+    expect(readProjectFile(dir, 'big.txt', 9, true)).toEqual({ text: 'Status: x' });
+    expect(readProjectFile(dir, 'small.txt', 9, true)).toEqual({ text: 'hi' });
+  });
+
   it.skipIf(!canSymlink())('refuses a project file that is a symlink', () => {
     const dir = tempDir();
     writeFiles(dir, { 'real.txt': 'x' });
