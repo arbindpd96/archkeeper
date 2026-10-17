@@ -129,7 +129,7 @@ describe('the always-on context budget (ADR-0017)', () => {
         [`${BRAND.stateDir}/config.json`]: JSON.stringify({ preset: name }),
         [`${BRAND.stateDir}/local/active-feature`]: 'login\n',
         [`${BRAND.stateDir}/local/snapshots/latest.json`]: JSON.stringify({
-          savedAt: '2026-10-17T10:00:00.000Z',
+          savedAt: new Date().toISOString(),
           branch: 'main',
           status: Array.from({ length: 50 }, (_, index) => `?? f${String(index)}.ts`),
           more: 0,

@@ -8,6 +8,7 @@ export const SNAPSHOT_STATE = 'snapshots/latest.json';
 /** The snapshot's project-relative path, as hooks name it. */
 export const SNAPSHOT_FILE = `${BRAND.stateDir}/local/${SNAPSHOT_STATE}`;
 const MAX_STATUS_LINES = 50;
+const MAX_AGE_MS = 15 * 60_000;
 
 /** What pre-compact saves before Claude Code compacts the conversation, from the clock and git alone. */
 export interface Snapshot {
@@ -59,12 +60,22 @@ function snapshotOf(value: unknown): Snapshot | undefined {
     : undefined;
 }
 
-/** The latest saved snapshot, or undefined when there is none or it does not hold a snapshot's fields. */
-export function readSnapshot(projectDir: string): Snapshot | undefined {
+// Compaction follows its PreCompact hook within minutes, so an older snapshot, or one from the future, is not its own.
+function isRecent(snapshot: Snapshot, now: number): boolean {
+  const age = now - Date.parse(snapshot.savedAt);
+  return age >= 0 && age <= MAX_AGE_MS;
+}
+
+/**
+ * The snapshot saved in the 15 minutes before `now` (milliseconds since the epoch), or undefined when there is none,
+ * it is older or from the future, or it does not hold a snapshot's fields.
+ */
+export function readSnapshot(projectDir: string, now: number): Snapshot | undefined {
   const text = readState(projectDir, SNAPSHOT_STATE);
   if (text === null) return undefined;
   try {
-    return snapshotOf(JSON.parse(text));
+    const snapshot = snapshotOf(JSON.parse(text));
+    return snapshot !== undefined && isRecent(snapshot, now) ? snapshot : undefined;
   } catch {
     return undefined;
   }
