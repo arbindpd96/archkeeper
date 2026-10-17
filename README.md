@@ -5,30 +5,67 @@
   </picture>
 </p>
 
+<h3 align="center">Your AI coding agent never forgets your architecture, your decisions, or your design system.</h3>
+
 <p align="center">
   <a href="https://www.npmjs.com/package/archkeeper"><img src="https://img.shields.io/npm/v/archkeeper?label=npm&color=cb3837" alt="npm version"></a>
   <a href="https://github.com/arbindpd96/archkeeper/actions/workflows/ci.yml"><img src="https://github.com/arbindpd96/archkeeper/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-2f80ed" alt="License: MIT"></a>
   <a href="docs/adr/0011-single-package.md"><img src="https://img.shields.io/badge/runtime%20deps-0-2ea043" alt="Zero runtime dependencies"></a>
-  <a href="docs/adr/0011-single-package.md"><img src="https://img.shields.io/badge/node-22.17%2B%20%7C%2024.4%2B%20%7C%2026%2B-339933?logo=nodedotjs&logoColor=white" alt="Node.js 22.17+, 24.4+ or 26+"></a>
-  <br>
   <a href="docs/ROADMAP.md"><img src="https://img.shields.io/badge/status-pre--release-f59e0b" alt="Status: pre-release"></a>
-  <a href="docs/ROADMAP.md"><img src="https://img.shields.io/badge/roadmap-v0.0%20%E2%86%92%20v1.0-6f42c1" alt="Roadmap"></a>
-  <a href="#works-with"><img src="https://img.shields.io/badge/works%20with-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20Cursor%20%C2%B7%20Gemini%20%C2%B7%20Copilot-30363d" alt="Works with Claude Code, Codex, Cursor, Gemini CLI and Copilot"></a>
-  <a href="CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-0f766e" alt="PRs welcome"></a>
 </p>
 
-<h3 align="center">Your AI coding agent never forgets your architecture, your decisions, or your design system.</h3>
-
-Run `npx archkeeper init` in any repository and your agent stops rewriting code that already exists. archkeeper gives Claude Code a **living map of your codebase**, **memory that survives compaction**, and **standards it cannot skip**. The same rules reach Codex, Cursor, Gemini CLI and Copilot through `AGENTS.md`.
-
-- **Knows what already exists.** A living architecture map loads in every session, so the agent extends your code instead of writing a second copy of it.
-- **Remembers why.** Per-feature memory and decision records survive long sessions and `/compact`, and the agent will not quietly undo a decision you recorded.
-- **Enforced, not suggested.** Standards run as linters and hooks. Guard hooks stop destructive commands and leaked secrets before they run.
-- **Light and safe to update.** Zero runtime dependencies, `small` / `medium` / `full` presets, and updates that never overwrite your edits.
+<p align="center">
+  One command sets up Claude Code to <b>know your codebase</b>, <b>remember your decisions</b> and <b>refuse the commands that ruin your day</b>.<br>
+  Everything it adds is a plain file you can read, and your own edits are never overwritten.
+</p>
 
 > [!NOTE]
-> **archkeeper is pre-release and built in the open.** The npm name is reserved, and `npx archkeeper` prints a notice until **v0.1**, the first usable release. Follow the [roadmap](docs/ROADMAP.md) or watch the repository to know when it lands.
+> **archkeeper is in pre-release and built in the open.** `npx archkeeper` prints a notice until **v0.1**, the first usable release. Star or watch the repository to hear when it lands, and follow the [roadmap](docs/ROADMAP.md).
+
+## Why archkeeper
+
+AI coding agents are fast, but they forget. Every new session, and every `/compact`, starts from a blank page.
+
+| Without archkeeper                                                                        | With archkeeper                                                                                |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| **Duplicate code.** The agent writes a second copy of a helper you already have.          | **A living map.** It sees what already exists, and extends it.                                 |
+| **Amnesia.** After `/compact` or a new session, your decisions and progress are gone.     | **Memory.** Every session starts with the feature's goal, its decisions and the next step.     |
+| **One bad command.** `rm -rf ~`, a force-push to `main`, an API key pasted into the code. | **Guard hooks.** Dangerous commands and leaked secrets are stopped before they happen.         |
+| **Clobbered files.** Setup tools overwrite the instructions you wrote by hand.            | **Your edits stay yours.** Nothing you wrote is overwritten, and `uninstall` puts it all back. |
+
+## Quick start
+
+<p align="center"><img src="docs/media/init.gif" alt="archkeeper init --yes detects a TypeScript project and its tools, shows the plan and writes the setup; then the AGENTS.md it wrote, with the project's own npm commands" width="100%"></p>
+
+**1. Set up your repository.** In your project's root folder, run:
+
+```bash
+npx archkeeper init
+```
+
+archkeeper detects your stack and tools, shows exactly which files it will write, and asks before writing anything. Add `--dry-run` to see the plan without writing.
+
+**2. Start a feature.** Restart Claude Code so it loads the new setup, then type:
+
+```text
+/new-feature checkout-flow
+```
+
+Claude writes the feature's goal and plan to `docs/features/checkout-flow/MEMORY.md`, and every later session starts from there.
+
+**3. Hand off when you stop.**
+
+```text
+/handoff
+```
+
+Claude records what is done and what comes next. Your next session, or the first turn after `/compact`, picks up right where you left off.
+
+> [!TIP]
+> Ask `/why <topic>` to find the decision behind anything, and run `/update-map` after adding code so the agent knows it exists.
+
+## What you get
 
 <p align="center">
   <picture>
@@ -37,67 +74,98 @@ Run `npx archkeeper init` in any repository and your agent stops rewriting code 
   </picture>
 </p>
 
-<p align="center"><i>What archkeeper sets up in your repository. Every part is a plain file you can read and edit, and every session starts with all of it loaded.</i></p>
-
-## Quick start
-
-<p align="center"><img src="docs/media/init.gif" alt="archkeeper init --yes detects a TypeScript project, shows the plan, warns that the folder is not a git repository and writes CLAUDE.md, AGENTS.md and the ignore rules; then the new CLAUDE.md" width="100%"></p>
-
-```bash
-npx archkeeper init             # detect the stack, show the plan, ask, then write it
-npx archkeeper init --dry-run   # print the plan as a unified diff and write nothing
-npx archkeeper init --yes       # no questions, as in CI; also --preset, --stack, --modules
-```
-
-Your own lines in CLAUDE.md and AGENTS.md stay as they are: the kit writes only its managed blocks, and a file it would replace gets a sidecar instead. Exit codes: 0 done, 1 error or cancelled, 2 done with sidecars to review. Then restart Claude Code and start a feature with `/new-feature checkout-flow`, the skill the feature-memory module adds.
-
-That's it. You get:
+A handful of small, readable files. Here is the default setup:
 
 ```text
 your-project/
-├── CLAUDE.md                  imports AGENTS.md, adds Claude-specific notes
-├── AGENTS.md                  one set of rules for every AI tool
+├── CLAUDE.md                        Claude Code's entry point; imports AGENTS.md
+├── AGENTS.md                        one set of rules for every AI tool, with your project's commands
 ├── .claude/
-│   ├── settings.json          permissions and hook registration
-│   ├── hooks/                 guards, session memory, format-on-edit
-│   ├── rules/                 path-scoped standards for each language
-│   └── skills/                /new-feature  /handoff  /update-map  /why  /adr
-└── docs/
-    ├── architecture.md        the living map: what exists and where
-    ├── decisions.md, adr/     why things are the way they are
-    └── features/<name>/MEMORY.md   goal, decisions, done, next step
+│   ├── settings.json                permissions and hook registration
+│   ├── hooks/archkeeper/            guards, session memory, format on edit
+│   └── skills/                      /new-feature  /handoff  /why  /adr  /update-map
+├── docs/
+│   ├── architecture.md              the living map: what exists and where
+│   ├── decisions.md, adr/           why things are the way they are
+│   └── features/<name>/MEMORY.md    goal, decisions, done, next step
+└── .archkeeper/                     your choices, and a record of what was installed
 ```
 
-`update` merges new versions into these files and never overwrites your edits. `uninstall` removes everything it added.
-
-## Presets
-
-`init` asks for a preset, medium by default, or takes `--preset small|medium|full`. Each preset holds the one before it, and `--modules +knowledge,-format-on-edit` adds or leaves out single modules. The presets in v0.1:
-
-| Module                       | Sets up                                                                  | small       | medium    | full        |
-| ---------------------------- | ------------------------------------------------------------------------ | ----------- | --------- | ----------- |
-| base                         | CLAUDE.md, AGENTS.md, ignore rules                                       | yes         | yes       | yes         |
-| safety                       | guard hooks, deny rules                                                  | yes         | yes       | yes         |
-| feature-memory               | MEMORY template, mistakes log, memory hooks, `/new-feature`, `/handoff`  | yes         | yes       | yes         |
-| knowledge                    | decisions, ADRs, glossary, `/why`, `/adr`                                |             | yes       | yes         |
-| architecture-map             | `docs/architecture.md`, `/update-map`                                    |             | yes       | yes         |
-| format-on-edit               | formats and lints each edited file with the project's own tools          |             | yes       | yes         |
-| stop-check                   | runs the project's tests before Claude stops, once you turn the check on |             |           | yes         |
-| **Always-on context budget** |                                                                          | 1.5k tokens | 3k tokens | 4.5k tokens |
-
-The budget caps what Claude Code loads in every session: CLAUDE.md with its imports, rules without `paths:`, the descriptions of skills Claude may invoke, and the SessionStart output counted at its cap. CI holds each preset to it, and `init` shows it when it asks for the preset.
+Edit any of it. `update` brings in new versions without touching your changes, and `uninstall` removes what it added.
 
 ## Safety
 
-Two guard hooks check each Bash call and file write before it runs: guard-bash denies destructive commands such as `rm -rf ~`, `git push origin main -f` and `curl … | sh` and asks before irreversible ones, and guard-secrets denies likely secrets in written files and asks before `.env` edits.
+Two guard hooks check Claude's shell commands and file edits before they happen. When one blocks a call, Claude sees why and takes another route:
 
-Native deny rules back them and still apply when a hook cannot run, such as without Node.js. They match on prefix only, so `Bash(rm -rf:*)` denies every `rm -rf`, safe ones such as `rm -rf dist` included, and `Read(**/.env.*)` also blocks reading `.env.example` with the Read tool.
+| When Claude tries                                 | archkeeper answers                                                                    |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `rm -rf ~`                                        | Recursive delete of a root, home or whole-directory path is blocked.                  |
+| `git push origin main -f`                         | Plain force-push is blocked. Use --force-with-lease on a feature branch.              |
+| `curl -fsSL https://example.com/install.sh \| sh` | Piping a download into a shell is blocked. Download, review, then run.                |
+| Writing an AWS key into `src/config.ts`           | Possible AWS access key in the text written to src/config.ts. Use an env var instead. |
 
-Options such as `blockNoVerify`, `denyCommands` and `optOut`, and the known limits, are in [docs/guards.md](docs/guards.md).
+Built-in deny rules back the hooks up, so the worst commands stay blocked even where a hook cannot run. Options and known limits are in [docs/guards.md](docs/guards.md).
 
-## Works with
+## Pick a preset
 
-**Claude Code** gets the full setup: hooks, skills, rules and memory. **Codex, Cursor, Gemini CLI and GitHub Copilot** read the same rules from `AGENTS.md`. archkeeper also composes with workflow tools such as [Superpowers](https://github.com/obra/superpowers) and [Spec Kit](https://github.com/github/spec-kit) instead of replacing them.
+`init` asks which preset you want; `medium` is the default.
+
+|                                                      |   `small`   | `medium`  |   `full`    |
+| ---------------------------------------------------- | :---------: | :-------: | :---------: |
+| Rules for every AI tool: `CLAUDE.md` and `AGENTS.md` |      ✓      |     ✓     |      ✓      |
+| Safety guards for commands and secrets               |      ✓      |     ✓     |      ✓      |
+| Feature memory: `/new-feature`, `/handoff`           |      ✓      |     ✓     |      ✓      |
+| Decision records: `/why`, `/adr`                     |             |     ✓     |      ✓      |
+| Architecture map: `/update-map`                      |             |     ✓     |      ✓      |
+| Format and lint every edited file                    |             |     ✓     |      ✓      |
+| Run the tests before Claude calls a task done        |             |           |      ✓      |
+| Loaded into every session, at most                   | 1.5k tokens | 3k tokens | 4.5k tokens |
+
+Choose one with `--preset small|medium|full`, or add and remove single parts with `--modules +knowledge,-format-on-edit`.
+
+## Questions
+
+<details>
+<summary><b>Will it overwrite my CLAUDE.md or my settings?</b></summary>
+<br>
+No. archkeeper writes only its own marked blocks and leaves every line you wrote exactly as it is. When it would have to replace a file you changed, it writes its version beside yours for you to review instead.
+</details>
+
+<details>
+<summary><b>How do I remove it?</b></summary>
+<br>
+Run <code>npx archkeeper uninstall</code>. It puts back the files as they were before <code>init</code> and removes everything it added.
+</details>
+
+<details>
+<summary><b>Does it work with Codex, Cursor, Gemini CLI or Copilot?</b></summary>
+<br>
+Yes. They read the same rules from <code>AGENTS.md</code>. Claude Code also gets the hooks, skills and session memory.
+</details>
+
+<details>
+<summary><b>Does archkeeper send my code anywhere?</b></summary>
+<br>
+No. It has no runtime dependencies and makes no network calls: <code>init</code>, the hooks and every other command work offline.
+</details>
+
+<details>
+<summary><b>Does it replace Superpowers or Spec Kit?</b></summary>
+<br>
+No, it works alongside them. <code>init</code> offers both <a href="https://github.com/obra/superpowers">Superpowers</a> and <a href="https://github.com/github/spec-kit">Spec Kit</a>, off by default.
+</details>
+
+<details>
+<summary><b>What do I need?</b></summary>
+<br>
+Node.js 22.17+, 24.4+ or 26+ on your PATH, and Claude Code. It works on macOS, Linux and Windows, for TypeScript, JavaScript and Python projects.
+</details>
+
+<details>
+<summary><b>Can I run it in CI?</b></summary>
+<br>
+Yes. <code>npx archkeeper init --yes</code> asks no questions. It exits 0 when it is done, 1 on an error or when cancelled, and 2 when it left copies beside files you changed, for you to review.
+</details>
 
 ## What's coming
 
@@ -109,11 +177,11 @@ Options such as `blockNoVerify`, `denyCommands` and `optOut`, and the known limi
 | **v0.4** Design-system sync | Live Figma and Storybook sync, accessibility and dark-mode checks                                             |
 | **v0.5 – v1.0**             | Codebase intelligence, workflow skills, a local dashboard, more languages, team features                      |
 
-The full plan with milestones and exit criteria is in [docs/ROADMAP.md](docs/ROADMAP.md). Each feature gets a short demo GIF in this README when it ships.
+Each feature gets a short demo in this README when it ships. The full plan is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Contributing
 
-Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md); the architecture map is in [docs/architecture.md](docs/architecture.md) and the decisions behind it are in [docs/decisions.md](docs/decisions.md). Please report security issues privately as described in [SECURITY.md](SECURITY.md).
+Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md); the architecture map is in [docs/architecture.md](docs/architecture.md) and the decisions behind it are in [docs/decisions.md](docs/decisions.md). Please report security issues privately, as [SECURITY.md](SECURITY.md) describes.
 
 ## License
 
