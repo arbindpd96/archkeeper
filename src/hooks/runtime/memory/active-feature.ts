@@ -6,7 +6,7 @@ import { readProjectFile } from '../project.js';
 import { readState } from '../state.js';
 
 /** The pointer's state name under `<state dir>/local/`, which `/new-feature` writes (ADR-0014). */
-export const POINTER_STATE = 'active-feature';
+const POINTER_STATE = 'active-feature';
 /** The pointer's project-relative path, as hooks name it. */
 export const POINTER_FILE = `${BRAND.stateDir}/local/${POINTER_STATE}`;
 const FEATURES = 'docs/features';
