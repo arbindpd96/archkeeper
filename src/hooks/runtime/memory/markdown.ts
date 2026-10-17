@@ -1,16 +1,8 @@
 import { withoutComments } from '../../../core/imports.js';
+import { markdownHeadings } from '../../../core/markdown-headings.js';
 import { toLf } from '../../../core/text.js';
 
-// Linear on any line: a closing run of #s stays in the title, which is only ever matched by its start.
-const HEADING = /^(#{1,6})[ \t]+(.*)$/;
-const FENCE = /^ {0,3}(?:```|~~~)/;
 const LIST_ITEM = /^(?:[-*+]|\d{1,9}[.)])[ \t]/;
-
-interface Heading {
-  readonly line: number;
-  readonly level: number;
-  readonly title: string;
-}
 
 /**
  * Markdown as the memory hooks read it: LF line endings and no HTML comments, which Claude Code strips from
@@ -20,26 +12,14 @@ export function readableMarkdown(text: string): string {
   return withoutComments(toLf(text));
 }
 
-// A `#` line inside a code fence is code, not a heading.
-function headingsOf(lines: readonly string[]): Heading[] {
-  const headings: Heading[] = [];
-  let fenced = false;
-  for (const [line, text] of lines.entries()) {
-    if (FENCE.test(text)) fenced = !fenced;
-    const match = fenced ? null : HEADING.exec(text);
-    if (match !== null) headings.push({ line, level: match[1]?.length ?? 0, title: match[2] ?? '' });
-  }
-  return headings;
-}
-
 /**
  * The trimmed text under the first `##` heading whose title starts with `title`, in any case, such as
  * `## Decisions (never undo without asking)` for `Decisions`, up to the next `#` or `##` heading; undefined
- * when there is no such heading.
+ * when there is no such heading. A `#` line inside a code fence is code, not a heading.
  */
 export function sectionText(markdown: string, title: string): string | undefined {
   const lines = markdown.split('\n');
-  const headings = headingsOf(lines);
+  const headings = markdownHeadings(lines);
   const wanted = title.toLowerCase();
   const at = headings.findIndex(
     (heading) => heading.level === 2 && heading.title.toLowerCase().startsWith(wanted),

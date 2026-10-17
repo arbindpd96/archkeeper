@@ -132,6 +132,13 @@ describe('session-start reads the memory as Claude Code reads instructions (#35)
     );
   });
 
+  it('reads on past a Decision that quotes a backtick fence inside a tilde one, as CommonMark closes fences', () => {
+    const dir = tempDir();
+    const decisions = ['- 2026-10-18: Quote fences as text.', '  ~~~md', '  ```', '  ~~~'];
+    writeFiles(dir, { [POINTER]: 'login', [LOGIN]: memoryText({ decisions }) });
+    expect(contextOf(dir)).toContain('## Next step\nWire the token refresh in src/auth.ts.');
+  });
+
   it('says so when the memory records no next step', () => {
     const dir = tempDir();
     writeFiles(dir, { [POINTER]: 'login', [LOGIN]: '# Feature: login\n\nStatus: in progress\n' });
