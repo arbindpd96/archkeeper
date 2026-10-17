@@ -6,7 +6,8 @@ import { filesUnder } from './install-helpers.js';
 import { runInit } from './init-helpers.js';
 
 const SKILL = /^\.claude\/skills\/[^/]+\/SKILL\.md$/;
-const DOC_SPAN = /`(docs\/[^`\s]*)`/g;
+// A doc path, in a code span or bare, as in a skill's description, runs to a space, a backtick or punctuation.
+const DOC_PATH = /(?<![\w./-])docs\/[^\s`,;()]*/g;
 
 // A `<placeholder>` stands for one name and `*` for part of one; a doc ending in / is a folder.
 function partPattern(part: string): string {
@@ -24,7 +25,7 @@ function docPattern(doc: string): RegExp {
 }
 
 function docsNamedIn(text: string): string[] {
-  return [...text.matchAll(DOC_SPAN)].map((match) => match[1] ?? '');
+  return [...text.matchAll(DOC_PATH)].map((match) => match[0].replace(/[.:]+$/, ''));
 }
 
 // py-app has no docs folder of its own, so every doc found there is one the preset wrote.

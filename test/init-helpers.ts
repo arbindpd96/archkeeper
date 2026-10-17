@@ -51,6 +51,15 @@ const MODULE_IDS = readdirSync(path.join(REPO_ROOT, 'modules'), { withFileTypes:
 /** The kit as this repository ships it, loaded once, with stand-ins for its hook bundles. */
 export const KIT = loadCatalog(MODULE_IDS, standInReader(REPO_ROOT));
 
+/**
+ * init's exit code on `fixture` with `preset`: 2, done with a sidecar to review, on existing-claude-setup wherever
+ * the preset has the knowledge module, whose why skill meets the user's own (ADR-0014); 0 everywhere else.
+ */
+export function doneCode(fixture: string, preset: string): number {
+  const knowledge = KIT.modules.get('knowledge')?.manifest.presets.includes(preset) ?? false;
+  return fixture === 'existing-claude-setup' && knowledge ? 2 : 0;
+}
+
 /** The kit's modules named by `ids` rendered for the test brand, on a TS stack with no detected commands. */
 export function renderedKit(ids: readonly string[]): RenderTree {
   const modules = ids.map((id): KitModule => {

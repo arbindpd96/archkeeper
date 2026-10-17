@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { readBlob } from '../src/cli/blob-store.js';
 import { fixtureCopy } from './helpers.js';
 import { filesUnder, projectText } from './install-helpers.js';
-import { existingClaudeSetup, KIT, runInit } from './init-helpers.js';
+import { doneCode, existingClaudeSetup, KIT, runInit } from './init-helpers.js';
 import { TEST_BRAND } from './kit-fixtures.js';
 import { generatedProblems } from './static-rules.js';
 
@@ -57,18 +57,12 @@ interface Summary {
   readonly plan: readonly { readonly ops: readonly { readonly kind: string }[] }[];
 }
 
-// init exits 2 while a sidecar waits for review, as beside existing-claude-setup's own why skill (ADR-0014).
-function doneCode(dir: string): number {
-  return filesUnder(dir).some((file) => file.endsWith(TEST_BRAND.sidecarSuffix)) ? 2 : 0;
-}
-
 describe.each(FIXTURES)('init on %s (#29)', (fixture) => {
   it.each(PRESETS)(
     'with the %s preset writes its golden tree and passes the static rules',
     async (preset) => {
       const dir = projectOf(fixture);
-      const { code } = await runInit(dir, ['--yes', '--preset', preset]);
-      expect(code).toBe(doneCode(dir));
+      expect((await runInit(dir, ['--yes', '--preset', preset])).code).toBe(doneCode(fixture, preset));
       await expect(goldenText(dir)).toMatchFileSnapshot(`__snapshots__/golden/${fixture}.${preset}.txt`);
       expect(generatedProblems(dir, TEST_BRAND, fixture !== 'existing-claude-setup')).toEqual([]);
     },
@@ -81,7 +75,7 @@ describe.each(FIXTURES)('init on %s (#29)', (fixture) => {
       await runInit(dir, ['--yes', '--preset', preset]);
       const before = projectText(dir);
       const again = await runInit(dir, ['--json']);
-      expect(again.code).toBe(doneCode(dir));
+      expect(again.code).toBe(doneCode(fixture, preset));
       const { plan } = JSON.parse(again.stdout) as Summary;
       expect(plan.flatMap((entry) => entry.ops).filter((op) => op.kind !== 'skip')).toEqual([]);
       expect(projectText(dir)).toBe(before);
