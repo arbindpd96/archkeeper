@@ -5,9 +5,9 @@ name: handoff
 description: Save this session's progress to the active feature's MEMORY.md so the next session resumes where this one stopped. Use before ending a session or compacting, or when a hook asks for a memory update.
 ---
 
-Save this session's progress in the active feature's memory.
+Save this session's progress in the active feature's memory, editing only its MEMORY.md and `docs/mistakes.md`.
 
-1. Find the active feature. It is the one named in `.acmekit/local/active-feature` when its `docs/features/<name>/MEMORY.md` says `Status: in progress`. Otherwise it is the only feature MEMORY.md that says so, leaving out folders whose names start with `_`, such as `docs/features/_template/`. If several say so, ask which one. If none does, offer `/new-feature <name>` and stop.
+1. Find the active feature. It is the one named in `.acmekit/local/active-feature`, if that file holds one kebab-case name (lowercase letters, digits and single hyphens) and its `docs/features/<name>/MEMORY.md` says `Status: in progress`. Otherwise it is the only feature MEMORY.md that says so, leaving out folders whose names start with `_`, such as `docs/features/_template/`. If several say so, ask which one. If none does, offer `/new-feature <name>` and stop.
 2. Read the file fully, then update it:
    - **Done**: tick what is finished, add new finished items as `- [x]` and keep open ones as `- [ ]`.
    - **Next step**: the single exact next action, naming the file, function or command, so a new session starts without asking.
@@ -29,7 +29,7 @@ Start the feature named in `$ARGUMENTS`. If no name was given, ask for one.
 1. Turn the name into kebab-case: lowercase letters, digits and single hyphens. If `docs/features/<name>/MEMORY.md` already exists, read it fully and resume that feature instead: set `Status: in progress` if it says otherwise, then go to step 4.
 2. Ask the user what "done" means for this feature, in one or two lines, unless the request already says. If the current git branch is the default branch, offer to create a branch for the feature first.
 3. Copy `docs/features/_template/MEMORY.md` to `docs/features/<name>/MEMORY.md`. Fill in the title (`# Feature: <name>`), `Status: in progress | Branch: <branch>` with the current git branch, the **Goal**, and the first concrete action under **Next step**. If the template is missing, write its sections yourself: Goal, Decisions (never undo without asking), Done, Next step, Gotchas / don't try again, and Open questions.
-4. Make it the active feature: write `<name>` as the only line of `.acmekit/local/active-feature`. That folder is never committed, so if `.acmekit/local/.gitignore` is missing, write it first with the single line `*`.
+4. Make it the active feature in `.acmekit/local/active-feature`. Read that file first: if it exists and holds anything other than one kebab-case name, stop and tell the user, since nothing else should be there. Otherwise write `<name>` as its only line.
 5. Search the codebase for code this feature should reuse, and note it under **Next step** or **Open questions**.
 6. Tell the user the goal, the branch and the next step.
 === .gitignore (blocks, base, block base)
@@ -63,7 +63,7 @@ Rules for AI coding agents, such as Claude Code, Codex, Cursor, Gemini CLI and C
 === AGENTS.md (blocks, feature-memory, block feature-memory)
 ## Feature memory
 
-Each feature keeps its working memory in `docs/features/<feature>/MEMORY.md`: the goal, decisions, progress and next step, so any session can resume it.
+Each feature keeps its working memory in `docs/features/<feature>/MEMORY.md`: the goal, decisions, progress and next step, so any session can resume it. The active feature is the one named in `.acmekit/local/active-feature`, else the only MEMORY.md that says `Status: in progress`.
 
 - Before changing code, read the active feature's MEMORY.md fully. If you do not know which feature is active, ask, and offer `/new-feature <name>` to start one.
 - After an important decision, append it to **Decisions** with the date and the reason.
@@ -120,9 +120,9 @@ name: handoff
 description: Save this session's progress to the active feature's MEMORY.md so the next session resumes where this one stopped. Use before ending a session or compacting, or when a hook asks for a memory update.
 ---
 
-Save this session's progress in the active feature's memory.
+Save this session's progress in the active feature's memory, editing only its MEMORY.md and `docs/mistakes.md`.
 
-1. Find the active feature. It is the one named in `.acmekit/local/active-feature` when its `docs/features/<name>/MEMORY.md` says `Status: in progress`. Otherwise it is the only feature MEMORY.md that says so, leaving out folders whose names start with `_`, such as `docs/features/_template/`. If several say so, ask which one. If none does, offer `/new-feature <name>` and stop.
+1. Find the active feature. It is the one named in `.acmekit/local/active-feature`, if that file holds one kebab-case name (lowercase letters, digits and single hyphens) and its `docs/features/<name>/MEMORY.md` says `Status: in progress`. Otherwise it is the only feature MEMORY.md that says so, leaving out folders whose names start with `_`, such as `docs/features/_template/`. If several say so, ask which one. If none does, offer `/new-feature <name>` and stop.
 2. Read the file fully, then update it:
    - **Done**: tick what is finished, add new finished items as `- [x]` and keep open ones as `- [ ]`.
    - **Next step**: the single exact next action, naming the file, function or command, so a new session starts without asking.
@@ -144,7 +144,7 @@ Start the feature named in `$ARGUMENTS`. If no name was given, ask for one.
 1. Turn the name into kebab-case: lowercase letters, digits and single hyphens. If `docs/features/<name>/MEMORY.md` already exists, read it fully and resume that feature instead: set `Status: in progress` if it says otherwise, then go to step 4.
 2. Ask the user what "done" means for this feature, in one or two lines, unless the request already says. If the current git branch is the default branch, offer to create a branch for the feature first.
 3. Copy `docs/features/_template/MEMORY.md` to `docs/features/<name>/MEMORY.md`. Fill in the title (`# Feature: <name>`), `Status: in progress | Branch: <branch>` with the current git branch, the **Goal**, and the first concrete action under **Next step**. If the template is missing, write its sections yourself: Goal, Decisions (never undo without asking), Done, Next step, Gotchas / don't try again, and Open questions.
-4. Make it the active feature: write `<name>` as the only line of `.acmekit/local/active-feature`. That folder is never committed, so if `.acmekit/local/.gitignore` is missing, write it first with the single line `*`.
+4. Make it the active feature in `.acmekit/local/active-feature`. Read that file first: if it exists and holds anything other than one kebab-case name, stop and tell the user, since nothing else should be there. Otherwise write `<name>` as its only line.
 5. Search the codebase for code this feature should reuse, and note it under **Next step** or **Open questions**.
 6. Tell the user the goal, the branch and the next step.
 === .gitignore (blocks, base, block base)
@@ -177,7 +177,7 @@ Rules for AI coding agents, such as Claude Code, Codex, Cursor, Gemini CLI and C
 === AGENTS.md (blocks, feature-memory, block feature-memory)
 ## Feature memory
 
-Each feature keeps its working memory in `docs/features/<feature>/MEMORY.md`: the goal, decisions, progress and next step, so any session can resume it.
+Each feature keeps its working memory in `docs/features/<feature>/MEMORY.md`: the goal, decisions, progress and next step, so any session can resume it. The active feature is the one named in `.acmekit/local/active-feature`, else the only MEMORY.md that says `Status: in progress`.
 
 - Before changing code, read the active feature's MEMORY.md fully. If you do not know which feature is active, ask, and offer `/new-feature <name>` to start one.
 - After an important decision, append it to **Decisions** with the date and the reason.

@@ -45,31 +45,43 @@ describe('the feature-memory module (#34)', () => {
     ]);
   });
 
-  it('starts a feature only when the user asks, from the template, and points the active-feature file at it', () => {
+  it('starts a feature only when the user asks, from the template', () => {
     const skill = written('.claude/skills/new-feature/SKILL.md');
     expect(frontmatterOf(skill)?.get('disable-model-invocation')).toBe('true');
     expect(skill).toContain(`Copy \`${TEMPLATE}\` to \`docs/features/<name>/MEMORY.md\``);
-    expect(skill).toContain(`write \`<name>\` as the only line of \`${POINTER}\``);
-    expect(skill).toContain(
-      `if \`${TEST_BRAND.stateDir}/local/.gitignore\` is missing, write it first with the single line \`*\``,
-    );
   });
 
-  it('lets Claude save progress on its own, to the feature the pointer names or the one in progress', () => {
+  it('points the active-feature file at the new feature only over nothing or a name, and writes no ignore file', () => {
+    const skill = written('.claude/skills/new-feature/SKILL.md');
+    expect(skill).toContain(`Make it the active feature in \`${POINTER}\``);
+    expect(skill).toContain('if it exists and holds anything other than one kebab-case name, stop');
+    expect(skill).toContain('Otherwise write `<name>` as its only line.');
+    expect(skill).not.toContain('.gitignore');
+  });
+
+  it('lets Claude save progress on its own, to the feature a kebab-case pointer names or the one in progress', () => {
     const skill = written('.claude/skills/handoff/SKILL.md');
     const fields = frontmatterOf(skill);
     expect(fields?.has('disable-model-invocation')).toBe(false);
     expect(fields?.get('description')).toMatch(
       /^Save this session's progress .* Use before ending a session/,
     );
-    expect(skill).toContain(`the one named in \`${POINTER}\` when its \`docs/features/<name>/MEMORY.md\``);
+    expect(skill).toContain(`the one named in \`${POINTER}\`, if that file holds one kebab-case name`);
     expect(skill).toContain('the only feature MEMORY.md that says so, leaving out folders whose names start');
+  });
+
+  it('saves progress only into the active MEMORY.md and the mistakes log', () => {
+    const skill = written('.claude/skills/handoff/SKILL.md');
+    expect(skill).toContain(`editing only its MEMORY.md and \`${MISTAKES}\``);
     expect(skill).toContain(`add it to \`${MISTAKES}\``);
   });
 
-  it('tells agents to keep the memory and the mistakes log, and how to start and save a feature', () => {
+  it('tells agents where the memory and the active feature live, and how to start and save a feature', () => {
     const block = written('AGENTS.md');
     expect(block).toContain('`docs/features/<feature>/MEMORY.md`');
+    expect(block).toContain(
+      `the one named in \`${POINTER}\`, else the only MEMORY.md that says \`Status: in progress\``,
+    );
     expect(block).toContain('`/new-feature <name>`');
     expect(block).toContain('`/handoff`');
     expect(block).toContain(`\`${MISTAKES}\``);
