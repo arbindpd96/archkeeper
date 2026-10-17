@@ -52,11 +52,12 @@ function isRealFolder(folder: string): boolean {
   return lstatSync(folder, { throwIfNoEntry: false })?.isDirectory() === true;
 }
 
-// `_` folders never count: the template in `_template` says `Status: in progress` too.
+// Only kebab-case names count, as for the pointer: no name holds a line break or a control character, and the template
+// in `_template`, which says `Status: in progress` too, never counts.
 function featureFolders(projectDir: string): string[] {
   const root = path.join(projectDir, ...FEATURES.split('/'));
   try {
-    const names = readdirSync(root).filter((name) => !name.startsWith('_'));
+    const names = readdirSync(root).filter((name) => KEBAB_NAME.test(name));
     return names.filter((name) => isRealFolder(path.join(root, name))).sort(compareText);
   } catch (error) {
     if (ABSENT.has((error as NodeJS.ErrnoException).code ?? '')) return [];
@@ -67,7 +68,8 @@ function featureFolders(projectDir: string): string[] {
 /**
  * The active feature, found as `/handoff` finds it (the v0.1-m5-memory decision of 2026-10-17): the folder the
  * pointer names, when it holds one kebab-case name whose MEMORY.md says `Status: in progress`; else the only
- * MEMORY.md under `docs/features/` that says so. Each read refuses symlinks and files outside the project.
+ * MEMORY.md in a kebab-case folder of `docs/features/` that says so. Each read refuses symlinks and files outside
+ * the project.
  */
 export function activeFeature(projectDir: string): ActiveFeature {
   const pointed = pointedFeature(projectDir);

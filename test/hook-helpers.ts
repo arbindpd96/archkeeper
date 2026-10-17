@@ -1,3 +1,5 @@
+import { utimesSync } from 'node:fs';
+import path from 'node:path';
 import { pathContext } from '../src/hooks/runtime/bash/dangerous-paths.js';
 import { judgeCommand } from '../src/hooks/runtime/bash/guard.js';
 import {
@@ -99,4 +101,16 @@ export function injectedContext(answer: Answer): string {
   const specific = output?.hookSpecificOutput as { additionalContext?: unknown } | undefined;
   if (typeof specific?.additionalContext !== 'string') throw new Error('the hook injected no context');
   return specific.additionalContext;
+}
+
+/** The reason of a `decision: block` answer, or undefined when the answer lets Claude stop. */
+export function blockReason(answer: Answer): string | undefined {
+  const output = answer.kind === 'done' ? answer.output : undefined;
+  return output?.decision === 'block' ? String(output.reason) : undefined;
+}
+
+/** Sets a file's access and modification times to `offsetMs` from now, such as an hour ago. */
+export function setModified(dir: string, file: string, offsetMs: number): void {
+  const time = new Date(Date.now() + offsetMs);
+  utimesSync(path.join(dir, file), time, time);
 }

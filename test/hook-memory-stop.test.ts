@@ -1,11 +1,11 @@
-import { existsSync, mkdirSync, symlinkSync, utimesSync } from 'node:fs';
+import { existsSync, mkdirSync, symlinkSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
 import type { Answer, Payload } from '../src/hooks/runtime/io.js';
 import { memoryStop } from '../src/hooks/runtime/memory/memory-stop.js';
 import { canSymlink, commitFiles, git, tempDir, tempRepo, writeFiles } from './helpers.js';
-import { memoryText } from './hook-helpers.js';
+import { blockReason, memoryText, setModified } from './hook-helpers.js';
 
 const POINTER = `${BRAND.stateDir}/local/active-feature`;
 const LOGIN = 'docs/features/login/MEMORY.md';
@@ -15,22 +15,11 @@ function stop(projectDir: string, payload: Payload = STOP): Answer {
   return memoryStop.answer({ payload }, { projectDir, home: tempDir() });
 }
 
-/** The reason of a `decision: block` answer, or undefined when the answer lets Claude stop. */
-function blockReason(answer: Answer): string | undefined {
-  const output = answer.kind === 'done' ? answer.output : undefined;
-  return output?.decision === 'block' ? String(output.reason) : undefined;
-}
-
-function setTime(dir: string, file: string, offsetMs: number): void {
-  const time = new Date(Date.now() + offsetMs);
-  utimesSync(path.join(dir, file), time, time);
-}
-
 /** A repository whose active feature, login, saved its memory an hour ago, with the given files committed too. */
 function featureRepo(files: Record<string, string> = {}): string {
   const dir = tempRepo({ [LOGIN]: memoryText(), 'src/auth.ts': 'export {};\n', ...files });
   writeFiles(dir, { [POINTER]: 'login\n' });
-  setTime(dir, LOGIN, -3_600_000);
+  setModified(dir, LOGIN, -3_600_000);
   return dir;
 }
 
@@ -77,7 +66,7 @@ describe('memory-stop (#35)', () => {
   it('lets Claude stop once MEMORY.md was saved after the change', () => {
     const dir = featureRepo();
     writeFiles(dir, { 'src/auth.ts': 'export const refresh = 1;\n' });
-    setTime(dir, LOGIN, 60_000);
+    setModified(dir, LOGIN, 60_000);
     expect(stop(dir)).toEqual({ kind: 'done' });
   });
 
@@ -117,7 +106,7 @@ describe('memory-stop (#35)', () => {
 
   it('checks the only feature in progress when no pointer names one', () => {
     const dir = tempRepo({ [LOGIN]: memoryText(), 'src/auth.ts': 'export {};\n' });
-    setTime(dir, LOGIN, -3_600_000);
+    setModified(dir, LOGIN, -3_600_000);
     writeFiles(dir, { 'src/auth.ts': 'export const refresh = 1;\n' });
     expect(blockReason(stop(dir))).toContain(`after ${LOGIN} was last saved`);
   });
@@ -129,7 +118,7 @@ describe('memory-stop (#35)', () => {
       'top.ts': 'x\n',
     });
     const app = path.join(repo, 'packages/app');
-    setTime(app, LOGIN, -3_600_000);
+    setModified(app, LOGIN, -3_600_000);
     writeFiles(repo, { 'top.ts': 'y\n' });
     expect(stop(app)).toEqual({ kind: 'done' });
     writeFiles(app, { 'src/a.ts': 'y\n' });
@@ -169,7 +158,7 @@ describe('memory-stop lets Claude stop when it should not or cannot tell (ADR-00
   it('lets Claude stop outside a git repository', () => {
     const dir = tempDir();
     writeFiles(dir, { [POINTER]: 'login', [LOGIN]: memoryText(), 'src/auth.ts': 'x\n' });
-    setTime(dir, LOGIN, -3_600_000);
+    setModified(dir, LOGIN, -3_600_000);
     expect(stop(dir)).toEqual({ kind: 'done' });
   });
 
@@ -186,7 +175,7 @@ describe('memory-stop lets Claude stop when it should not or cannot tell (ADR-00
 describe.skipIf(!canSymlink())('memory-stop state safety (ADR-0015)', () => {
   it('lets Claude stop, noting why, when it cannot record that it asked', () => {
     const dir = tempRepo({ [LOGIN]: memoryText(), 'src/auth.ts': 'export {};\n' });
-    setTime(dir, LOGIN, -3_600_000);
+    setModified(dir, LOGIN, -3_600_000);
     const outside = tempDir();
     mkdirSync(path.join(dir, BRAND.stateDir));
     symlinkSync(outside, path.join(dir, BRAND.stateDir, 'local'));

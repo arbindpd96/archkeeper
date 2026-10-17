@@ -110,7 +110,7 @@ describe('the feature-memory module (#34)', () => {
       /^Save this session's progress .* Use before ending a session/,
     );
     expect(skill).toContain(`the one named in \`${POINTER}\`, if that file holds one kebab-case name`);
-    expect(skill).toContain('the only feature MEMORY.md that says so, leaving out folders whose names start');
+    expect(skill).toContain('the only MEMORY.md in a kebab-case folder of `docs/features/` that says so');
   });
 
   it('saves progress only into the active MEMORY.md and the mistakes log', () => {
