@@ -8,6 +8,7 @@ import { canSymlink, commitFiles, git, tempDir, tempRepo, writeFiles } from './h
 import { blockReason, memoryText, setModified } from './hook-helpers.js';
 
 const POINTER = `${BRAND.stateDir}/local/active-feature`;
+const IGNORE_ALL = `${BRAND.stateDir}/local/.gitignore`;
 const LOGIN = 'docs/features/login/MEMORY.md';
 const STOP: Payload = { session_id: 's1', stop_hook_active: false };
 
@@ -18,7 +19,7 @@ function stop(projectDir: string, payload: Payload = STOP): Answer {
 /** A repository whose active feature, login, saved its memory an hour ago, with the given files committed too. */
 function featureRepo(files: Record<string, string> = {}): string {
   const dir = tempRepo({ [LOGIN]: memoryText(), 'src/auth.ts': 'export {};\n', ...files });
-  writeFiles(dir, { [POINTER]: 'login\n' });
+  writeFiles(dir, { [POINTER]: 'login\n', [IGNORE_ALL]: '*\n' });
   setModified(dir, LOGIN, -3_600_000);
   return dir;
 }
@@ -147,6 +148,14 @@ describe('memory-stop lets Claude stop when it should not or cannot tell (ADR-00
       kind: 'done',
       note: 'memory-stop: stdin was not valid JSON, so it let Claude stop',
     });
+  });
+
+  it('reads the pointer only from a local folder as a write leaves it, with a .gitignore of *', () => {
+    const dir = featureRepo({ 'docs/features/other/MEMORY.md': memoryText() });
+    writeFiles(dir, { 'src/auth.ts': 'export const refresh = 1;\n', [IGNORE_ALL]: '!active-feature\n' });
+    expect(stop(dir)).toEqual({ kind: 'done' });
+    writeFiles(dir, { [IGNORE_ALL]: '*\n' });
+    expect(blockReason(stop(dir))).toContain(`after ${LOGIN} was last saved`);
   });
 
   it('lets Claude stop when no feature is active', () => {

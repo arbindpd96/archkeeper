@@ -1,9 +1,18 @@
-import { existsSync, mkdirSync, readFileSync, statSync, symlinkSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  symlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
 import type { Payload } from '../src/hooks/runtime/io.js';
 import { sessionStart } from '../src/hooks/runtime/memory/session-start.js';
+import { SNAPSHOT_FILE } from '../src/hooks/runtime/memory/snapshot.js';
 import { canSymlink, tempDir, writeFiles } from './helpers.js';
 import { injectedContext, memoryText } from './hook-helpers.js';
 
@@ -153,6 +162,14 @@ describe('session-start state (ADR-0014, ADR-0015)', () => {
     expect(readFileSync(path.join(dir, LOCAL, '.gitignore'), 'utf8')).toBe('*\n');
     if (process.platform !== 'win32') expect(statSync(path.join(dir, LOCAL)).mode & 0o777).toBe(0o700);
   });
+
+  it('leaves only that .gitignore in the local state folder, however often it runs', () => {
+    const dir = tempDir();
+    writeFiles(dir, { [LOGIN]: memoryText() });
+    contextOf(dir);
+    contextOf(dir, { source: 'compact' });
+    expect(readdirSync(path.join(dir, LOCAL))).toEqual(['.gitignore']);
+  });
 });
 
 describe.skipIf(!canSymlink())('session-start symlink safety (ADR-0015)', () => {
@@ -180,6 +197,30 @@ describe.skipIf(!canSymlink())('session-start symlink safety (ADR-0015)', () => 
     expect(injectedContext(answer)).toContain('the active feature is login');
     expect(answer.kind === 'done' ? answer.note : '').toMatch(/^session-start: .*local is a symlink$/);
     expect(existsSync(path.join(outside, '.gitignore'))).toBe(false);
+  });
+
+  it('reads neither the pointer nor the snapshot where a write is refused, as with a symlinked .gitignore', () => {
+    const dir = tempDir();
+    const outside = path.join(tempDir(), 'ignore');
+    const snapshot = { savedAt: new Date().toISOString(), branch: 'main', status: [], more: 0 };
+    writeFiles(dir, {
+      [POINTER]: 'login\n',
+      [SNAPSHOT_FILE]: JSON.stringify(snapshot),
+      [LOGIN]: memoryText(),
+      'docs/features/other/MEMORY.md': memoryText(),
+    });
+    writeFileSync(outside, '*\n');
+    symlinkSync(outside, path.join(dir, LOCAL, '.gitignore'));
+    const answer = sessionStart.answer(
+      { payload: { source: 'compact' } },
+      { projectDir: dir, home: tempDir() },
+    );
+    expect(injectedContext(answer)).toBe(
+      `${BRAND.displayName} feature memory: no feature is active, since several say Status: in progress ` +
+        '(login, other). Ask the user which feature this session is for, and offer /new-feature <name> to ' +
+        'resume or start one.',
+    );
+    expect(answer.kind === 'done' ? answer.note : '').toMatch(/\.gitignore is not a regular file$/);
   });
 });
 
