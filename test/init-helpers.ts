@@ -5,7 +5,8 @@ import type { GitState } from '../src/cli/git-state.js';
 import { kitReader } from '../src/cli/kit.js';
 import { main } from '../src/cli/main.js';
 import type { Prompter } from '../src/cli/prompts.js';
-import { type Catalog, loadCatalog, type ReadKitFile } from '../src/core/loader.js';
+import { type Catalog, type KitModule, loadCatalog, type ReadKitFile } from '../src/core/loader.js';
+import { render, type RenderTree } from '../src/core/render.js';
 import { fixtureCopy, REPO_ROOT, writeFiles } from './helpers.js';
 import { TEST_BRAND } from './kit-fixtures.js';
 
@@ -49,6 +50,32 @@ const MODULE_IDS = readdirSync(path.join(REPO_ROOT, 'modules'), { withFileTypes:
 
 /** The kit as this repository ships it, loaded once, with stand-ins for its hook bundles. */
 export const KIT = loadCatalog(MODULE_IDS, standInReader(REPO_ROOT));
+
+/** The kit's modules named by `ids` rendered for the test brand, on a TS stack with no detected commands. */
+export function renderedKit(ids: readonly string[]): RenderTree {
+  const modules = ids.map((id): KitModule => {
+    const kit = KIT.modules.get(id);
+    if (kit === undefined) throw new Error(`modules/${id} is missing`);
+    return kit;
+  });
+  return render(modules, { stack: ['ts'], values: { project: { reference: [] } } }, TEST_BRAND);
+}
+
+/** Each path `module` renders into `tree`, with its strategy and block id (empty for a whole file), in path order. */
+export function moduleEntries(tree: RenderTree, module: string): string[][] {
+  return [...tree].flatMap(([file, entries]) =>
+    entries
+      .filter((entry) => entry.module === module)
+      .map((entry) => [file, entry.strategy, entry.blockId ?? '']),
+  );
+}
+
+/** What `module` renders into `file` of `tree`, a whole file or its block; throws when it renders nothing there. */
+export function moduleContent(tree: RenderTree, module: string, file: string): string {
+  const entry = tree.get(file)?.find((candidate) => candidate.module === module);
+  if (entry === undefined) throw new Error(`${module} renders nothing into ${file}`);
+  return entry.content;
+}
 
 /** The package info init tests run with, so a release changes no snapshot. */
 export const INFO: PackageInfo = { version: '1.0.0', description: 'Test kit.' };

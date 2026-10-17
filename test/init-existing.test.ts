@@ -23,7 +23,7 @@ describe('init on a project with its own Claude Code setup', () => {
   it("keeps every user byte, adds the kit's blocks and does not import AGENTS.md twice", async () => {
     const dir = existingSetup();
     const result = await runInit(dir, ['--yes']);
-    expect(result.code).toBe(0);
+    expect(result.code).toBe(2);
     expect(result.stdout).toMatch(/^ {2}modify {4}\.claude\/settings\.json \(/m);
     const claude = read(dir, 'CLAUDE.md');
     expect(claude.startsWith(USER_CLAUDE)).toBe(true);
@@ -32,7 +32,15 @@ describe('init on a project with its own Claude Code setup', () => {
     expect(read(dir, 'AGENTS.md').startsWith(`${USER_AGENTS}\n<!-- ${TEST_BRAND.markerPrefix}:begin`)).toBe(
       true,
     );
+  });
+
+  it("keeps the user's own why skill and writes the knowledge module's beside it for review, exiting 2", async () => {
+    const dir = existingSetup();
+    const result = await runInit(dir, ['--yes']);
+    expect(result.code).toBe(2);
+    expect(result.stdout).toMatch(/conflict {2}\.claude\/skills\/why\/SKILL\.md: /);
     expect(read(dir, '.claude/skills/why/SKILL.md')).toBe(USER_SKILL);
+    expect(read(dir, `.claude/skills/why/SKILL.md${TEST_BRAND.sidecarSuffix}`)).toContain('name: why\n');
   });
 
   it("adds the safety entries to the user's settings without a second copy of the user's own rule", async () => {
@@ -53,13 +61,13 @@ describe('init on a project with its own Claude Code setup', () => {
     expect(USER_SETTINGS).toContain('"deny": ["Read(**/.env)"]');
   });
 
-  it('changes nothing on a second run', async () => {
+  it('changes nothing on a second run, while the why sidecar still waits for review', async () => {
     const dir = existingSetup();
     await runInit(dir, ['--yes']);
     const before = projectText(dir);
     const again = await runInit(dir, ['--yes']);
-    expect(again.code).toBe(0);
-    expect(again.stdout).toContain('Nothing to change');
+    expect(again.code).toBe(2);
+    expect(again.stdout).toContain('Nothing to change, but sidecars still wait for review');
     expect(projectText(dir)).toBe(before);
   });
 });
@@ -150,7 +158,7 @@ describe.skipIf(!canSymlink())(
 
     it('sets up the rest of the project without reading through the link when the modules writing under .claude are left out', async () => {
       const { dir } = linkedClaudeFolder();
-      const result = await runInit(dir, ['--yes', '--modules', '-safety,-feature-memory']);
+      const result = await runInit(dir, ['--yes', '--modules', '-safety,-feature-memory,-knowledge']);
       expect(result.code).toBe(0);
       expect(read(dir, 'CLAUDE.md')).toContain('@AGENTS.md');
     });

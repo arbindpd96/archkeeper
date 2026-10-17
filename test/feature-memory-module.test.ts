@@ -1,34 +1,19 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { KitModule } from '../src/core/loader.js';
-import { render, type RenderTree } from '../src/core/render.js';
 import { fixtureCopy, writeFiles } from './helpers.js';
 import { projectText } from './install-helpers.js';
-import { KIT, runInit } from './init-helpers.js';
+import { moduleContent, moduleEntries, renderedKit, runInit } from './init-helpers.js';
 import { TEST_BRAND } from './kit-fixtures.js';
 import { frontmatterOf } from './static-rules.js';
 
 const TEMPLATE = 'docs/features/_template/MEMORY.md';
 const MISTAKES = 'docs/mistakes.md';
 const POINTER = `${TEST_BRAND.stateDir}/local/active-feature`;
-
-function kitModule(id: string): KitModule {
-  const kit = KIT.modules.get(id);
-  if (kit === undefined) throw new Error(`modules/${id} is missing`);
-  return kit;
-}
-
-const TREE: RenderTree = render(
-  [kitModule('base'), kitModule('feature-memory')],
-  { stack: ['ts'], values: { project: { reference: [] } } },
-  TEST_BRAND,
-);
+const TREE = renderedKit(['base', 'feature-memory']);
 
 function written(file: string): string {
-  const entry = TREE.get(file)?.find((candidate) => candidate.module === 'feature-memory');
-  if (entry === undefined) throw new Error(`feature-memory writes no ${file}`);
-  return entry.content;
+  return moduleContent(TREE, 'feature-memory', file);
 }
 
 function read(dir: string, file: string): string {
@@ -37,12 +22,7 @@ function read(dir: string, file: string): string {
 
 describe('the feature-memory module (#34)', () => {
   it('writes the memory template and the mistakes log once, and owns its two skills and AGENTS.md block', () => {
-    const entries = [...TREE].flatMap(([file, list]) =>
-      list
-        .filter((entry) => entry.module === 'feature-memory')
-        .map((entry) => [file, entry.strategy, entry.blockId ?? '']),
-    );
-    expect(entries).toEqual([
+    expect(moduleEntries(TREE, 'feature-memory')).toEqual([
       ['.claude/skills/handoff/SKILL.md', 'owned', ''],
       ['.claude/skills/new-feature/SKILL.md', 'owned', ''],
       ['AGENTS.md', 'blocks', 'feature-memory'],

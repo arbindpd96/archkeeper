@@ -18,26 +18,29 @@ v0.1 milestone M5 (issues #34 and #35): every feature in a user's project gets a
 - 2026-10-17: Generated skills use only ADR-0015's allowlisted frontmatter keys: `name`, `description` and, on `/new-feature` and `/adr`, `disable-model-invocation: true`. No `argument-hint`, which this repo's own skills use but the allowlist leaves out (the static rules refuse it), and no `allowed-tools`, which Read, Grep and Glob do not need. The body says what `$ARGUMENTS` holds. Why: ADR-0015 (see Open questions).
 - 2026-10-17: Each module writes its own AGENTS.md block (`feature-memory`, `knowledge`) naming only its own docs and skills, so each preset's AGENTS.md names only docs it writes; `test/instruction-docs.test.ts` checks AGENTS.md and every written skill per preset. Why: #34; templates are logic-less, so a block cannot depend on which other modules are on.
 - 2026-10-17: The memory template is handoff §5.2 with `Status: in progress | Branch: <branch>` (this repo's `feat/<name>` generalised), 80 lines or fewer (a test holds it), and no HTML comments, so a copied memory carries none and part B reads its sections as written. `/handoff` keeps each memory at 80 lines or fewer.
-- 2026-10-17: Behaviour change: with `.claude` linked outside the project, `--modules -safety` alone no longer gets init past the refusal, because the skills live under `.claude/skills/` too; leaving out feature-memory as well does. Why: path safety refuses every write through such a link (ADR-0014), and the owner's 2026-10-17 sign-off keeps that refusal with no sidecar fallback (see Open questions).
+- 2026-10-17: Behaviour change: with `.claude` linked outside the project, `--modules -safety` alone no longer gets init past the refusal, because the skills live under `.claude/skills/` too; leaving out feature-memory and, in medium and full, knowledge as well does. Why: path safety refuses every write through such a link (ADR-0014), and the owner's 2026-10-17 sign-off keeps that refusal with no sidecar fallback (see Open questions).
 - 2026-10-17: init's next steps now name `/new-feature` in every preset, since the feature-memory module writes the skill (the M3 sign-off item on #27); `test/init.test.ts` holds it, and its absence with `--modules -feature-memory`.
+- 2026-10-17: `/why` is model-invocable, like this repo's own, since it only reads; `/new-feature` and `/adr` write files and stay user-only (#34). `/why` searches the decision log and ADRs, the MEMORY.md Decisions sections, the mistakes log, then `git log --grep`, skipping what a project lacks, and cites `path:line` or a short hash. `/adr` numbers ADRs with four digits from the template, sets `accepted` only when the user agreed, marks the ADR it supersedes and adds a row to the decision log; like `/new-feature`, it does not commit. Why: #34 and reference §3.1; users' git workflows differ.
+- 2026-10-17: The knowledge module requires only base, not feature-memory. Why: `/why` skips the records a project lacks, and a requirement would make `--modules -feature-memory` on medium an error unless knowledge goes too, since resolution refuses a removed requirement.
+- 2026-10-17: The existing-claude-setup fixture's own `why` skill now meets the knowledge module's in medium and full: init keeps the user's skill, writes the kit's beside it as a sidecar and exits 2 (ADR-0014's first contact), and a second run still plans only skips. The golden, init-existing and context-budget tests expect it. Why: M3 gave the fixture a `why` skill, and this is what a user with their own `/why` sees.
 
 ## Done
 
 - [x] Feature memory (this file).
-- [x] feature-memory module: memory template, mistakes log, `new-feature` and `handoff` skills, AGENTS.md block, module and docs tests, golden trees, architecture map (the module commit).
-- [ ] knowledge module: decision log, ADR template, glossary, `why` and `adr` skills, AGENTS.md block.
-- [ ] Tests: module tests, snapshots, golden trees, static rules, init's `/new-feature` next step.
+- [x] feature-memory module: memory template, mistakes log, `new-feature` and `handoff` skills, AGENTS.md block, module and docs tests, golden trees, architecture map (6abe62e).
+- [x] knowledge module: decision log, ADR template, glossary, `why` and `adr` skills, AGENTS.md block, module test, golden trees with the existing setup's `why` sidecar, architecture map (the knowledge commit).
 - [ ] `why.tape` (`# live`) and its fixture ADR.
-- [ ] Docs: architecture map, decisions, ROADMAP, changeset, this file.
+- [ ] Docs: decisions, ROADMAP, changeset, this file.
 
 ## Next step
 
-Write the knowledge module (`modules/knowledge/`): `docs/decisions.md`, `docs/adr/0000-template.md` and `docs/glossary.md` (create-only), the `why` and `adr` skills (owned) and its AGENTS.md block, with its test, module snapshot and golden trees, and update `docs/architecture.md` in the same commit.
+Write `docs/media/tapes/why.tape` (`# live`): init on ts-app, then `/why` in Claude Code citing an ADR by path:line, with the ADR it cites added to `examples/ts-app/docs/adr/`.
 
 ## Gotchas / don't try again
 
 - In a sandbox that cannot write `~/.npm`, run npm with `npm_config_cache` set to a writable temp folder, or every `test/check-package.test.ts` case fails with EPERM.
 - Never run `rm`, `git clean` or `git restore`; leave cleanup to the tools that own a folder (the maintainer, 2026-10-10).
+- vitest 5's `-u` takes an optional value, so `vitest run -u test/golden.test.ts` swallows the file name and updates snapshots across the whole suite. Put the file filters first and `--update` last.
 
 ## Open questions
 

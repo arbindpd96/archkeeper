@@ -18,6 +18,12 @@ modules/feature-memory/files/skill-handoff.md
 modules/feature-memory/files/skill-new-feature.md
 modules/feature-memory/module.json
 modules/format-on-edit/module.json
+modules/knowledge/files/adr-template.md
+modules/knowledge/files/agents-knowledge.md
+modules/knowledge/files/decisions.md
+modules/knowledge/files/glossary.md
+modules/knowledge/files/skill-adr.md
+modules/knowledge/files/skill-why.md
 modules/knowledge/module.json
 modules/presets.json
 modules/safety/files/agents-safety.md

@@ -5,5 +5,19 @@
   "description": "Decision records, ADRs and a glossary, with the /why and /adr skills.",
   "presets": ["medium", "full"],
   "requires": ["base"],
+  "files": [
+    { "from": "decisions.md", "to": "docs/decisions.md", "strategy": "create-only", "target": "project" },
+    {
+      "from": "adr-template.md",
+      "to": "docs/adr/0000-template.md",
+      "strategy": "create-only",
+      "target": "project"
+    },
+    { "from": "glossary.md", "to": "docs/glossary.md", "strategy": "create-only", "target": "project" },
+    { "from": "skill-why.md", "to": ".claude/skills/why/SKILL.md", "strategy": "owned", "target": "project" },
+    { "from": "skill-adr.md", "to": ".claude/skills/adr/SKILL.md", "strategy": "owned", "target": "project" },
+    { "to": "AGENTS.md", "strategy": "blocks", "target": "project" }
+  ],
+  "blocks": [{ "file": "AGENTS.md", "id": "knowledge", "template": "agents-knowledge.md" }],
   "internal": true
 }

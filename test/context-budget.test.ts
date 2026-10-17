@@ -106,7 +106,8 @@ describe('the always-on context budget (ADR-0017)', () => {
     'keeps %s on %s within budgets.json, SessionStart counted at its cap',
     async (name, fixture) => {
       const dir = fixture === 'existing-claude-setup' ? existingClaudeSetup() : fixtureCopy(fixture).dir;
-      expect((await runInit(dir, ['--yes', '--preset', name])).code).toBe(0);
+      // 2 is done with a sidecar to review, as beside existing-claude-setup's own why skill.
+      expect([0, 2]).toContain((await runInit(dir, ['--yes', '--preset', name])).code);
       const cap = KIT.presets.find((preset) => preset.name === name)?.defaults.sessionStartCap ?? Infinity;
       expect(alwaysOnContext(dir, cap).tokens).toBeLessThanOrEqual(BUDGETS.get(name) ?? 0);
     },
