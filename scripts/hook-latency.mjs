@@ -42,6 +42,7 @@ const SAMPLES = {
       tool_input: { file_path: EDITED_FILE, old_string: 'line 900', new_string: 'line 9000' },
     },
   ],
+  'memory-stop': [{ stop_hook_active: false }, { stop_hook_active: true }],
   'pre-compact': [{ trigger: 'manual' }, { trigger: 'auto' }],
   'session-start': [{ source: 'startup' }, { source: 'compact' }, { source: 'resume' }],
 };

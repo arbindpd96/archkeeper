@@ -23,6 +23,7 @@ export type FailurePolicy = 'ask' | 'open';
 export const FAILURE_POLICY: Readonly<Record<string, FailurePolicy>> = {
   'guard-bash': 'ask',
   'guard-secrets': 'ask',
+  'memory-stop': 'open',
   'pre-compact': 'open',
   'session-start': 'open',
 };
