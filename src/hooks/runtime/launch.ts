@@ -18,10 +18,11 @@ import { projectDirOf, slashed } from './project.js';
 /** What a hook does when it cannot do its job (ADR-0015): `ask`, which fails closed, or `open`, which lets the action go on. */
 export type FailurePolicy = 'ask' | 'open';
 
-/** ADR-0015's failure policy of every hook the kit ships, by bundle name; both guards fail closed. */
+/** ADR-0015's failure policy of every hook the kit ships, by bundle name: both guards fail closed, the rest open. */
 export const FAILURE_POLICY: Readonly<Record<string, FailurePolicy>> = {
   'guard-bash': 'ask',
   'guard-secrets': 'ask',
+  'pre-compact': 'open',
 };
 
 /** Where a hook runs: the project folder Claude Code names and the user's home folder. */

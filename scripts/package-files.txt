@@ -5,6 +5,7 @@ dist/brand.mjs
 dist/cli.mjs
 dist/hooks/guard-bash.mjs
 dist/hooks/guard-secrets.mjs
+dist/hooks/pre-compact.mjs
 dist/main.mjs
 modules/architecture-map/module.json
 modules/base/files/agents.md
