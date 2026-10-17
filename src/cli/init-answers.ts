@@ -110,8 +110,8 @@ const GIT_PROBLEMS: Readonly<Record<Exclude<GitState, 'clean'>, readonly [proble
     'check that git is installed and works here',
   ],
   filters: [
-    'has a repository whose own config sets a filter program, which git status could run, so init did not ask git',
-    'check the filter entries in its .git/config',
+    "has a repository whose own config sets a filter program or a partial clone's promisor remote, which git status could run or fetch from, so init did not ask git",
+    'check the filter and remote entries in its .git/config',
   ],
 };
 

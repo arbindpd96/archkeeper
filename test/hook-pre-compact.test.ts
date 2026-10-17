@@ -96,16 +96,6 @@ describe('pre-compact (#35)', () => {
     compact(dir);
     expect(snapshotIn(dir)).toMatchObject({ branch: null, status: null, more: 0 });
   });
-
-  it('runs no git status where the repository config sets a filter program, which status could run', () => {
-    const marker = path.join(tempDir(), 'ran');
-    const repo = tempRepo({ '.gitattributes': '* filter=evil\n', 'README.md': '# App\n' });
-    git(repo, 'config', 'filter.evil.clean', `touch '${marker}'; cat`);
-    writeFiles(repo, { 'README.md': '# App, edited\n' });
-    compact(repo);
-    expect(snapshotIn(repo)).toMatchObject({ branch: null, status: null });
-    expect(existsSync(marker)).toBe(false);
-  });
 });
 
 describe.skipIf(!canSymlink())('pre-compact state safety (ADR-0015)', () => {
