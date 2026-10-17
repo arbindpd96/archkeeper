@@ -4,6 +4,8 @@ Record approaches that failed, so no session repeats them. Newest first.
 
 Format: `- YYYY-MM-DD — <what we tried> → <what went wrong> → <what to do instead>`
 
+- 2026-10-17 — Adding a row whose cell is wider than its column to a Prettier-formatted Markdown table (the architecture map, the decision log) → Prettier re-padded every row, so a one-row change showed as 140 changed lines → keep a new cell within the column's current width, or make the widening its own commit.
+- 2026-10-17 — Updating one suite's snapshots with `vitest run -u test/golden.test.ts` → vitest 5's `-u` takes an optional value, so it swallowed the file name and ran the whole suite in update mode → put the file filters first and `--update` last.
 - 2026-10-10 — Running a hook's `--self-test` samples in the project it guards → guard-bash read the project's options, so a config whose `denyCommands` lists `npm test` failed the sample that expects `npm test` to pass, and doctor would report a broken hook → run the samples where no project config applies (the hook's own folder), and keep a bundle test with such a config.
 - 2026-10-10 — Reading a hook's project config with a bare `JSON.parse` → a config an editor saved with a byte-order mark failed to parse, and guard-bash, which fails closed, would ask on every command → strip a leading byte-order mark first, as `src/core/json.ts` does.
 - 2026-10-10 — Putting a file name or a config entry into a guard's reason as it is → a crafted name with an ANSI escape or a bidirectional override could dress up the permission prompt the user reads → escape control and bidirectional characters with `escapeUnprintable` wherever a reason echoes text.
