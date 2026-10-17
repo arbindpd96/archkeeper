@@ -9,6 +9,7 @@ export type Git = (args: readonly string[]) => ToolRun;
 const SAFE = ['--no-optional-locks', '-c', 'core.fsmonitor=false'];
 const STATUS_HAZARDS = String.raw`^(filter\..*\.(clean|process)|extensions\.partialclone|remote\..*\.promisor)$`;
 const CALLER_VARIABLES = /^(?:GIT_(?!CEILING_DIRECTORIES$)|PATH$)/i;
+const OUT_OF_TIME: ToolRun = { status: null, stdout: '', stderr: 'git ran out of time' };
 
 // Programs git starts come only from absolute PATH folders outside the project too.
 function trustedPath(root: string): string[] {
@@ -33,16 +34,25 @@ function gitEnv(folders: readonly string[]): NodeJS.ProcessEnv {
 /**
  * git for one project folder, with no shell and no network (ADR-0015, ADR-0018): found only in absolute PATH
  * folders outside the project, which are also the only PATH it gets, with no `GIT_*` variable from a caller but the
- * ceiling, no fsmonitor, no optional locks and no lazy fetch. Undefined when no such folder holds git.
+ * ceiling, no fsmonitor, no optional locks and no lazy fetch. With `budgetMs`, all its calls share one deadline
+ * that many milliseconds away, and a call after it fails at once. Undefined when no such folder holds git.
  */
-export function gitRunner(root: string, timeoutMs?: number): Git | undefined {
+export function gitRunner(root: string, budgetMs?: number): Git | undefined {
   const rootReal = realOrUndefined(root) ?? root;
   const folders = trustedPath(rootReal);
   const git = findProgram('git', rootReal, folders.join(path.delimiter));
   if (git === undefined) return undefined;
   const env = gitEnv(folders);
-  const limit = timeoutMs === undefined ? {} : { timeoutMs };
-  return (args) => runProgram(git, [...SAFE, ...args], { cwd: root, env, ...limit });
+  const deadline = budgetMs === undefined ? undefined : Date.now() + budgetMs;
+  return (args) => {
+    const timeoutMs = deadline === undefined ? undefined : deadline - Date.now();
+    if (timeoutMs !== undefined && timeoutMs <= 0) return OUT_OF_TIME;
+    return runProgram(git, [...SAFE, ...args], {
+      cwd: root,
+      env,
+      ...(timeoutMs === undefined ? {} : { timeoutMs }),
+    });
+  };
 }
 
 /**
