@@ -4,7 +4,7 @@ import { describe, expect, it, onTestFinished } from 'vitest';
 import budgets from '../budgets.json' with { type: 'json' };
 import { alwaysOnContext, importsOf } from '../scripts/context-rules.mjs';
 import { fixtureCopy, runScript, tempDir, writeFiles } from './helpers.js';
-import { existingClaudeSetup, KIT, runInit } from './init-helpers.js';
+import { doneCode, existingClaudeSetup, KIT, runInit } from './init-helpers.js';
 
 const BUDGETS = new Map(
   Object.entries(budgets.alwaysOnContext).filter(
@@ -106,8 +106,7 @@ describe('the always-on context budget (ADR-0017)', () => {
     'keeps %s on %s within budgets.json, SessionStart counted at its cap',
     async (name, fixture) => {
       const dir = fixture === 'existing-claude-setup' ? existingClaudeSetup() : fixtureCopy(fixture).dir;
-      // 2 is done with a sidecar to review, as beside existing-claude-setup's own why skill.
-      expect([0, 2]).toContain((await runInit(dir, ['--yes', '--preset', name])).code);
+      expect((await runInit(dir, ['--yes', '--preset', name])).code).toBe(doneCode(fixture, name));
       const cap = KIT.presets.find((preset) => preset.name === name)?.defaults.sessionStartCap ?? Infinity;
       expect(alwaysOnContext(dir, cap).tokens).toBeLessThanOrEqual(BUDGETS.get(name) ?? 0);
     },
