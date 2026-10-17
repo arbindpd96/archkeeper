@@ -1,7 +1,8 @@
 import { gitRunner, unsafeForStatus } from './git.js';
 
-// A hook ends well inside its 10-second timeout even when git hangs, so it fails open with a note, not a kill.
-const GIT_TIMEOUT_MS = 3000;
+// One deadline for every git call of a status read, so a hook ends well inside its 10-second timeout even when git
+// hangs, and lets the action go on by itself instead of being killed.
+const GIT_BUDGET_MS = 3000;
 const BRANCH_HEAD = '# branch.head ';
 const BRANCH_OID = '# branch.oid ';
 // The space-separated fields before the path in each porcelain v2 record kind; a path may hold spaces.
@@ -81,11 +82,12 @@ export function parseStatus(stdout: string, prefix: string): ProjectStatus {
 
 /**
  * `git status` of the project folder alone, untracked files included only when asked, through the hardened
- * runner. Undefined when git is missing, the folder is in no repository, git fails or takes over 3 seconds, or the
- * repository's own config sets a filter program or a promisor remote, which status would run or fetch from.
+ * runner. Undefined when git is missing, the folder is in no repository, git fails or its calls take over 3 seconds
+ * in all, or the repository's own config sets a filter program or a promisor remote, which status would run or fetch
+ * from.
  */
 export function projectStatus(projectDir: string, untracked: boolean): ProjectStatus | undefined {
-  const git = gitRunner(projectDir, GIT_TIMEOUT_MS);
+  const git = gitRunner(projectDir, GIT_BUDGET_MS);
   const prefix = git?.(['rev-parse', '--show-prefix']);
   if (git === undefined || prefix?.status !== 0 || unsafeForStatus(git) !== false) return undefined;
   const files = untracked ? 'normal' : 'no';

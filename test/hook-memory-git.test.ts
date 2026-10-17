@@ -3,6 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
 import { gitRunner } from '../src/hooks/runtime/git.js';
+import { projectStatus } from '../src/hooks/runtime/git-status.js';
 import { memoryStop } from '../src/hooks/runtime/memory/memory-stop.js';
 import { preCompact } from '../src/hooks/runtime/memory/pre-compact.js';
 import { SNAPSHOT_FILE } from '../src/hooks/runtime/memory/snapshot.js';
@@ -74,4 +75,14 @@ describe.skipIf(process.platform === 'win32')("the hooks' git runner", () => {
     stubEnv('GIT_NO_LAZY_FETCH', '0');
     expect(gitRunner(tempDir())?.(['status']).stdout).toBe('1|/ceiling|');
   });
+
+  it('gives all the git calls of a status read one 3-second deadline, so a slow git ends it in time', () => {
+    const script = '#!/bin/sh\ncase "$*" in\n  *rev-parse*) sleep 2; echo ;;\n  *) exec sleep 10 ;;\nesac\n';
+    stubEnv('PATH', [fakeBin('git', script), process.env.PATH ?? ''].join(path.delimiter));
+    const start = performance.now();
+    expect(projectStatus(tempDir(), false)).toBeUndefined();
+    const elapsed = performance.now() - start;
+    expect(elapsed).toBeGreaterThan(2_900);
+    expect(elapsed).toBeLessThan(4_500);
+  }, 15_000);
 });
