@@ -28,6 +28,7 @@ cd7366ce9cbf42d295cad1b0bfc1900a96028d33afe15008be380ab9bba0265c  blocks       .
 86a8ae407191e0812a7769c012a59b780f60cb551445ab817ea3e4cdbaa9b1ae  blocks       AGENTS.md
 4f0c3f78bdba99783b07985121cd5c9c0e5d60756ac8773542eb6c2f155af025  blocks       CLAUDE.md
 352c829f9f658f90eef7a90183872c4f83e48f080bb6265fd34d0dd09a347d73  create-only  docs/adr/0000-template.md
+47af7278c6ea424f8f729f267c28847e13e200f7183c591d3d0f84de4fdab083  user         docs/adr/0001-run-tests-with-vitest.md
 7ca81795dcb726ba36742d50abdb88a74a63808bfad6885cfccf4d8bf0b464f2  create-only  docs/decisions.md
 4e63c485c075be179b03e75f99367ef85473980862ed524c8ddc8afc1d7b2d24  create-only  docs/features/_template/MEMORY.md
 b5c4383fbf153ea0d527315f74f02741cb70721db40c0edf85d6721855f3aee0  create-only  docs/glossary.md
