@@ -5,6 +5,7 @@ dist/brand.mjs
 dist/cli.mjs
 dist/hooks/guard-bash.mjs
 dist/hooks/guard-secrets.mjs
+dist/hooks/memory-stop.mjs
 dist/hooks/pre-compact.mjs
 dist/hooks/session-start.mjs
 dist/main.mjs
