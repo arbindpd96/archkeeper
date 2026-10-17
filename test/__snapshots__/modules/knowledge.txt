@@ -25,9 +25,9 @@ Answer "why $ARGUMENTS?" from the project's records only. If no topic was given,
    - `docs/decisions.md` and the ADRs in `docs/adr/`
    - the **Decisions** sections of `docs/features/*/MEMORY.md`
    - `docs/mistakes.md`
-   - the commit history: `git log --grep=<keyword> -i --oneline` for each keyword, trying a synonym or two
-2. Answer in two to five sentences. Cite each source as `path:line`, or a commit by its short hash.
-3. If nothing is recorded, say so plainly instead of guessing a reason, and offer to record the answer with `/adr <title>` once the user decides.
+2. If they do not answer it, search the commit history: `git log --grep=<keyword> -i --oneline` for each keyword, trying a synonym or two.
+3. Answer in two to five sentences. Cite each source as `path:line`, or a commit by its short hash.
+4. If nothing is recorded, say so plainly instead of guessing a reason, and offer to record the answer with `/adr <title>` once the user decides.
 === .gitignore (blocks, base, block base)
 CLAUDE.local.md
 .claude/settings.local.json
@@ -137,9 +137,9 @@ Answer "why $ARGUMENTS?" from the project's records only. If no topic was given,
    - `docs/decisions.md` and the ADRs in `docs/adr/`
    - the **Decisions** sections of `docs/features/*/MEMORY.md`
    - `docs/mistakes.md`
-   - the commit history: `git log --grep=<keyword> -i --oneline` for each keyword, trying a synonym or two
-2. Answer in two to five sentences. Cite each source as `path:line`, or a commit by its short hash.
-3. If nothing is recorded, say so plainly instead of guessing a reason, and offer to record the answer with `/adr <title>` once the user decides.
+2. If they do not answer it, search the commit history: `git log --grep=<keyword> -i --oneline` for each keyword, trying a synonym or two.
+3. Answer in two to five sentences. Cite each source as `path:line`, or a commit by its short hash.
+4. If nothing is recorded, say so plainly instead of guessing a reason, and offer to record the answer with `/adr <title>` once the user decides.
 === .gitignore (blocks, base, block base)
 CLAUDE.local.md
 .claude/settings.local.json
