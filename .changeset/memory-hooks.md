@@ -1,0 +1,5 @@
+---
+'archkeeper': minor
+---
+
+Add three memory hooks to the feature-memory module in every preset, registered in exec form in `.claude/settings.json`. session-start, on every session start and after compaction, injects the active feature's Next step, Goal and last five Decisions, then, after compaction, the snapshot taken before it, and in medium and full the Overview of `docs/architecture.md`, in that priority order and cut at the preset's cap of 1,200, 3,000 or 4,000 characters; with no active feature it injects one line asking Claude to ask which feature, and to offer `/new-feature`. pre-compact saves the time, the branch and `git status --short` (50 lines at most) to `.archkeeper/local/snapshots/latest.json` before compaction, without calling a model. memory-stop asks Claude to run `/handoff`, once per change set, when tracked files other than docs changed after the active feature's MEMORY.md was last saved. All three let Claude go on whenever they cannot do their job, and run git only from absolute PATH folders outside the project, with no shell. Every hook's `--self-test` now runs its samples in a temp folder, never in the project.
