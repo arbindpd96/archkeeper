@@ -76,6 +76,7 @@ v0.1 milestone M4 (issues #30, #31, #32, #33): the safety layer the kit installs
 - `npm run package -- --update` rewrites `scripts/package-files.txt` after a new published file (a hook bundle, a module template).
 - A test kit read through `readKit(REPO_ROOT)` holds the real bundles; `KIT` from `test/init-helpers.ts` holds stand-ins. Golden and snapshot tests use `KIT`; anything that runs an installed hook uses `readKit`.
 - Never run `rm -rf`, not even on a worktree, a build folder or a scratch folder (the maintainer, 2026-10-10). Leave cleanup to the tools that own a folder (tsdown's `dist/`, the tests' `tempDir`, the scripts' `mkdtemp` folders) or ask the maintainer.
+- A test that puts a Windows path into a bash command must single-quote it, since Git Bash and guard-bash's tokenizer drop unquoted backslashes, and take it from `realpathSync.native`, since a Windows runner's temp path holds an 8.3 short name that only the native real path expands. The Windows CI job on PR #85 caught both.
 - In a sandbox that cannot write `~/.npm`, every `test/check-package.test.ts` case fails with `npm pack` EPERM on `~/.npm/_cacache`, which is not a code failure. Run the check with `npm_config_cache` set to a writable temp folder.
 
 ## Open questions
