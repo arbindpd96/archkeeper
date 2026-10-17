@@ -73,7 +73,8 @@ function reason(memory: FeatureMemory, files: readonly string[]): string {
   const changed = `${files.slice(0, NAMES_SHOWN).map(escapeUnprintable).join(', ')}${more}`;
   const ask =
     'Run /handoff to record Done and Next step there, or tell the user why this needs no memory update.';
-  return `${BRAND.displayName} feature memory: ${changed} changed after ${memory.file} was last saved. ${ask}`;
+  const file = escapeUnprintable(memory.file);
+  return `${BRAND.displayName} feature memory: ${changed} changed after ${file} was last saved. ${ask}`;
 }
 
 function answer(input: HookInput, context: HookContext): Answer {

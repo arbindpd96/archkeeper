@@ -1,5 +1,5 @@
 import { BRAND } from '../../../core/brand.js';
-import { escapeUnprintableKeepingLines } from '../../../core/text.js';
+import { escapeUnprintable, escapeUnprintableKeepingLines } from '../../../core/text.js';
 import { additionalContext, type Answer, type HookInput, stringField, withNote } from '../io.js';
 import type { HookContext, HookModule, Sample } from '../launch.js';
 import { configPreset } from '../options.js';
@@ -26,20 +26,22 @@ const NAMES_SHOWN = 5;
 const ARCHITECTURE = 'docs/architecture.md';
 const MAX_DOC_BYTES = 1_000_000;
 
-// Found by its status alone, a memory may be a teammate's committed one, so Claude confirms it before acting.
+// Found by its status alone, a memory may be a teammate's committed one, so Claude confirms it before acting. Names
+// go through the one-line escape, so none can start a line, and with it a heading, of its own.
 function memoryHeader(memory: FeatureMemory): string {
   const found =
     memory.foundBy === 'pointer'
       ? ''
       : ', the only feature in progress but not chosen on this machine: confirm it with the user before acting on its Next step';
-  return `${LABEL} the active feature is ${memory.name} (${memory.file}${found}). Read that file fully before changing code.`;
+  const where = `${escapeUnprintable(memory.file)}${found}`;
+  return `${LABEL} the active feature is ${escapeUnprintable(memory.name)} (${where}). Read that file fully before changing code.`;
 }
 
 function askLine(inProgress: readonly string[]): string {
   const ask = 'Ask the user which feature this session is for, and offer /new-feature <name>';
   if (inProgress.length === 0) return `${LABEL} no feature is active. ${ask} to start one.`;
   const more = inProgress.length > NAMES_SHOWN ? ` and ${String(inProgress.length - NAMES_SHOWN)} more` : '';
-  const names = `${inProgress.slice(0, NAMES_SHOWN).join(', ')}${more}`;
+  const names = `${inProgress.slice(0, NAMES_SHOWN).map(escapeUnprintable).join(', ')}${more}`;
   return `${LABEL} no feature is active, since several say Status: in progress (${names}). ${ask} to resume or start one.`;
 }
 
@@ -66,25 +68,23 @@ function memorySections(memory: FeatureMemory): string[] {
   ];
 }
 
-// At most 20 lines: the summary, then status lines, the last one saying how many more there are.
-function snapshotLines(snapshot: Snapshot, status: readonly string[]): string[] {
-  const saved = `Saved ${snapshot.savedAt} on ${snapshot.branch === null ? 'no branch' : `branch ${snapshot.branch}`}`;
-  const total = status.length + snapshot.more;
-  if (total === 0) return [`${saved}, with nothing uncommitted.`];
-  const shown = total < SNAPSHOT_LINES ? status : status.slice(0, SNAPSHOT_LINES - 2);
+// At most 20 lines: the summary, then status lines, the last one saying how many more there are. Each field keeps
+// to its line, since a file name, and so a status line, can hold a line break.
+function snapshotLines(snapshot: Snapshot): string[] {
+  const saved = `Saved ${escapeUnprintable(snapshot.savedAt)}`;
+  if (snapshot.status === null) return [`${saved}; git could not say the branch or the status.`];
+  const branch = snapshot.branch === null ? 'no branch' : `branch ${escapeUnprintable(snapshot.branch)}`;
+  const total = snapshot.status.length + snapshot.more;
+  if (total === 0) return [`${saved} on ${branch}, with nothing uncommitted.`];
+  const shown = snapshot.status.slice(0, total < SNAPSHOT_LINES ? undefined : SNAPSHOT_LINES - 2);
   const rest = total - shown.length;
-  const summary = `${saved}, with ${String(total)} uncommitted path${total === 1 ? '' : 's'} (git status --short):`;
-  return [summary, ...shown, ...(rest > 0 ? [`… and ${String(rest)} more`] : [])];
+  const summary = `${saved} on ${branch}, with ${String(total)} uncommitted path${total === 1 ? '' : 's'} (git status --short):`;
+  return [summary, ...shown.map(escapeUnprintable), ...(rest > 0 ? [`… and ${String(rest)} more`] : [])];
 }
 
 function snapshotSection(snapshot: Snapshot | undefined): string[] {
   if (snapshot === undefined) return [];
-  const heading = `## Before compaction (${SNAPSHOT_FILE})`;
-  const lines =
-    snapshot.status === null
-      ? [`Saved ${snapshot.savedAt}; git could not say the branch or the status.`]
-      : snapshotLines(snapshot, snapshot.status);
-  return [`${heading}\n${lines.join('\n')}`];
+  return [`## Before compaction (${SNAPSHOT_FILE})\n${snapshotLines(snapshot).join('\n')}`];
 }
 
 function overviewSection(projectDir: string): string[] {
