@@ -107,11 +107,25 @@ describe('hook bundles (#30, ADR-0015)', () => {
     expect(result.status).toBe(0);
   });
 
-  it("passes its self-test in a project whose options would deny a sample's command", () => {
+  it.each(HOOK_SOURCES)(
+    '%s runs its self-test in a temp folder, writing nothing into the project or beside the hook',
+    (hook) => {
+      const project = tempDir();
+      const script = isolatedCopy(hook);
+      expect(run(script, '', ['--self-test'], { project }).status).toBe(0);
+      expect(readdirSync(project)).toEqual([]);
+      expect(readdirSync(path.dirname(script))).toEqual([`${hook}.mjs`]);
+    },
+  );
+
+  it("passes its self-test where a project's options, or ones beside the hook, would deny a sample's command", () => {
     const project = tempDir();
+    const script = isolatedCopy('guard-bash');
     const options = { options: { safety: { denyCommands: ['npm test'], blockNoVerify: true } } };
-    writeFiles(project, { [`${BRAND.stateDir}/config.json`]: JSON.stringify(options) });
-    expect(run(isolatedCopy('guard-bash'), '', ['--self-test'], { project }).status).toBe(0);
+    const config = { [`${BRAND.stateDir}/config.json`]: JSON.stringify(options) };
+    writeFiles(project, config);
+    writeFiles(path.dirname(script), config);
+    expect(run(script, '', ['--self-test'], { project }).status).toBe(0);
   });
 
   it('denies a force-push given on stdin, as Claude Code sends it', () => {

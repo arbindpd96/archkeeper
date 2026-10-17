@@ -1,5 +1,7 @@
-import { homedir } from 'node:os';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
+import { BRAND } from '../../core/brand.js';
 import {
   type Answer,
   type HookInput,
@@ -11,7 +13,7 @@ import {
   respond,
 } from './io.js';
 import { isRecord } from '../../core/text.js';
-import { projectDirOf } from './project.js';
+import { projectDirOf, slashed } from './project.js';
 
 /** What a hook does when it cannot do its job (ADR-0015): `ask`, which fails closed, or `open`, which lets the action go on. */
 export type FailurePolicy = 'ask' | 'open';
@@ -31,11 +33,13 @@ export interface HookContext {
 /** What a hook's answer is, as its self-test samples name it; `allow` is no output, which lets the call go on. */
 export type Outcome = 'allow' | 'ask' | 'deny' | 'context' | 'block' | 'refuse';
 
-/** A sample payload embedded in a hook, with the outcome `--self-test` expects for it. */
+/** A sample payload embedded in a hook, the files its project holds, and the outcome `--self-test` expects. */
 export interface Sample {
   readonly name: string;
   readonly payload: Payload;
   readonly expect: Outcome;
+  /** Text files written into the sample's project before the hook answers, by project-relative path. */
+  readonly files?: Readonly<Record<string, string>>;
 }
 
 /** A hook's logic, loaded lazily so that a failure while loading it still meets its failure policy. */
@@ -44,13 +48,22 @@ export interface HookModule {
   readonly samples: readonly Sample[];
 }
 
+/** Where one `--self-test` sample runs, and how to remove that folder once the hook has answered. */
+export interface SampleRun {
+  readonly context: HookContext;
+  readonly remove: () => void;
+}
+
 /** What a launch reads and writes, so tests run a hook in-process. */
 export interface LaunchIo {
   readonly argv: readonly string[];
   readonly input: () => HookInput;
   readonly context: () => HookContext;
-  /** Where `--self-test` runs the samples: no project config there, so a project's options cannot change them. */
-  readonly sampleContext: () => HookContext;
+  /**
+   * A fresh temp folder as the project of one `--self-test` sample, never the real project: no project config
+   * applies there, and no state a sample makes lands in the project (ROADMAP v0.1 M5).
+   */
+  readonly sampleRun: () => SampleRun;
   readonly streams: HookStreams;
 }
 
@@ -62,13 +75,26 @@ function homeFolder(): string {
   }
 }
 
+// A folder left behind in the temp folder costs nothing, so failing to remove it is noted, not a failed sample.
+function tempProject(): SampleRun {
+  const projectDir = mkdtempSync(path.join(tmpdir(), `${BRAND.npmName}-self-test-`));
+  const remove = (): void => {
+    try {
+      rmSync(projectDir, { recursive: true, force: true });
+    } catch {
+      process.stderr.write(`could not remove the self-test folder ${slashed(projectDir)}\n`);
+    }
+  };
+  return { context: { projectDir, home: homeFolder() }, remove };
+}
+
 /** The launch IO of a hook process: its arguments, stdin, environment and standard streams. */
 export function processIo(): LaunchIo {
   return {
     argv: process.argv.slice(2),
     input: readInput,
     context: () => ({ projectDir: projectDirOf(process.env, process.cwd()), home: homeFolder() }),
-    sampleContext: () => ({ projectDir: path.dirname(process.argv[1] ?? '.'), home: homeFolder() }),
+    sampleRun: tempProject,
     streams: {
       stdout: (text) => process.stdout.write(text),
       stderr: (text) => process.stderr.write(text),
@@ -87,10 +113,27 @@ export function outcomeOf(answer: Answer): Outcome {
   return output.decision === 'block' ? 'block' : 'allow';
 }
 
+function writeSampleFiles(projectDir: string, files: Readonly<Record<string, string>>): void {
+  for (const [relative, text] of Object.entries(files)) {
+    const file = path.join(projectDir, ...relative.split('/'));
+    mkdirSync(path.dirname(file), { recursive: true });
+    writeFileSync(file, text);
+  }
+}
+
+function sampleOutcome(hook: HookModule, sample: Sample, io: LaunchIo): Outcome {
+  const run = io.sampleRun();
+  try {
+    writeSampleFiles(run.context.projectDir, sample.files ?? {});
+    return outcomeOf(hook.answer({ payload: sample.payload }, run.context));
+  } finally {
+    run.remove();
+  }
+}
+
 function selfTest(name: string, hook: HookModule, io: LaunchIo): number {
-  const context = io.sampleContext();
   const failures = hook.samples.flatMap((sample) => {
-    const got = outcomeOf(hook.answer({ payload: sample.payload }, context));
+    const got = sampleOutcome(hook, sample, io);
     return got === sample.expect ? [] : [`${name}: ${sample.name}: expected ${sample.expect}, got ${got}`];
   });
   for (const failure of failures) io.streams.stdout(`FAIL ${failure}\n`);
