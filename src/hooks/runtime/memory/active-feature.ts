@@ -13,6 +13,8 @@ const FEATURES = 'docs/features';
 const KEBAB_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const IN_PROGRESS = /^status:[ \t]*in progress\b/im;
 const MAX_MEMORY_BYTES = 1_000_000;
+const STATUS_BYTES = 4096;
+const MAX_SCANNED_FOLDERS = 200;
 const ABSENT = new Set(['ENOENT', 'ENOTDIR']);
 
 /** The active feature's memory: its folder name, its path, its text with LF line endings, and how it was found. */
@@ -61,33 +63,38 @@ function isRealFolder(folder: string): boolean {
 }
 
 // Only kebab-case names count, as for the pointer: no name holds a line break or a control character, and the template
-// in `_template`, which says `Status: in progress` too, never counts.
+// in `_template`, which says `Status: in progress` too, never counts. A Stop with no pointer scans, so at most 200.
 function featureFolders(projectDir: string): string[] {
   const root = path.join(projectDir, ...FEATURES.split('/'));
   try {
+    if (!isRealFolder(root)) return [];
     const names = readdirSync(root).filter((name) => KEBAB_NAME.test(name));
-    return names.filter((name) => isRealFolder(path.join(root, name))).sort(compareText);
+    const first = names.sort(compareText).slice(0, MAX_SCANNED_FOLDERS);
+    return first.filter((name) => isRealFolder(path.join(root, name)));
   } catch (error) {
     if (ABSENT.has((error as NodeJS.ErrnoException).code ?? '')) return [];
     throw error;
   }
 }
 
+// The status line tops a memory, so the scan reads only the head of each.
+function saysInProgress(projectDir: string, name: string): boolean {
+  const read = readProjectFile(projectDir, `${FEATURES}/${name}/MEMORY.md`, STATUS_BYTES, true);
+  return 'text' in read && IN_PROGRESS.test(read.text);
+}
+
 /**
  * The active feature, found as `/handoff` finds it (the v0.1-m5-memory decision of 2026-10-17): the folder the
  * pointer names, when it holds one kebab-case name whose MEMORY.md says `Status: in progress`; else the only
- * MEMORY.md in a kebab-case folder of `docs/features/` that says so. Each read refuses symlinks and files outside
- * the project.
+ * MEMORY.md in a kebab-case folder of `docs/features/` that says so in its first 4 KB, among the first 200 folders.
+ * Each read refuses symlinks and files outside the project.
  */
 export function activeFeature(projectDir: string): ActiveFeature {
   const pointed = pointedFeature(projectDir);
   if (pointed !== undefined) return { memory: pointed };
-  const found = featureFolders(projectDir).flatMap((name) => {
-    const memory = memoryInProgress(projectDir, name, 'scan');
-    return memory === undefined ? [] : [memory];
-  });
-  const [only] = found;
-  return found.length === 1 && only !== undefined
-    ? { memory: only }
-    : { inProgress: found.map((memory) => memory.name) };
+  const inProgress = featureFolders(projectDir).filter((name) => saysInProgress(projectDir, name));
+  const [only] = inProgress;
+  if (inProgress.length !== 1 || only === undefined) return { inProgress };
+  const memory = memoryInProgress(projectDir, only, 'scan');
+  return memory === undefined ? { inProgress: [] } : { memory };
 }
