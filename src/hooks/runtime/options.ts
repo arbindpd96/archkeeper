@@ -16,21 +16,35 @@ export function configFile(brand: Brand = BRAND): string {
   return `${brand.stateDir}/config.json`;
 }
 
+type ConfigRead = { readonly config: unknown } | { readonly missing: true } | { readonly problem: string };
+
+function readConfig(projectDir: string, brand: Brand): ConfigRead {
+  const read = readProjectFile(projectDir, configFile(brand), MAX_CONFIG_BYTES);
+  if (!('text' in read)) return read;
+  try {
+    return { config: JSON.parse(withoutByteOrderMark(read.text)) };
+  } catch {
+    return { problem: 'it is not valid JSON' };
+  }
+}
+
+/** The project config's `preset`, or undefined when the config is missing, unreadable or names no preset. */
+export function configPreset(projectDir: string, brand: Brand = BRAND): string | undefined {
+  const read = readConfig(projectDir, brand);
+  const preset = 'config' in read && isRecord(read.config) ? read.config.preset : undefined;
+  return typeof preset === 'string' ? preset : undefined;
+}
+
 /**
  * Reads one module's `options` from the project config (ADR-0014), the user's reviewed record of intent. A
  * missing config or entry gives no values; a config that is a symlink, outside the project, too large or not
  * JSON gives the problem, so a hook can meet its failure policy instead of silently dropping an option.
  */
 export function readModuleOptions(projectDir: string, moduleId: string, brand: Brand = BRAND): ModuleOptions {
-  const read = readProjectFile(projectDir, configFile(brand), MAX_CONFIG_BYTES);
+  const read = readConfig(projectDir, brand);
   if ('missing' in read) return { values: {} };
   if ('problem' in read) return { problem: read.problem };
-  let config: unknown;
-  try {
-    config = JSON.parse(withoutByteOrderMark(read.text));
-  } catch {
-    return { problem: 'it is not valid JSON' };
-  }
+  const config = read.config;
   const options = isRecord(config) ? config.options : undefined;
   if (options === undefined) return { values: {} };
   const values = isRecord(options) ? options[moduleId] : undefined;

@@ -6,6 +6,7 @@ dist/cli.mjs
 dist/hooks/guard-bash.mjs
 dist/hooks/guard-secrets.mjs
 dist/hooks/pre-compact.mjs
+dist/hooks/session-start.mjs
 dist/main.mjs
 modules/architecture-map/module.json
 modules/base/files/agents.md

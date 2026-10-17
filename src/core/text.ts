@@ -11,13 +11,19 @@ export function compareText(left: string, right: string): number {
 export const UNPRINTABLE = String.raw`\p{Cc}\u2028\u2029\u200E\u200F\u202A-\u202E\u2066-\u2069`;
 
 const UNPRINTABLE_CHARACTER = new RegExp(`[${UNPRINTABLE}]`, 'gu');
+const UNPRINTABLE_BUT_LINES = new RegExp(`(?![\\n\\t])[${UNPRINTABLE}]`, 'gu');
+
+const unicodeEscape = (character: string): string =>
+  `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`;
 
 /** Writes each {@link UNPRINTABLE} character as a JSON `\u` escape, so the text prints as one plain line. */
 export function escapeUnprintable(text: string): string {
-  return text.replace(UNPRINTABLE_CHARACTER, (character) => {
-    const code = character.charCodeAt(0).toString(16).padStart(4, '0');
-    return `\\u${code}`;
-  });
+  return text.replace(UNPRINTABLE_CHARACTER, unicodeEscape);
+}
+
+/** {@link escapeUnprintable} for text of many lines: line feeds and tabs stay, every other such character is escaped. */
+export function escapeUnprintableKeepingLines(text: string): string {
+  return text.replace(UNPRINTABLE_BUT_LINES, unicodeEscape);
 }
 
 /**

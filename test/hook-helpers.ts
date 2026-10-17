@@ -5,7 +5,7 @@ import {
   DEFAULT_OPTIONS,
   type JudgeContext,
 } from '../src/hooks/runtime/bash/judge-context.js';
-import type { Payload } from '../src/hooks/runtime/io.js';
+import type { Answer, Payload } from '../src/hooks/runtime/io.js';
 import { type HookModule, outcomeOf } from '../src/hooks/runtime/launch.js';
 
 /** The home folder and project the guard-bash tables judge commands in. */
@@ -57,4 +57,46 @@ export function hookAnswer(
   const output = answer.kind === 'done' ? answer.output : undefined;
   const specific = output?.hookSpecificOutput as { permissionDecisionReason?: string } | undefined;
   return { outcome: outcomeOf(answer), reason: specific?.permissionDecisionReason ?? '' };
+}
+
+/** The parts of a feature MEMORY.md a memory hook reads; each has a default. */
+export interface MemoryParts {
+  readonly status?: string;
+  readonly goal?: string;
+  readonly decisions?: readonly string[];
+  readonly next?: string;
+}
+
+/** A feature MEMORY.md in the layout of the kit's template, with `Status: in progress` unless `status` says otherwise. */
+export function memoryText(parts: MemoryParts = {}): string {
+  return [
+    '# Feature: x',
+    '',
+    `Status: ${parts.status ?? 'in progress'} | Branch: main`,
+    '',
+    '## Goal',
+    '',
+    parts.goal ?? 'Rate-limit failed logins.',
+    '',
+    '## Decisions (never undo without asking)',
+    '',
+    ...(parts.decisions ?? ['- 2026-10-17: Count failures per account. Why: per-IP counts miss botnets.']),
+    '',
+    '## Done',
+    '',
+    '- [ ] The limiter.',
+    '',
+    '## Next step',
+    '',
+    parts.next ?? 'Wire the token refresh in src/auth.ts.',
+    '',
+  ].join('\n');
+}
+
+/** The `additionalContext` a hook answered with; throws when it answered none. */
+export function injectedContext(answer: Answer): string {
+  const output = answer.kind === 'done' ? answer.output : undefined;
+  const specific = output?.hookSpecificOutput as { additionalContext?: unknown } | undefined;
+  if (typeof specific?.additionalContext !== 'string') throw new Error('the hook injected no context');
+  return specific.additionalContext;
 }

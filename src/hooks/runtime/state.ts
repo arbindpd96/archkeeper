@@ -86,16 +86,22 @@ function ensureIgnoreAll(local: string, rootReal: string): void {
   if (text?.replaceAll('\r', '').trim() !== '*') writeExclusively(ignore, IGNORE_ALL, rootReal);
 }
 
-/** Where `<state dir>/local/<name>` is, with every folder on the way checked, and created when `create` is set. */
-function stateFile(projectDir: string, name: string, brand: Brand, create: boolean): StateFile {
-  if (!STATE_NAME.test(name) || name === IGNORE_FILE) {
-    throw new StateRefused(`${name} is not a plain relative state name`);
-  }
+/** `<state dir>/local/`, checked to be a real folder inside the project, and created with its `.gitignore` if asked. */
+function localFolder(projectDir: string, brand: Brand, create: boolean): { local: string; rootReal: string } {
   const rootReal = realpathSync.native(projectDir);
   const local = path.join(projectDir, brand.stateDir, 'local');
   ensureRealFolder(path.dirname(local), rootReal, create);
   ensureRealFolder(local, rootReal, create);
   if (create) ensureIgnoreAll(local, rootReal);
+  return { local, rootReal };
+}
+
+/** Where `<state dir>/local/<name>` is, with every folder on the way checked, and created when `create` is set. */
+function stateFile(projectDir: string, name: string, brand: Brand, create: boolean): StateFile {
+  if (!STATE_NAME.test(name) || name === IGNORE_FILE) {
+    throw new StateRefused(`${name} is not a plain relative state name`);
+  }
+  const { local, rootReal } = localFolder(projectDir, brand, create);
   const parts = name.split('/');
   let folder = local;
   for (const part of parts.slice(0, -1)) {
@@ -124,8 +130,21 @@ export function writeState(
     writeExclusively(file, content, rootReal);
     return { written: true };
   } catch (error) {
-    const problem = error instanceof Error ? error.message : String(error);
-    return { written: false, problem };
+    return { written: false, problem: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+/**
+ * Creates `<state dir>/local/` with its `.gitignore` of `*` where either is missing, as a state write does, so a
+ * file a skill later writes there, such as the active-feature pointer, is ignored from the start (ADR-0014). A
+ * refused folder is left alone and its reason returned for the hook to report.
+ */
+export function prepareLocalState(projectDir: string, brand: Brand = BRAND): StateWrite {
+  try {
+    localFolder(projectDir, brand, true);
+    return { written: true };
+  } catch (error) {
+    return { written: false, problem: error instanceof Error ? error.message : String(error) };
   }
 }
 

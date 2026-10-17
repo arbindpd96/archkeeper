@@ -63,6 +63,11 @@ export function noAnswer(note?: string): Answer {
   return note === undefined ? { kind: 'done' } : { kind: 'done', note };
 }
 
+/** The answer with a one-line note for stderr added; a refusal already says everything on stderr. */
+export function withNote(answer: Answer, note: string): Answer {
+  return answer.kind === 'done' ? { ...answer, note } : answer;
+}
+
 /** A PreToolUse permission decision whose reason names the guard, as Claude and the user see it. */
 export function permission(decision: Decision, reason: string): Answer {
   const output = {
