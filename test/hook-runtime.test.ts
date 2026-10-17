@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
 import {
@@ -19,19 +21,36 @@ import {
   outcomeOf,
 } from '../src/hooks/runtime/launch.js';
 import { projectDirOf, slashed } from '../src/hooks/runtime/project.js';
+import { tempDir } from './helpers.js';
 
 interface Captured {
   readonly io: LaunchIo;
   readonly out: { stdout: string; stderr: string };
+  /** Each folder a sample ran in, and whether it was removed afterwards. */
+  readonly runs: { readonly projectDir: string; removed: boolean }[];
 }
 
-function capture(argv: readonly string[] = [], input: HookInput = { payload: {} }): Captured {
+function capture(
+  argv: readonly string[] = [],
+  input: HookInput = { payload: {} },
+  sampleDir: () => string = () => '/samples',
+): Captured {
   const out = { stdout: '', stderr: '' };
+  const runs: Captured['runs'] = [];
   const io: LaunchIo = {
     argv,
     input: () => input,
     context: () => ({ projectDir: '/p', home: '/home/u' }),
-    sampleContext: () => ({ projectDir: '/samples', home: '/home/u' }),
+    sampleRun: () => {
+      const run = { projectDir: sampleDir(), removed: false };
+      runs.push(run);
+      return {
+        context: { projectDir: run.projectDir, home: '/home/u' },
+        remove: () => {
+          run.removed = true;
+        },
+      };
+    },
     streams: {
       stdout: (text) => {
         out.stdout += text;
@@ -41,7 +60,7 @@ function capture(argv: readonly string[] = [], input: HookInput = { payload: {} 
       },
     },
   };
-  return { io, out };
+  return { io, out, runs };
 }
 
 const asking: HookModule = {
@@ -203,6 +222,48 @@ describe('hook launch and failure policy (ADR-0015)', () => {
     };
     await launch('guard-bash', () => Promise.resolve(watching), io);
     expect(seen).toEqual(['/samples']);
+  });
+
+  it('runs each sample in a folder of its own and removes it once the hook has answered', async () => {
+    let count = 0;
+    const { io, runs } = capture(['--self-test'], { payload: {} }, () => `/samples/${String((count += 1))}`);
+    const seen: string[] = [];
+    const watching: HookModule = {
+      answer: (_input, context) => {
+        seen.push(context.projectDir);
+        return noAnswer();
+      },
+      samples: [
+        { name: 'one', payload: {}, expect: 'allow' },
+        { name: 'two', payload: {}, expect: 'deny' },
+      ],
+    };
+    expect(await launch('guard-bash', () => Promise.resolve(watching), io)).toBe(1);
+    expect(seen).toEqual(['/samples/1', '/samples/2']);
+    expect(runs).toEqual([
+      { projectDir: '/samples/1', removed: true },
+      { projectDir: '/samples/2', removed: true },
+    ]);
+  });
+
+  it("writes a sample's files into its folder before the hook answers", async () => {
+    const folder = tempDir();
+    const { io } = capture(['--self-test'], { payload: {} }, () => folder);
+    const reading: HookModule = {
+      answer: (_input, context) => {
+        const memory = readFileSync(path.join(context.projectDir, 'docs/features/a/MEMORY.md'), 'utf8');
+        return memory === '# Feature: a\n' ? noAnswer() : permission('deny', 'missing');
+      },
+      samples: [
+        {
+          name: 'a memory',
+          payload: {},
+          expect: 'allow',
+          files: { 'docs/features/a/MEMORY.md': '# Feature: a\n' },
+        },
+      ],
+    };
+    expect(await launch('guard-bash', () => Promise.resolve(reading), io)).toBe(0);
   });
 
   it('exits 1 from --self-test when the hook cannot load', async () => {
