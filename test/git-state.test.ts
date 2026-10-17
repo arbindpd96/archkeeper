@@ -1,16 +1,8 @@
 import { chmodSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it, onTestFinished, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { gitState } from '../src/cli/git-state.js';
-import { commitFiles, git, tempDir, tempRepo, writeFiles } from './helpers.js';
-
-/** Sets an environment variable of this process for the current test only, as the user's shell would. */
-function stubEnv(name: string, value: string): void {
-  vi.stubEnv(name, value);
-  onTestFinished(() => {
-    vi.unstubAllEnvs();
-  });
-}
+import { commitFiles, git, stubEnv, tempDir, tempRepo, writeFiles } from './helpers.js';
 
 describe('gitState', () => {
   it('says a folder outside any repository is not a repository', () => {
@@ -90,6 +82,18 @@ describe('gitState hardening', () => {
     expect(gitState(repo)).toBe('filters');
     expect(existsSync(marker)).toBe(false);
   });
+
+  it.each([
+    ['extensions.partialClone', 'origin'],
+    ['remote.origin.promisor', 'true'],
+  ])(
+    'does not run git status where the repository config sets %s, which status could fetch from',
+    (key, value) => {
+      const repo = tempRepo({ 'README.md': '# App\n' });
+      git(repo, 'config', key, value);
+      expect(gitState(repo)).toBe('filters');
+    },
+  );
 
   it('keeps git status out of a submodule, whose own config could set a filter program', () => {
     const marker = path.join(tempDir(), 'ran');

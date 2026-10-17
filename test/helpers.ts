@@ -12,7 +12,7 @@ import {
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { onTestFinished } from 'vitest';
+import { onTestFinished, vi } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
 
 export const REPO_ROOT = path.resolve(import.meta.dirname, '..');
@@ -261,6 +261,14 @@ export function fixtureCopy(name: string): FixtureCopy {
     GIT_CONFIG_NOSYSTEM: '1',
   });
   return { dir, env };
+}
+
+/** Sets an environment variable of this process for the current test only, as the user's shell would. */
+export function stubEnv(name: string, value: string): void {
+  vi.stubEnv(name, value);
+  onTestFinished(() => {
+    vi.unstubAllEnvs();
+  });
 }
 
 /** Writes an executable `name` script into a fresh temp folder and returns it, to put a stand-in tool on PATH. */

@@ -180,15 +180,6 @@ describe('memory-stop lets Claude stop when it should not or cannot tell (ADR-00
     setModified(dir, LOGIN, -3_600_000);
     expect(stop(dir)).toEqual({ kind: 'done' });
   });
-
-  it('lets Claude stop, running no git status, where the repository config sets a filter program', () => {
-    const marker = path.join(tempDir(), 'ran');
-    const dir = featureRepo({ '.gitattributes': '* filter=evil\n' });
-    git(dir, 'config', 'filter.evil.clean', `touch '${marker}'; cat`);
-    writeFiles(dir, { 'src/auth.ts': 'export const refresh = 1;\n' });
-    expect(stop(dir)).toEqual({ kind: 'done' });
-    expect(existsSync(marker)).toBe(false);
-  });
 });
 
 describe.skipIf(!canSymlink())('memory-stop state safety (ADR-0015)', () => {
