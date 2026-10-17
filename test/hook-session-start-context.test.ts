@@ -30,8 +30,15 @@ function contextOf(projectDir: string, payload: Payload = { source: 'startup' })
   return injectedContext(sessionStart.answer({ payload }, { projectDir, home: tempDir() }));
 }
 
-function snapshotJson(status: readonly string[] | null, more = 0, branch: string | null = 'main'): string {
-  return JSON.stringify({ savedAt: '2026-10-17T10:00:00.000Z', branch, status, more });
+const SAVED_AT = new Date(Date.now() - 60_000).toISOString();
+
+function snapshotJson(
+  status: readonly string[] | null,
+  more = 0,
+  branch: string | null = 'main',
+  savedAt = SAVED_AT,
+): string {
+  return JSON.stringify({ savedAt, branch, status, more });
 }
 
 /** A project of `preset` whose active feature, snapshot and map are each about `size` characters long. */
@@ -151,7 +158,7 @@ describe('session-start after compaction (#35)', () => {
     const lines = section.trim().split('\n').slice(1);
     expect(lines).toHaveLength(20);
     expect(lines[0]).toBe(
-      'Saved 2026-10-17T10:00:00.000Z on branch main, with 57 uncommitted paths (git status --short):',
+      `Saved ${SAVED_AT} on branch main, with 57 uncommitted paths (git status --short):`,
     );
     expect(lines.at(-1)).toBe('… and 39 more');
   });
@@ -179,6 +186,19 @@ describe('session-start after compaction (#35)', () => {
   ])('ignores a snapshot file that is not a snapshot: %s', (text) => {
     const dir = tempDir();
     writeFiles(dir, { [LOGIN]: memoryText(), [SNAPSHOT_FILE]: text });
+    expect(contextOf(dir, { source: 'compact' })).not.toContain('Before compaction');
+  });
+
+  it.each([
+    ['over 15 minutes ago', -16 * 60_000],
+    ['in the future', 60_000],
+  ])('ignores a snapshot saved %s, which is not the one this compaction took', (_when, offsetMs) => {
+    const dir = tempDir();
+    const savedAt = new Date(Date.now() + offsetMs).toISOString();
+    writeFiles(dir, {
+      [LOGIN]: memoryText(),
+      [SNAPSHOT_FILE]: snapshotJson(['?? a.ts'], 0, 'main', savedAt),
+    });
     expect(contextOf(dir, { source: 'compact' })).not.toContain('Before compaction');
   });
 });

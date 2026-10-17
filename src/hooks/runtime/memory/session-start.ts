@@ -98,7 +98,7 @@ function overviewSection(projectDir: string): string[] {
 // In priority order, so the cut at the cap drops the least important content first (ADR-0015).
 function contextText(projectDir: string, compact: boolean, preset: string): string {
   const found = activeFeature(projectDir);
-  const snapshot = compact ? snapshotSection(readSnapshot(projectDir)) : [];
+  const snapshot = compact ? snapshotSection(readSnapshot(projectDir, Date.now())) : [];
   if (!('memory' in found)) return [askLine(found.inProgress), ...snapshot].join('\n\n');
   const overview = OVERVIEW_PRESETS.includes(preset) ? overviewSection(projectDir) : [];
   return [memoryHeader(found.memory), ...memorySections(found.memory), ...snapshot, ...overview].join('\n\n');
@@ -138,7 +138,8 @@ const SAMPLE_MEMORY = [
   '',
 ].join('\n');
 const MEMORY_FILES = { [POINTER_FILE]: 'self-test\n', 'docs/features/self-test/MEMORY.md': SAMPLE_MEMORY };
-const SNAPSHOT = { savedAt: '2026-10-17T00:00:00.000Z', branch: 'main', status: [' M src/a.ts'], more: 0 };
+// Taken as the hook loads, so the sample's snapshot is as recent as one saved just before compaction.
+const SNAPSHOT = { savedAt: new Date().toISOString(), branch: 'main', status: [' M src/a.ts'], more: 0 };
 
 const SAMPLES: readonly Sample[] = [
   { name: 'a session with no active feature', payload: { source: 'startup' }, expect: 'context' },
