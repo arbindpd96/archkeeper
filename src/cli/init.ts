@@ -6,7 +6,7 @@ import { type ProblemReport, UsageError } from '../core/errors.js';
 import { withoutImportedBlocks, withoutRefusedImports } from '../core/import-blocks.js';
 import { resolveOptions } from '../core/options.js';
 import { optOutOwnable } from '../core/opt-out.js';
-import { summarizePlan } from '../core/plan-summary.js';
+import { condensePlan, summarizePlan } from '../core/plan-summary.js';
 import type { Plan } from '../core/plan.js';
 import { projectValues } from '../core/project-values.js';
 import { render, type RenderTree } from '../core/render.js';
@@ -30,7 +30,14 @@ import {
 import { type ExistingConfig, nextConfig, readExistingConfig, withConfig } from './init-config.js';
 import { plannedWrites } from './apply.js';
 import { applyPlanned, finishDryRun } from './init-finish.js';
-import { detectedLines, planLines, reporterFor, stateLines } from './init-report.js';
+import {
+  condensedPlanLines,
+  detectedLines,
+  planLines,
+  reporterFor,
+  stateLines,
+  verboseHintLines,
+} from './init-report.js';
 import { type InitFlags, type InitRun, type Planned, textAt } from './init-run.js';
 import {
   keepingRegisteredScripts,
@@ -195,6 +202,15 @@ function planInit(
   return { profile, existing, next, stack, modules, tree, plan, written, optedOut, hooksKept };
 }
 
+function planListing(run: InitRun, planned: Planned): string[] {
+  const { paint } = run.asking.report;
+  const summaries = summarizePlan(planned.plan);
+  const state = stateLines(planned.written, run.brand);
+  if (run.flags.verbose === true) return [...planLines(summaries, paint), ...state];
+  const rows = condensePlan(summaries);
+  return [...condensedPlanLines(rows, paint), ...state, ...verboseHintLines(rows)];
+}
+
 function showPlan(run: InitRun, planned: Planned): void {
   const { say, paint } = run.asking.report;
   say(presetLine(planned.next.config.preset));
@@ -202,8 +218,7 @@ function showPlan(run: InitRun, planned: Planned): void {
   say(`Modules: ${planned.modules.join(', ')}`);
   say();
   say(paint('bold', 'Plan:'));
-  for (const line of planLines(summarizePlan(planned.plan), paint)) say(line);
-  for (const line of stateLines(planned.written, run.brand)) say(line);
+  for (const line of planListing(run, planned)) say(line);
   const guards = guardsLeftOut(planned.next.config);
   if (guards.length > 0) run.asking.report.warn(guardsOffWarning(guards, planned.hooksKept, run.brand));
   if (planned.optedOut.length > 0) {
@@ -265,6 +280,7 @@ export const setupInit: CommandSetup = (command, session) => {
     .option('--modules <list>', 'Modules to add or leave out, such as +knowledge,-format-on-edit')
     .option('--stack <list>', 'The stack, kept in the config: ts, python, ts,python or none')
     .option('--dry-run', 'Print the plan and a unified diff, and write nothing')
+    .option('--verbose', 'List every file in the plan instead of a summary by folder')
     .action(async (flags: InitFlags) => {
       session.finish(await runInit(startRun(session, flags)));
     });
