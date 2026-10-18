@@ -67,7 +67,7 @@ function topFolder(path: string): string {
   return slash === -1 ? '' : path.slice(0, slash);
 }
 
-function folderRow(group: PlanGroup, folder: string, summaries: readonly PathSummary[]): PlanRow {
+function rowForFolder(group: PlanGroup, folder: string, summaries: readonly PathSummary[]): PlanRow {
   if (folder === '') return { kind: 'root', group, names: summaries.map((summary) => summary.path) };
   const [first, ...others] = summaries;
   if (first !== undefined && others.length === 0) return { kind: 'path', summary: first };
@@ -82,7 +82,7 @@ function rowsByFolder(group: PlanGroup, summaries: readonly PathSummary[]): Plan
   }
   return [...byFolder]
     .sort(([left], [right]) => compareText(left, right))
-    .map(([folder, inFolder]) => folderRow(group, folder, inFolder));
+    .map(([folder, inFolder]) => rowForFolder(group, folder, inFolder));
 }
 
 /**

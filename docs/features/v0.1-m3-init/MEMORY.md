@@ -128,6 +128,8 @@ Always-on context measured by `npm run context` (largest of ts-app, py-app and m
 
 - [x] Review of the import review's fixes (1 blocker, 2 should-fix, 2 medium, 4 low, 9 nits and a fuzzing report) answered: frontmatter that may make Claude Code skip a file (787c025); inline text without an `@` lexed (d95d9c9); the timing rows sized to reach marked and a refusal row per cost (72eac43); paragraph breaks charged (6bc69b7); the companion only beside a CLAUDE.md without other imports (a7b256e); a NUL in a path `ZP` may drop (f0a3c35); the budget's reader on an 8 MB worker stack, failing on a lexing error (59cee2a); Dependabot ignores marked (5852109); the byte-order mark escaped and linted for (9e879bd); the `editBlocks` JSDoc rewrapped (961541b); an import block after the line that closes frontmatter (513b7b2); architecture, decisions, mistakes, reference §2.1 and these notes (this commit). Each fix has a test that fails without it, the nits excepted, and `npm run check` passed before every commit.
 
+- [x] Short plan by folder, with every file behind `--verbose` (cb97d94, 02245fd; owner's choice, 2026-10-18); a test that a `modify` line stays on its own line in the short plan (the review follow-up commit).
+
 ## Next step
 
 1. The coordinator pushes the branch (the ci.yml step for `npm run context` needs `gh auth refresh -h github.com -s workflow`), opens the M3 PR (closes #26; refs #28 until the maintainer answers its two Open questions, then the kit implements them, #28 is amended, or a follow-up issue takes them; closes #25, #27 and #29 only once the maintainer signs off the five "Sign-off" Open questions, which the PR body lists under "Acceptance deviations for sign-off", or the issues are amended).

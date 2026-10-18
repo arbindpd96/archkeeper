@@ -24,6 +24,7 @@ describe('init on a project with its own Claude Code setup', () => {
     const dir = existingSetup();
     const result = await runInit(dir, ['--yes']);
     expect(result.code).toBe(0);
+    expect(result.stdout).toMatch(/^ {2}modify {4}\.claude\/settings\.json \(/m);
     const claude = read(dir, 'CLAUDE.md');
     expect(claude.startsWith(USER_CLAUDE)).toBe(true);
     expect(claude.match(/@AGENTS\.md/g)).toHaveLength(1);

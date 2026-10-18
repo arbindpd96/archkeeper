@@ -114,7 +114,7 @@ function pathLine(summary: PathSummary, paint: Reporter['paint']): string {
   return planLine(summary.group, `${summary.path}${detail(summary)}`, paint);
 }
 
-/** The plan grouped as create, modify, conflict and skip (#27); every path, entry and reason escaped. */
+/** The plan init prints with --verbose: every path on its own line, grouped as create, modify, conflict and skip (#27), escaped. */
 export function planLines(summaries: readonly PathSummary[], paint: Reporter['paint']): string[] {
   if (summaries.length === 0) return [NOTHING_PLANNED];
   return summaries.map((summary) => pathLine(summary, paint));
