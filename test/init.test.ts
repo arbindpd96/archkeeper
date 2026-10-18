@@ -87,6 +87,26 @@ describe('init, scripted', () => {
     expect(projectText(dir)).toBe(before);
   });
 
+  it('prints a short plan by default: root files by name, a count per folder and the --verbose hint', async () => {
+    const result = await runInit(fixtureCopy('ts-app').dir, ['--yes']);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain('Plan:\n  create    .gitattributes, .gitignore, AGENTS.md, CLAUDE.md\n');
+    expect(result.stdout).toMatch(/^ {2}create {4}\d+ files in \.claude\/$/m);
+    expect(result.stdout).not.toContain('.claude/settings.json');
+    expect(result.stdout).toContain(
+      `  and ${CONFIG}, the lock and the base blobs\n  Add --verbose to list every file.\n`,
+    );
+  });
+
+  it('lists every path of the plan on its own line with --verbose, without the hint', async () => {
+    const result = await runInit(fixtureCopy('ts-app').dir, ['--yes', '--verbose']);
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain('  create    .claude/settings.json\n');
+    expect(result.stdout).toContain('  create    AGENTS.md\n  create    CLAUDE.md\n');
+    expect(result.stdout).not.toContain('files in');
+    expect(result.stdout).not.toContain('--verbose');
+  });
+
   it('prints one JSON line with --json and asks nothing', async () => {
     const { dir } = fixtureCopy('mixed');
     const result = await runInit(dir, ['--json', '--yes', '--preset', 'small'], { interactive: true });

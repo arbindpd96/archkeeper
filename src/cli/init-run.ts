@@ -15,6 +15,7 @@ export interface InitFlags {
   readonly modules?: string;
   readonly stack?: string;
   readonly dryRun?: boolean;
+  readonly verbose?: boolean;
 }
 
 /** One run of `init`: the session, its flags, the project folder, the kit and how it may ask. */

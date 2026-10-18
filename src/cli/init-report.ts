@@ -2,7 +2,7 @@ import type { Brand } from '../core/brand.js';
 import { configPath } from '../core/config.js';
 import { lockFilePath } from '../core/lock.js';
 import type { OpKind } from '../core/plan-types.js';
-import type { PathSummary, PlanGroup } from '../core/plan-summary.js';
+import type { PathSummary, PlanGroup, PlanRow } from '../core/plan-summary.js';
 import type { Language, StackProfile } from '../core/stack-profile.js';
 import { escapeUnprintable } from '../core/text.js';
 import { baseFolder } from './blob-store.js';
@@ -104,13 +104,32 @@ function detail(summary: PathSummary): string {
   return words.length === 0 ? '' : ` (${words.join(', ')})`;
 }
 
+const NOTHING_PLANNED = '  nothing to plan';
+
+function planLine(group: PlanGroup, text: string, paint: Reporter['paint']): string {
+  return `  ${paint(GROUP_STYLE[group], group.padEnd(8))}  ${escapeUnprintable(text)}`;
+}
+
+function pathLine(summary: PathSummary, paint: Reporter['paint']): string {
+  return planLine(summary.group, `${summary.path}${detail(summary)}`, paint);
+}
+
 /** The plan grouped as create, modify, conflict and skip (#27); every path, entry and reason escaped. */
 export function planLines(summaries: readonly PathSummary[], paint: Reporter['paint']): string[] {
-  if (summaries.length === 0) return ['  nothing to plan'];
-  return summaries.map((summary) => {
-    const label = paint(GROUP_STYLE[summary.group], summary.group.padEnd(8));
-    return `  ${label}  ${escapeUnprintable(`${summary.path}${detail(summary)}`)}`;
-  });
+  if (summaries.length === 0) return [NOTHING_PLANNED];
+  return summaries.map((summary) => pathLine(summary, paint));
+}
+
+function rowLine(row: PlanRow, paint: Reporter['paint']): string {
+  if (row.kind === 'path') return pathLine(row.summary, paint);
+  const text = row.kind === 'root' ? row.names.join(', ') : `${String(row.count)} files in ${row.folder}/`;
+  return planLine(row.group, text, paint);
+}
+
+/** init's default plan: `condensePlan`'s rows in the columns and colours of `planLines`, every name escaped. */
+export function condensedPlanLines(rows: readonly PlanRow[], paint: Reporter['paint']): string[] {
+  if (rows.length === 0) return [NOTHING_PLANNED];
+  return rows.map((row) => rowLine(row, paint));
 }
 
 /** The line after the plan naming the kit's own files in `written`, the apply's writes: config, lock, base blobs. */
@@ -125,6 +144,11 @@ export function stateLines(written: readonly string[], brand: Brand): string[] {
   const listed =
     names.length === 1 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1) ?? ''}`;
   return [`  and ${escapeUnprintable(listed)}`];
+}
+
+/** The line after a short plan whose folder rows hide files, which `--verbose` lists one by one. */
+export function verboseHintLines(rows: readonly PlanRow[]): string[] {
+  return rows.some((row) => row.kind === 'folder') ? ['  Add --verbose to list every file.'] : [];
 }
 
 const DIFF_STYLE: readonly [prefix: string, format: StyleFormat][] = [
