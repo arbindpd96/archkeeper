@@ -44,7 +44,7 @@ AI coding agents are fast, but they forget. Every new session, and every `/compa
 npx archkeeper init
 ```
 
-archkeeper detects your stack and tools, shows exactly which files it will write, and asks before writing anything. Add `--dry-run` to see the plan without writing.
+archkeeper detects your stack and tools, shows a short plan of what it will write, and asks before writing anything. Add `--verbose` to list every file, or `--dry-run` to see the plan without writing.
 
 **2. Start a feature.** Restart Claude Code so it loads the new setup, then type:
 
