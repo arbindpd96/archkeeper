@@ -12,20 +12,22 @@
 86a04404b65e2118b5761b0faa92c54dfa99dd7b654e263dda73fe5b6287d4cc  state        .acmekit/base/86a04404b65e2118b5761b0faa92c54dfa99dd7b654e263dda73fe5b6287d4cc
 96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1  state        .acmekit/base/96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1
 99408194f38bd7f9ad964927448b4e8e872b4bbca7f405c7e85b2e99ebbe22e6  state        .acmekit/base/99408194f38bd7f9ad964927448b4e8e872b4bbca7f405c7e85b2e99ebbe22e6
+9f26d35d9f3f9fb8eb08f2aca9d13eda706c0376bcad2fc62cb4b82cdff63d56  state        .acmekit/base/9f26d35d9f3f9fb8eb08f2aca9d13eda706c0376bcad2fc62cb4b82cdff63d56
 afd2a94d066fc1670fbeffc984dd72d35f0e58006dc803678a5b0cf76f2fcd2e  state        .acmekit/base/afd2a94d066fc1670fbeffc984dd72d35f0e58006dc803678a5b0cf76f2fcd2e
 beab0e8a02e38248bf3c8a2eea8dbbd29b4a2575038107b24811cd42fde5a4af  state        .acmekit/base/beab0e8a02e38248bf3c8a2eea8dbbd29b4a2575038107b24811cd42fde5a4af
 c21a50a58576afdc151c02bcf12b1b86801606d4cd86396998bb1a5d6e1961ab  state        .acmekit/base/c21a50a58576afdc151c02bcf12b1b86801606d4cd86396998bb1a5d6e1961ab
 c36b483b6893c8446c7149f858e2de81c843421eb167d7927eee2dd5717442c7  state        .acmekit/base/c36b483b6893c8446c7149f858e2de81c843421eb167d7927eee2dd5717442c7
 fce4bb35997926a2d93b95e482b93cf28976f408278086e9133a050ab7bbdace  state        .acmekit/base/fce4bb35997926a2d93b95e482b93cf28976f408278086e9133a050ab7bbdace
-6d80fbac1f9cfb3d9063a6ee397772df29bf5900f29b6fce94791c4cfe564c19  state        .acmekit/config.json
+3a54c2f8ba3064f20de7ea095cfa1bf8354258b5999d81ec6091b3e811d67e98  state        .acmekit/config.json
 cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b  state        .acmekit/local/.gitignore
-dac019b12c97830483989e2996c9c2d9e117182d1e5e4dbe92885c1da8c306e3  state        .acmekit/lock.json
+4b1eef417bad63dc10921454238ae1bcd772ebb518b05ad0b367a811d7baff0a  state        .acmekit/lock.json
+9f26d35d9f3f9fb8eb08f2aca9d13eda706c0376bcad2fc62cb4b82cdff63d56  owned        .claude/hooks/acmekit/format-on-edit.mjs
 96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1  owned        .claude/hooks/acmekit/guard-bash.mjs
 343cfbecf0eab8a622de43d172727d19e0989861bf82146f941b310089e32703  owned        .claude/hooks/acmekit/guard-secrets.mjs
 afd2a94d066fc1670fbeffc984dd72d35f0e58006dc803678a5b0cf76f2fcd2e  owned        .claude/hooks/acmekit/memory-stop.mjs
 1d6f9505476c4f0a62d416fc4eb76b6df678edb5fd5c5a5193a0f93600017c21  owned        .claude/hooks/acmekit/pre-compact.mjs
 3e29d58c0ddc4477a32509ccad081945c22b968c9d6639b09ad9faea3761e428  owned        .claude/hooks/acmekit/session-start.mjs
-b5f62c0a7a102efbbd554bcb2ef94ec304b4e04b1c436fa580e722ef0380b5f8  json         .claude/settings.json
+0c8330442f9603d749d032efe1001d1895e7a2f546d9b8a80c950772969c1ad3  json         .claude/settings.json
 00c9f709e7abb10a8407b03b3f0ee00a06c669e92c08d92745837deb9acd847c  owned        .claude/skills/adr/SKILL.md
 528a7a9997d6681bc8f1a39466802519d29f1f0b202742d4b3320659a84a78d0  owned        .claude/skills/handoff/SKILL.md
 fce4bb35997926a2d93b95e482b93cf28976f408278086e9133a050ab7bbdace  owned        .claude/skills/new-feature/SKILL.md
@@ -172,6 +174,21 @@ Hooks guard this repository unless its config opts one out. guard-bash denies de
               "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/memory-stop.mjs"
             ],
             "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/format-on-edit.mjs"
+            ],
+            "timeout": 30
           }
         ]
       }

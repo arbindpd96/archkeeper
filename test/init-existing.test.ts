@@ -158,7 +158,7 @@ describe.skipIf(!canSymlink())(
 
     it('sets up the rest of the project without reading through the link when the modules writing under .claude are left out', async () => {
       const { dir } = linkedClaudeFolder();
-      const modules = '-safety,-feature-memory,-knowledge,-architecture-map';
+      const modules = '-safety,-feature-memory,-knowledge,-architecture-map,-format-on-edit';
       const result = await runInit(dir, ['--yes', '--modules', modules]);
       expect(result.code).toBe(0);
       expect(read(dir, 'CLAUDE.md')).toContain('@AGENTS.md');

@@ -30,10 +30,21 @@ describe('the v0.1 modules', () => {
 
   it.each(['small', 'medium', 'full'])('the %s preset resolves to its column of the table', (preset) => {
     const expected = Object.keys(MEMBERSHIP).filter((id) => MEMBERSHIP[id]?.includes(preset));
-    const resolved = resolveModules({ preset, stack: ['ts'] }, catalog).modules.map((kit) => kit.manifest.id);
+    const request = { preset, stack: ['ts'], tools: ['prettier', 'eslint'] } as const;
+    const resolved = resolveModules(request, catalog).modules.map((kit) => kit.manifest.id);
     expect([...resolved].sort()).toEqual(expected.sort());
     expect(resolved[0]).toBe('base');
   });
+
+  it.each(['medium', 'full'])(
+    'the %s preset leaves format-on-edit out, saying why, where no formatter is found',
+    (preset) => {
+      const resolution = resolveModules({ preset, stack: ['ts'], tools: ['eslint', 'vitest'] }, catalog);
+      expect(resolution.dropped).toEqual([
+        { id: 'format-on-edit', reason: 'needs prettier, biome or ruff, and none was detected' },
+      ]);
+    },
+  );
 
   it('form the small ⊂ medium ⊂ full chain with the SessionStart caps of ADR-0015', () => {
     expect(catalog.presets.map(({ name, defaults }) => [name, defaults.sessionStartCap])).toEqual([

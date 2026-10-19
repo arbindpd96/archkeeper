@@ -37,6 +37,7 @@ describe('init, scripted', () => {
       $schema: 'https://cdn.jsdelivr.net/npm/acmekit@1.0.0/schema/config.schema.json',
       version: 1,
       preset: 'medium',
+      options: { 'format-on-edit': { formatters: ['prettier'], linters: ['eslint'] } },
     });
     const before = projectText(dir);
     const second = await runInit(dir, ['--json']);

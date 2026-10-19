@@ -5,5 +5,32 @@
   "description": "Formats and lints each edited file with the project's own tools.",
   "presets": ["medium", "full"],
   "requires": ["base"],
+  "when": { "tools": ["prettier", "biome", "ruff"] },
+  "files": [{ "to": ".claude/settings.json", "strategy": "json", "target": "project" }],
+  "hooks": [
+    {
+      "event": "PostToolUse",
+      "matcher": "Edit|Write|MultiEdit",
+      "script": "dist/hooks/format-on-edit.mjs",
+      "timeout": 30
+    }
+  ],
+  "options": {
+    "formatters": {
+      "type": "string-list",
+      "default": [],
+      "description": "The formatters to run on each edited file: prettier or biome, and ruff. init records the ones it detects."
+    },
+    "linters": {
+      "type": "string-list",
+      "default": [],
+      "description": "The linters to run on each edited file: eslint and ruff. init records the ones it detects."
+    },
+    "commands": {
+      "type": "command-list",
+      "default": [],
+      "description": "Extra checks to run on each edited file, as argument arrays its path is appended to, such as [\"node\", \"scripts/check.mjs\"]."
+    }
+  },
   "internal": true
 }

@@ -1,5 +1,5 @@
 import type { Brand } from '../core/brand.js';
-import { CONFIG_VERSION, type ProjectConfig } from '../core/config-schema.js';
+import { CONFIG_VERSION, type OptionValue, type ProjectConfig } from '../core/config-schema.js';
 import { configPath, configSchemaUrl, parseConfig } from '../core/config.js';
 import { ConfigError, type ProblemReport } from '../core/errors.js';
 import { exactHash } from '../core/hash.js';
@@ -18,12 +18,16 @@ export interface ExistingConfig {
   readonly warnings: readonly ProblemReport[];
 }
 
-/** What init settles for the config: the preset, the module changes, and the stack when the user named one. */
+/**
+ * What init settles for the config: the preset, the module changes, the stack when the user named one, and module
+ * option values init records, by module id, such as the tools format-on-edit runs.
+ */
 export interface ConfigAnswers {
   readonly preset: string;
   readonly add: readonly string[];
   readonly remove: readonly string[];
   readonly stack?: readonly Stack[];
+  readonly options?: Readonly<Record<string, Readonly<Record<string, OptionValue>>>>;
 }
 
 /** The config init leaves: its text, whether that differs from the file on disk, its parsed value and warnings. */
@@ -56,12 +60,21 @@ function sameList(left: readonly string[] | undefined, right: readonly string[] 
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function sameOptions(config: ProjectConfig, answers: ConfigAnswers): boolean {
+  return Object.entries(answers.options ?? {}).every(([id, values]) =>
+    Object.entries(values).every(
+      ([name, value]) => JSON.stringify(config.options[id]?.[name]) === JSON.stringify(value),
+    ),
+  );
+}
+
 function sameAnswers(config: ProjectConfig, answers: ConfigAnswers): boolean {
   return (
     config.preset === answers.preset &&
     sameList(config.modules.add, answers.add) &&
     sameList(config.modules.remove, answers.remove) &&
-    (answers.stack === undefined || sameList(config.stack, answers.stack))
+    (answers.stack === undefined || sameList(config.stack, answers.stack)) &&
+    sameOptions(config, answers)
   );
 }
 
@@ -71,11 +84,22 @@ function modulesField(raw: Readonly<Record<string, unknown>>, answers: ConfigAns
   return { modules: { ...modules, add: answers.add, remove: answers.remove } };
 }
 
+// The options init records join the config's own, so every key the user wrote stays, in its module and beside it.
+function optionsField(raw: Readonly<Record<string, unknown>>, answers: ConfigAnswers): object {
+  if (answers.options === undefined) return {};
+  const options = isRecord(raw.options) ? raw.options : {};
+  const recorded = Object.entries(answers.options).map(([id, values]) => {
+    const own = options[id];
+    return [id, { ...(isRecord(own) ? own : {}), ...values }] as const;
+  });
+  return { options: { ...options, ...Object.fromEntries(recorded) } };
+}
+
 /**
  * The config init writes (#27, ADR-0014): the existing file untouched when the answers match it, or its keys,
- * unknown ones included, with the preset, modules and named stack changed. A new config starts with `$schema`
- * (see `configSchemaUrl`) and `version`. `stack` is written only when the user named one, so detection decides
- * otherwise.
+ * unknown ones included, with the preset, modules, named stack and recorded options changed. A new config starts
+ * with `$schema` (see `configSchemaUrl`) and `version`. `stack` is written only when the user named one, so
+ * detection decides otherwise.
  */
 export function nextConfig(
   existing: ExistingConfig | undefined,
@@ -88,7 +112,13 @@ export function nextConfig(
   }
   const raw = existing?.raw ?? { $schema: configSchemaUrl(version, brand), version: CONFIG_VERSION };
   const stack = answers.stack === undefined ? {} : { stack: answers.stack };
-  const value = { ...raw, preset: answers.preset, ...modulesField(raw, answers), ...stack };
+  const value = {
+    ...raw,
+    preset: answers.preset,
+    ...modulesField(raw, answers),
+    ...stack,
+    ...optionsField(raw, answers),
+  };
   const text = `${JSON.stringify(value, null, 2)}\n`;
   return { text, changed: true, ...parseConfig(text, brand) };
 }
