@@ -254,7 +254,7 @@ The first contact with existing user files loses nothing.
 - `init` offers the tools we compose with.
 
 - [x] feat(modules): architecture-map module and update-map skill (the module stays internal until map.gif)
-- [ ] feat(hooks): format-on-edit PostToolUse hook using local tools only
+- [x] feat(hooks): format-on-edit PostToolUse hook using local tools only (stays internal until format.gif)
 - [ ] feat(modules): full preset with an optional shell-free stop check
 - [ ] feat(cli): init offers Superpowers and Spec Kit (print-only in v0.1)
 
