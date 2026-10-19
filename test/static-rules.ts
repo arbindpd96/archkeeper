@@ -18,6 +18,8 @@ const SKILL_KEYS = new Set([
   'arguments',
   'paths',
 ]);
+// A hint is text the user sees while typing the command, so it names one argument, as `<topic>` does, and no more.
+const ARGUMENT_HINT = /^<[a-z-]{1,24}>$/;
 const AGENT_KEYS = new Set([
   'name',
   'description',
@@ -135,6 +137,10 @@ export function skillProblems(text: string): string[] {
   const fields = frontmatterOf(text);
   if (fields === undefined) return ['the skill has no frontmatter'];
   const problems = [...fields.keys()].filter((key) => !SKILL_KEYS.has(key)).map((key) => `skill key ${key}`);
+  const hint = fields.get('argument-hint');
+  if (hint !== undefined && (Array.isArray(hint) || !ARGUMENT_HINT.test(hint))) {
+    problems.push(`skill argument-hint is ${JSON.stringify(hint)}`);
+  }
   const tools = fields.get('allowed-tools') ?? [];
   const list = Array.isArray(tools) ? tools : tools.split(/,\s*|\s+(?=[A-Z])/).filter(Boolean);
   problems.push(...list.flatMap(toolProblems));
