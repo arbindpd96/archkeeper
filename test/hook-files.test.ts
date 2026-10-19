@@ -10,7 +10,13 @@ import {
 } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readModuleOptions } from '../src/hooks/runtime/options.js';
+import {
+  booleanOption,
+  commandListOption,
+  numberOption,
+  readModuleOptions,
+  stringListOption,
+} from '../src/hooks/runtime/options.js';
 import { readProjectFile, readRegularFile } from '../src/hooks/runtime/project.js';
 import { readState, writeState } from '../src/hooks/runtime/state.js';
 import { findProgram, runNodeTool, runProgram } from '../src/hooks/runtime/tools.js';
@@ -218,6 +224,51 @@ describe('module options from the project config', () => {
     expect(readModuleOptions(dir, 'safety', TEST_BRAND)).toMatchObject({
       problem: expect.any(String) as string,
     });
+  });
+});
+
+describe('option values a hook reads', () => {
+  const values = {
+    flag: true,
+    seconds: 90.5,
+    names: ['prettier', 'eslint'],
+    commands: [
+      ['node', 'scripts/check-comments.mjs'],
+      ['ruff', 'check'],
+    ],
+    empty: [],
+    text: 'x',
+  };
+
+  it('reads each type, and the fallback or an empty list when the option is unset', () => {
+    expect(booleanOption(values, 'flag', false)).toBe(true);
+    expect(numberOption(values, 'seconds', 300)).toBe(90.5);
+    expect(numberOption(values, 'missing', 300)).toBe(300);
+    expect(stringListOption(values, 'names')).toEqual(['prettier', 'eslint']);
+    expect(commandListOption(values, 'commands')).toEqual(values.commands);
+    expect(commandListOption(values, 'empty')).toEqual([]);
+    expect(commandListOption(values, 'missing')).toEqual([]);
+  });
+
+  it.each<[string, unknown]>([
+    ['a string', 'node x.mjs'],
+    ['a list of strings', ['node', 'x.mjs']],
+    ['an empty command', [['node', 'x.mjs'], []]],
+    ['a command holding a number', [['node', 1]]],
+  ])('refuses %s as a list of commands', (_name, value) => {
+    expect(commandListOption({ commands: value }, 'commands')).toBeUndefined();
+  });
+
+  it.each<[string, unknown]>([
+    ['a string', '300'],
+    ['NaN', Number.NaN],
+    ['infinity', Number.POSITIVE_INFINITY],
+  ])('refuses %s as a number', (_name, value) => {
+    expect(numberOption({ seconds: value }, 'seconds', 300)).toBeUndefined();
+  });
+
+  it('refuses commands as a list of strings', () => {
+    expect(stringListOption(values, 'commands')).toBeUndefined();
   });
 });
 

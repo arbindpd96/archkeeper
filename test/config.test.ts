@@ -32,12 +32,19 @@ describe('parseConfig', () => {
         preset: 'small',
         modules: { add: ['knowledge'], remove: ['safety'] },
         stack: ['ts', 'python'],
-        options: { safety: { optOut: ['Bash(rm -rf:*)'] } },
+        options: {
+          safety: { optOut: ['Bash(rm -rf:*)'] },
+          'stop-check': { stopTimeout: 120, commands: [['node', 'scripts/check.mjs'], ['pytest']] },
+        },
         compose: { superpowers: true, specKit: false },
       }),
     );
     expect(full.warnings).toEqual([]);
     expect(full.config.modules).toEqual({ add: ['knowledge'], remove: ['safety'] });
+    expect(full.config.options['stop-check']).toEqual({
+      stopTimeout: 120,
+      commands: [['node', 'scripts/check.mjs'], ['pytest']],
+    });
     expect(parseConfig(json({ preset: 'medium' })).config).toEqual({
       preset: 'medium',
       modules: { add: [], remove: [] },
@@ -75,13 +82,19 @@ describe('parseConfig', () => {
       'an option value that is an object',
       { preset: 'small', options: { safety: { optOut: {} } } },
       'options.safety.optOut',
-      'true or false, a string, or a list of strings',
+      'true or false, a number, a string, a list of strings or a list of commands',
     ],
     [
       'an option list that holds a number',
       { preset: 'small', options: { safety: { optOut: [1] } } },
       'options.safety.optOut',
-      'true or false, a string, or a list of strings',
+      'true or false, a number, a string, a list of strings or a list of commands',
+    ],
+    [
+      'an option list that mixes strings and commands',
+      { preset: 'small', options: { 'format-on-edit': { commands: ['node', ['x.mjs']] } } },
+      'options.format-on-edit.commands',
+      'a list of commands',
     ],
     [
       'a compose choice that is not a boolean',
@@ -140,8 +153,20 @@ describe('resolveOptions', () => {
   it('fills every module with its defaults and applies the config values', () => {
     const { options: resolved, warnings } = options({ rich: { blockNoVerify: true } });
     expect(warnings).toEqual([]);
-    expect(resolved.get('rich')).toEqual({ blockNoVerify: true, optOut: [] });
+    expect(resolved.get('rich')).toEqual({ blockNoVerify: true, optOut: [], timeout: 300, commands: [] });
     expect(resolved.get('base')).toEqual({});
+  });
+
+  it('applies a number and a list of commands, an empty list of commands included', () => {
+    const commands = [['node', 'scripts/check-comments.mjs'], ['ruff']];
+    expect(options({ rich: { timeout: 12.5, commands } }).options.get('rich')).toMatchObject({
+      timeout: 12.5,
+      commands,
+    });
+    expect(options({ rich: { optOut: [], commands: [] } }).options.get('rich')).toMatchObject({
+      optOut: [],
+      commands: [],
+    });
   });
 
   it('warns about options for an unknown module or option and ignores them', () => {
@@ -150,7 +175,7 @@ describe('resolveOptions', () => {
       ['options.ghost', 'is not a module, so its options are ignored'],
       ['options.rich.nope', 'is not an option of this module, so it is ignored'],
     ]);
-    expect(resolved.get('rich')).toEqual({ blockNoVerify: false, optOut: [] });
+    expect(resolved.get('rich')).toEqual({ blockNoVerify: false, optOut: [], timeout: 300, commands: [] });
   });
 
   it.each(['constructor', 'toString'])('warns about option %s, which only objects inherit', (name) => {
@@ -170,6 +195,20 @@ describe('resolveOptions', () => {
       { rich: { optOut: 'Bash(x)' } },
       'options.rich.optOut',
       'a list of strings',
+    ],
+    ['commands for a list option', { rich: { optOut: [['x']] } }, 'options.rich.optOut', 'a list of strings'],
+    ['a string for a number option', { rich: { timeout: '300' } }, 'options.rich.timeout', 'a number'],
+    [
+      'a list of strings for a command-list option',
+      { rich: { commands: ['node', 'x.mjs'] } },
+      'options.rich.commands',
+      'a list of commands, each a list of strings',
+    ],
+    [
+      'an empty command, which names no program',
+      { rich: { commands: [['node', 'x.mjs'], []] } },
+      'options.rich.commands',
+      'Extra commands to run.',
     ],
   ])('rejects %s, quoting the option description', (_name, value, location, fix) => {
     let caught: unknown;

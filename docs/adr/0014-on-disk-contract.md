@@ -186,3 +186,10 @@ The command-line contract (#40):
 - **Local, uncommitted bases.** Teammates cannot 3-way merge.
 - **Overwrite with backups.** Loses trust.
 - **3-way merge in v0.1.** Puts more risk into the first frozen contract.
+
+## Notes
+
+- **2026-10-19, v0.1 M6: module options also take a number and a list of commands** ([v0.1-m6-map memory](../features/v0.1-m6-map/MEMORY.md)).
+  - A module may declare an option of type `number` or `command-list`, and `config.json` accepts both values besides `true` or `false`, a string and a list of strings, in its zod schema and `schema/config.schema.json`.
+  - A command is an argument array that names its program first, such as `["node", "scripts/check-comments.mjs"]`, never a command line, so no shell ever reads it (ADR-0015). An empty command names nothing to run and is refused.
+  - format-on-edit's extra `commands` (#37) and the stop check's timeout (#38) need them. 0.1.0 is not published yet, so the shapes change with this note and the config keeps `version` 1 (see Schema changes).

@@ -209,10 +209,10 @@ function whenOptionFinding(
         `declare it in options (declared: ${known})`,
       );
     }
-    if (spec.type === 'string-list') {
+    if (spec.type !== 'boolean' && spec.type !== 'string') {
       return finding(
         location,
-        'is a string-list option',
+        `is a ${spec.type} option`,
         'compare a boolean or string option: a when can compare only those',
       );
     }

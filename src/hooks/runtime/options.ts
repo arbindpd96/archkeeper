@@ -63,6 +63,10 @@ export function booleanOption(
   return typeof value === 'boolean' ? value : undefined;
 }
 
+const isStringList = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === 'string');
+const isCommand = (value: unknown): value is string[] => isStringList(value) && value.length > 0;
+
 /** A string-list option's value, `[]` when it is unset, or undefined when it is not a list of strings. */
 export function stringListOption(
   values: Readonly<Record<string, unknown>>,
@@ -70,6 +74,29 @@ export function stringListOption(
 ): string[] | undefined {
   const value = values[name];
   if (value === undefined) return [];
-  if (!Array.isArray(value)) return undefined;
-  return value.every((item): item is string => typeof item === 'string') ? value : undefined;
+  return isStringList(value) ? value : undefined;
+}
+
+/** A number option's value, the fallback when it is unset, or undefined when it is not a finite number. */
+export function numberOption(
+  values: Readonly<Record<string, unknown>>,
+  name: string,
+  fallback: number,
+): number | undefined {
+  const value = values[name];
+  if (value === undefined) return fallback;
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+/**
+ * A command-list option's value, `[]` when it is unset, or undefined when it is not a list of argument arrays that
+ * each name a program first.
+ */
+export function commandListOption(
+  values: Readonly<Record<string, unknown>>,
+  name: string,
+): string[][] | undefined {
+  const value = values[name];
+  if (value === undefined) return [];
+  return Array.isArray(value) && value.every(isCommand) ? value : undefined;
 }

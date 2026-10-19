@@ -540,6 +540,28 @@
             "properties": {
               "type": {
                 "type": "string",
+                "const": "number"
+              },
+              "default": {
+                "type": "number"
+              },
+              "description": {
+                "type": "string",
+                "pattern": "^\\S[^\\r\\n]*$"
+              }
+            },
+            "required": [
+              "type",
+              "default",
+              "description"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
                 "const": "string"
               },
               "default": {
@@ -568,6 +590,35 @@
                 "type": "array",
                 "items": {
                   "type": "string"
+                }
+              },
+              "description": {
+                "type": "string",
+                "pattern": "^\\S[^\\r\\n]*$"
+              }
+            },
+            "required": [
+              "type",
+              "default",
+              "description"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "command-list"
+              },
+              "default": {
+                "type": "array",
+                "items": {
+                  "minItems": 1,
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
                 }
               },
               "description": {
