@@ -21,6 +21,7 @@ export type FailurePolicy = 'ask' | 'open';
 
 /** ADR-0015's failure policy of every hook the kit ships, by bundle name: both guards fail closed, the rest open. */
 export const FAILURE_POLICY: Readonly<Record<string, FailurePolicy>> = {
+  'format-on-edit': 'open',
   'guard-bash': 'ask',
   'guard-secrets': 'ask',
   'memory-stop': 'open',
@@ -34,8 +35,11 @@ export interface HookContext {
   readonly home: string;
 }
 
-/** What a hook's answer is, as its self-test samples name it; `allow` is no output, which lets the call go on. */
-export type Outcome = 'allow' | 'ask' | 'deny' | 'context' | 'block' | 'refuse';
+/**
+ * What a hook's answer is, as its self-test samples name it: `allow` is no output, which lets the call go on, and
+ * `message` a `systemMessage` for the user alone.
+ */
+export type Outcome = 'allow' | 'ask' | 'deny' | 'context' | 'block' | 'message' | 'refuse';
 
 /** A sample payload embedded in a hook, the files its project holds, and the outcome `--self-test` expects. */
 export interface Sample {
@@ -114,7 +118,8 @@ export function outcomeOf(answer: Answer): Outcome {
   const decision = specific.permissionDecision;
   if (decision === 'ask' || decision === 'deny' || decision === 'allow') return decision;
   if (typeof specific.additionalContext === 'string') return 'context';
-  return output.decision === 'block' ? 'block' : 'allow';
+  if (output.decision === 'block') return 'block';
+  return typeof output.systemMessage === 'string' ? 'message' : 'allow';
 }
 
 function writeSampleFiles(projectDir: string, files: Readonly<Record<string, string>>): void {

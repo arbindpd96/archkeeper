@@ -119,7 +119,7 @@ describe('programs from .venv or PATH (ADR-0015)', () => {
     mkdirSync(path.join(dir, '.venv', 'bin'), { recursive: true });
     symlinkSync(target, path.join(dir, '.venv', 'bin', 'ruff'));
     stubEnv('PATH', '');
-    expect(pythonTool(dir, 'ruff')).toEqual({ missing: '.venv/bin/ruff or PATH' });
+    expect(pythonTool(dir, 'ruff')).toEqual({ missing: '.venv or PATH' });
   });
 
   it('looks on PATH only in absolute folders outside the project', () => {

@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { runScript, tempDir, writeFiles } from './helpers.js';
+import { REPO_ROOT, runScript, tempDir, writeFiles } from './helpers.js';
 
 const QUIET_HOOK = "import { readFileSync } from 'node:fs';\nreadFileSync(0);\n";
 
@@ -35,6 +35,14 @@ describe('hook-latency (ADR-0015, ADR-0017)', () => {
     const gated = latency(root, '--gate');
     expect(gated.status).toBe(1);
     expect(gated.stderr).toMatch(/guard-bash has a p95 of [\d.]+ ms, over its 0 ms/);
+  });
+
+  it('has sample payloads for every hook the build makes, format-on-edit included', () => {
+    const hooks = readdirSync(path.join(REPO_ROOT, 'src/hooks'))
+      .filter((file) => file.endsWith('.ts'))
+      .map((file) => path.basename(file, '.ts'));
+    expect(hooks).toContain('format-on-edit');
+    expect(latency(fixture({ p95Ms: 10_000 }, hooks)).status).toBe(0);
   });
 
   it('fails a built hook that has no sample payloads to time', () => {
