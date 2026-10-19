@@ -10,8 +10,9 @@ import {
   sessionStart,
 } from '../src/hooks/runtime/memory/session-start.js';
 import { SNAPSHOT_FILE } from '../src/hooks/runtime/memory/snapshot.js';
-import { REPO_ROOT, tempDir, tempRepo, writeFiles } from './helpers.js';
+import { fixtureCopy, REPO_ROOT, tempDir, tempRepo, writeFiles } from './helpers.js';
 import { injectedContext, memoryText } from './hook-helpers.js';
+import { runInit } from './init-helpers.js';
 
 const POINTER = `${BRAND.stateDir}/local/active-feature`;
 const CONFIG = `${BRAND.stateDir}/config.json`;
@@ -125,6 +126,15 @@ describe('session-start and the architecture Overview (#35)', () => {
       expect(context).not.toContain('Not injected.');
     },
   );
+
+  it("shows the Overview a fresh medium init seeds, the project's stack (#36)", async () => {
+    const { dir } = fixtureCopy('ts-app');
+    expect((await runInit(dir, ['--yes', '--preset', 'medium'])).code).toBe(0);
+    writeFiles(dir, { [CONFIG]: '{"preset":"medium"}', [POINTER]: 'login\n', [LOGIN]: memoryText() });
+    expect(contextOf(dir)).toMatch(
+      /\n## Architecture overview \(docs\/architecture\.md\)\n- Stack: TypeScript \(npm\)$/,
+    );
+  });
 
   it('leaves the Overview out in small, and wherever no feature is active', () => {
     const dir = tempDir();

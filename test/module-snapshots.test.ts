@@ -4,9 +4,11 @@ import { describe, expect, it } from 'vitest';
 import { projectView } from '../src/cli/project-view.js';
 import { detectStack } from '../src/core/detect.js';
 import type { KitModule } from '../src/core/loader.js';
+import { mapValues } from '../src/core/map-seed.js';
 import { projectValues } from '../src/core/project-values.js';
 import { render, type RenderTree } from '../src/core/render.js';
 import { REPO_ROOT } from './helpers.js';
+import { filesUnder } from './install-helpers.js';
 import { KIT } from './init-helpers.js';
 import { TEST_BRAND } from './kit-fixtures.js';
 
@@ -37,9 +39,14 @@ function treeText(tree: RenderTree): string {
     .join('');
 }
 
+// The values init renders with, the fixture's own files standing in for the files git tracks.
 function renderedOn(id: string, fixture: string): string {
-  const profile = detectStack(projectView(realpathSync.native(path.join(REPO_ROOT, 'examples', fixture))));
-  const values = projectValues(profile, profile.stack);
+  const dir = realpathSync.native(path.join(REPO_ROOT, 'examples', fixture));
+  const profile = detectStack(projectView(dir));
+  const values = {
+    ...projectValues(profile, profile.stack),
+    ...mapValues(profile, projectView(dir), filesUnder(dir), TEST_BRAND),
+  };
   return `##### ${id} on examples/${fixture}\n${treeText(render(withRequires(id), { stack: profile.stack, values }, TEST_BRAND))}`;
 }
 

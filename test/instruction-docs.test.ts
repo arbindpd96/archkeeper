@@ -3,9 +3,10 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { fixtureCopy } from './helpers.js';
 import { filesUnder } from './install-helpers.js';
-import { runInit } from './init-helpers.js';
+import { KIT, runInit } from './init-helpers.js';
 
 const SKILL = /^\.claude\/skills\/[^/]+\/SKILL\.md$/;
+const MAP_PRESETS = KIT.modules.get('architecture-map')?.manifest.presets ?? [];
 // A doc path, in a code span or bare, as in a skill's description, runs to a space, a backtick or punctuation.
 const DOC_PATH = /(?<![\w./-])docs\/[^\s`,;()]*/g;
 
@@ -41,5 +42,14 @@ describe.each(['small', 'medium', 'full'])('init with the %s preset (#34)', (pre
     expect(named.length).toBeGreaterThan(0);
     const missing = named.filter(({ doc }) => !files.some((file) => docPattern(doc).test(file)));
     expect(missing).toEqual([]);
+  });
+
+  it('names the architecture map and /update-map in AGENTS.md only where the preset writes them (#36)', async () => {
+    const { dir } = fixtureCopy('py-app');
+    expect((await runInit(dir, ['--yes', '--preset', preset])).code).toBe(0);
+    const agents = readFileSync(path.join(dir, 'AGENTS.md'), 'utf8');
+    for (const name of ['`docs/architecture.md`', '`/update-map`']) {
+      expect(agents.includes(name), name).toBe(MAP_PRESETS.includes(preset));
+    }
   });
 });

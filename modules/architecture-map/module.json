@@ -5,5 +5,21 @@
   "description": "A seeded docs/architecture.md and the /update-map skill.",
   "presets": ["medium", "full"],
   "requires": ["base"],
+  "files": [
+    {
+      "from": "architecture.md",
+      "to": "docs/architecture.md",
+      "strategy": "create-only",
+      "target": "project"
+    },
+    {
+      "from": "skill-update-map.md",
+      "to": ".claude/skills/update-map/SKILL.md",
+      "strategy": "owned",
+      "target": "project"
+    },
+    { "to": "AGENTS.md", "strategy": "blocks", "target": "project" }
+  ],
+  "blocks": [{ "file": "AGENTS.md", "id": "architecture-map", "template": "agents-architecture-map.md" }],
   "internal": true
 }

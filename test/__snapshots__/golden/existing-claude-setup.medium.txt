@@ -3,6 +3,7 @@
 343cfbecf0eab8a622de43d172727d19e0989861bf82146f941b310089e32703  state        .acmekit/base/343cfbecf0eab8a622de43d172727d19e0989861bf82146f941b310089e32703
 3e29d58c0ddc4477a32509ccad081945c22b968c9d6639b09ad9faea3761e428  state        .acmekit/base/3e29d58c0ddc4477a32509ccad081945c22b968c9d6639b09ad9faea3761e428
 3e6f1a905b397a0875312ee4a71c1216586f40c2f7b481ce0bb8e18d71405864  state        .acmekit/base/3e6f1a905b397a0875312ee4a71c1216586f40c2f7b481ce0bb8e18d71405864
+4851eceb26edab8a78f75cb9f9a4c6820b0647908df301be07340301e45e4a69  state        .acmekit/base/4851eceb26edab8a78f75cb9f9a4c6820b0647908df301be07340301e45e4a69
 528a7a9997d6681bc8f1a39466802519d29f1f0b202742d4b3320659a84a78d0  state        .acmekit/base/528a7a9997d6681bc8f1a39466802519d29f1f0b202742d4b3320659a84a78d0
 5a632757964e463c9b02e5eacddf7e910a0c1c931a2adb198a42e7eebc30bd8d  state        .acmekit/base/5a632757964e463c9b02e5eacddf7e910a0c1c931a2adb198a42e7eebc30bd8d
 78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7  state        .acmekit/base/78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7
@@ -13,10 +14,11 @@ afd2a94d066fc1670fbeffc984dd72d35f0e58006dc803678a5b0cf76f2fcd2e  state        .
 beab0e8a02e38248bf3c8a2eea8dbbd29b4a2575038107b24811cd42fde5a4af  state        .acmekit/base/beab0e8a02e38248bf3c8a2eea8dbbd29b4a2575038107b24811cd42fde5a4af
 c21a50a58576afdc151c02bcf12b1b86801606d4cd86396998bb1a5d6e1961ab  state        .acmekit/base/c21a50a58576afdc151c02bcf12b1b86801606d4cd86396998bb1a5d6e1961ab
 c36b483b6893c8446c7149f858e2de81c843421eb167d7927eee2dd5717442c7  state        .acmekit/base/c36b483b6893c8446c7149f858e2de81c843421eb167d7927eee2dd5717442c7
+cd8d1cf27da347bd6a282babad8e0cc019505cab12a6584daff25aa360f0209e  state        .acmekit/base/cd8d1cf27da347bd6a282babad8e0cc019505cab12a6584daff25aa360f0209e
 fce4bb35997926a2d93b95e482b93cf28976f408278086e9133a050ab7bbdace  state        .acmekit/base/fce4bb35997926a2d93b95e482b93cf28976f408278086e9133a050ab7bbdace
 6d80fbac1f9cfb3d9063a6ee397772df29bf5900f29b6fce94791c4cfe564c19  state        .acmekit/config.json
 cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b  state        .acmekit/local/.gitignore
-83781f44b6d88d19e9e4afb47c0da3c123a2d7e0dac17ae65b5991ac029ec634  state        .acmekit/lock.json
+aa6a4625f9b1ebead19f8358e70b5908b3f5bd62663b0ce96665a3cb68627681  state        .acmekit/lock.json
 96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1  owned        .claude/hooks/acmekit/guard-bash.mjs
 343cfbecf0eab8a622de43d172727d19e0989861bf82146f941b310089e32703  owned        .claude/hooks/acmekit/guard-secrets.mjs
 afd2a94d066fc1670fbeffc984dd72d35f0e58006dc803678a5b0cf76f2fcd2e  owned        .claude/hooks/acmekit/memory-stop.mjs
@@ -26,15 +28,17 @@ afd2a94d066fc1670fbeffc984dd72d35f0e58006dc803678a5b0cf76f2fcd2e  owned        .
 00c9f709e7abb10a8407b03b3f0ee00a06c669e92c08d92745837deb9acd847c  owned        .claude/skills/adr/SKILL.md
 528a7a9997d6681bc8f1a39466802519d29f1f0b202742d4b3320659a84a78d0  owned        .claude/skills/handoff/SKILL.md
 fce4bb35997926a2d93b95e482b93cf28976f408278086e9133a050ab7bbdace  owned        .claude/skills/new-feature/SKILL.md
+cd8d1cf27da347bd6a282babad8e0cc019505cab12a6584daff25aa360f0209e  owned        .claude/skills/update-map/SKILL.md
 8244dc2a6667ee91324c707423aa3992578ac192d36e9b1535424931e56db87f  owned        .claude/skills/why/SKILL.md
 86a04404b65e2118b5761b0faa92c54dfa99dd7b654e263dda73fe5b6287d4cc  user         .claude/skills/why/SKILL.md.acmekit-new
 cd7366ce9cbf42d295cad1b0bfc1900a96028d33afe15008be380ab9bba0265c  blocks       .gitattributes
 491e2e47d3979f026ba67314885071414ac11c06d84e74857f6ba84cc6c98f0b  blocks       .gitignore
 37055c98043228133ffcc5cad7bba5ef6c8f24698a551cae547b90f51d22e519  user         .prettierrc.json
-92a6dd23428f92e74a65163dcd18c21002c22aaa84d1d58e20832f6795d7b5f4  blocks       AGENTS.md
+ab0755e740697ade8eb1f1b4dfdc3e520bc459e009e73d2572d5846773fa867f  blocks       AGENTS.md
 4f0c3f78bdba99783b07985121cd5c9c0e5d60756ac8773542eb6c2f155af025  blocks       CLAUDE.md
 352c829f9f658f90eef7a90183872c4f83e48f080bb6265fd34d0dd09a347d73  create-only  docs/adr/0000-template.md
 47af7278c6ea424f8f729f267c28847e13e200f7183c591d3d0f84de4fdab083  user         docs/adr/0001-run-tests-with-vitest.md
+415cd78aab7449ef5f987a5f37037a69cb4829df32a2d63e1404f45eb77d4c0c  create-only  docs/architecture.md
 7ca81795dcb726ba36742d50abdb88a74a63808bfad6885cfccf4d8bf0b464f2  create-only  docs/decisions.md
 4e63c485c075be179b03e75f99367ef85473980862ed524c8ddc8afc1d7b2d24  create-only  docs/features/_template/MEMORY.md
 b5c4383fbf153ea0d527315f74f02741cb70721db40c0edf85d6721855f3aee0  create-only  docs/glossary.md
@@ -89,6 +93,15 @@ Rules for AI coding agents, such as Claude Code, Codex, Cursor, Gemini CLI and C
 | `npm run lint` | Lint |
 | `npm run format` | Format |
 <!-- acmekit:end agent-rules -->
+
+<!-- acmekit:begin architecture-map -->
+## Architecture map
+
+`docs/architecture.md` maps what exists and where: the stack, the folders and the entry points.
+
+- Before creating anything new, check the map for code that already does the job.
+- After adding or removing a module, package, command or shared util, update the map with `/update-map`.
+<!-- acmekit:end architecture-map -->
 
 <!-- acmekit:begin feature-memory -->
 ## Feature memory
