@@ -9,6 +9,7 @@ dist/hooks/guard-secrets.mjs
 dist/hooks/memory-stop.mjs
 dist/hooks/pre-compact.mjs
 dist/hooks/session-start.mjs
+dist/hooks/stop-check.mjs
 dist/main.mjs
 modules/architecture-map/files/agents-architecture-map.md
 modules/architecture-map/files/architecture.md
