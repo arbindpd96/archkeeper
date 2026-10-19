@@ -256,7 +256,7 @@ The first contact with existing user files loses nothing.
 - [x] feat(modules): architecture-map module and update-map skill (the module stays internal until map.gif)
 - [x] feat(hooks): format-on-edit PostToolUse hook using local tools only (stays internal until format.gif)
 - [x] feat(modules): full preset with an optional shell-free stop check (stays internal until stop-check.gif)
-- [ ] feat(cli): init offers Superpowers and Spec Kit (print-only in v0.1)
+- [x] feat(cli): init offers Superpowers and Spec Kit (print-only in v0.1)
 
 **M7: Lifecycle: update, uninstall, doctor v0, e2e, live acceptance.** Users can take fixes safely, diagnose problems in the install and in their own memory files, and leave cleanly. This is proven on the real tarball, across two kit versions and three OSes, and in a real Claude Code session.
 
@@ -315,7 +315,7 @@ The first contact with existing user files loses nothing.
   - On a project of broken memory files that a test builds in a temp folder, it reports every seeded problem at its file and line, with what is wrong, why it matters and the fix, and no error that was not seeded.
   - On a project built the same way whose memory files only look broken, such as `@alice`, `@types/node` and `<placeholder>` paths, it reports no error and no warning.
   - It changes nothing: the project tree, `.archkeeper/` included, is byte-identical after a run, hook self-tests included.
-- **Compose offers.** `init` offers Superpowers and Spec Kit, off by default. A yes prints the commands and records the choice. Nothing is installed or fetched.
+- **Compose offers.** `init` offers Superpowers and Spec Kit, off by default. A yes prints the commands and records the choice. Nothing is installed or fetched. Met in M6 (#39).
 - **Dogfood.** This repo runs on kit-generated files, and the CI self-check (`update --check` plus `doctor`) is green.
 - **Gate and release.**
   - 0.1.0-rc.0 (tag `next`) and 0.1.0 were staged-published with maintainer 2FA approval.
