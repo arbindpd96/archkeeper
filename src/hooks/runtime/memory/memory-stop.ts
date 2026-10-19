@@ -4,16 +4,14 @@ import path from 'node:path';
 import { BRAND } from '../../../core/brand.js';
 import { compareText, escapeUnprintable, isRecord } from '../../../core/text.js';
 import { projectStatus } from '../git-status.js';
-import { type Answer, block, type HookInput, noAnswer, type Payload } from '../io.js';
+import { type Answer, block, type HookInput, noAnswer, stopHookActive } from '../io.js';
 import type { HookContext, HookModule, Sample } from '../launch.js';
 import { slashed } from '../project.js';
 import { readState, writeState } from '../state.js';
+import { isWorkFile } from '../work-files.js';
 import { activeFeature, confirmFirst, type FeatureMemory, POINTER_FILE } from './active-feature.js';
 
 const STATE = 'memory-stop.json';
-// Docs are not the work a memory records: anything under docs/, and Markdown and other markup anywhere. A .txt file
-// counts as work, since requirements.txt and CMakeLists.txt are code.
-const DOC_FILE = /\.(?:md|mdx|markdown|rst|adoc)$/i;
 const NAMES_SHOWN = 3;
 
 /** The work a Stop finds unsaved in the memory, and the change set it belongs to. */
@@ -22,11 +20,6 @@ interface UnsavedWork {
   readonly changeSet: string;
   /** Those of the files saved after the memory, in path order. */
   readonly files: readonly string[];
-}
-
-// The kit's own state, such as the lock an update rewrites, is not work either.
-function isWorkFile(file: string): boolean {
-  return !file.startsWith('docs/') && !file.startsWith(`${BRAND.stateDir}/`) && !DOC_FILE.test(file);
 }
 
 function modifiedAt(projectDir: string, file: string): number | undefined {
@@ -63,13 +56,6 @@ function askedBefore(projectDir: string, changeSet: string): boolean {
   }
 }
 
-// Claude Code sets it while a Stop hook's block keeps Claude working. Any value but false ends the hook at once, so it
-// never loops; a missing field reads as false.
-function keptWorking(payload: Payload): boolean {
-  const active = payload.stop_hook_active;
-  return active !== undefined && active !== false;
-}
-
 function reason(memory: FeatureMemory, files: readonly string[]): string {
   const more = files.length > NAMES_SHOWN ? ` and ${String(files.length - NAMES_SHOWN)} more` : '';
   const changed = `${files.slice(0, NAMES_SHOWN).map(escapeUnprintable).join(', ')}${more}`;
@@ -81,7 +67,7 @@ function reason(memory: FeatureMemory, files: readonly string[]): string {
 
 function answer(input: HookInput, context: HookContext): Answer {
   if (input.problem !== undefined) return noAnswer(`memory-stop: ${input.problem}, so it let Claude stop`);
-  if (keptWorking(input.payload)) return noAnswer();
+  if (stopHookActive(input.payload)) return noAnswer();
   const found = activeFeature(context.projectDir);
   if (!('memory' in found)) return noAnswer();
   const unsaved = unsavedWork(context.projectDir, found.memory);
