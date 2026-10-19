@@ -14,7 +14,9 @@ on:
       - 'tsdown.config.mts'
       - 'scripts/lib.mjs'
       - 'scripts/render-tapes.mjs'
+      - 'scripts/tape-rules.mjs'
       - 'scripts/check-demos.mjs'
+      - 'scripts/demo-rules.mjs'
       - '.github/workflows/demo-gifs.yml'
   workflow_dispatch:
 
