@@ -175,6 +175,28 @@ describe('render', () => {
     expect(render([optionalFile()], { stack: [] }).has('docs/extra.md')).toBe(false);
   });
 
+  it('renders a file whose when names a tool only when the context gives that tool', () => {
+    const manifest = plainManifest('lint', {
+      files: [
+        {
+          from: 'lint.md',
+          to: 'docs/lint.md',
+          strategy: 'owned',
+          target: 'project',
+          when: { tools: ['ruff'] },
+        },
+      ],
+    });
+    const read = memoryReader({
+      'modules/lint/module.json': JSON.stringify(manifest),
+      'modules/lint/files/lint.md': '# Lint\n',
+    });
+    const lint = [loadModule('lint', read)];
+    expect(render(lint, { stack: ['python'], tools: ['pytest', 'ruff'] }).has('docs/lint.md')).toBe(true);
+    expect(render(lint, { stack: ['python'], tools: ['pytest'] }).has('docs/lint.md')).toBe(false);
+    expect(render(lint, { stack: ['python'] }).has('docs/lint.md')).toBe(false);
+  });
+
   it('keeps several modules blocks in one file, ordered by block id', () => {
     const blocks = render(MODULES, CONTEXT).get('AGENTS.md') ?? [];
     expect(blocks.map(({ module, blockId }) => [module, blockId])).toEqual([

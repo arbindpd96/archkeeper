@@ -20,6 +20,8 @@ import { whenMismatch } from './when.js';
 export interface RenderContext {
   readonly stack: readonly Stack[];
   readonly options?: ResolvedOptions;
+  /** The detected tools of the stacks in effect, one of which a file's `when.tools` needs; none when not given. */
+  readonly tools?: readonly string[];
   /** Values templates read next to `brand.*`, such as detected commands; `brand` is always the brand's. */
   readonly values?: TemplateScope;
 }
@@ -164,8 +166,9 @@ function moduleDrafts(job: ModuleRender): Draft[] {
   const options = moduleOptions(job.context.options, job.kit.manifest);
   const manifest = withoutOptedOut(job.kit.manifest, options);
   const scoped = { ...job, kit: { ...job.kit, manifest } };
+  const { stack, tools = [] } = job.context;
   return manifest.files.flatMap((file, index) =>
-    whenMismatch(file.when, job.context.stack, options) === undefined ? fileDrafts(scoped, file, index) : [],
+    whenMismatch(file.when, stack, options, tools) === undefined ? fileDrafts(scoped, file, index) : [],
   );
 }
 

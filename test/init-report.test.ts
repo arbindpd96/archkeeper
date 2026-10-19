@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   condensedPlanLines,
   diffLines,
+  droppedLines,
   planLines,
   stateLines,
   verboseHintLines,
@@ -104,5 +105,22 @@ describe('stateLines', () => {
 
   it('prints nothing when the apply writes none of them', () => {
     expect(stateLines(['AGENTS.md'], TEST_BRAND)).toEqual([]);
+  });
+});
+
+describe('droppedLines', () => {
+  it('names each module the resolver left out with its reason, escaped', () => {
+    const dropped = [
+      { id: 'format-on-edit', reason: 'needs prettier, biome or ruff, and none was detected' },
+      { id: 'odd', reason: `needs ${RLO}x` },
+    ];
+    expect(droppedLines(dropped)).toEqual([
+      'Left out: format-on-edit (needs prettier, biome or ruff, and none was detected)',
+      'Left out: odd (needs \\u202ex)',
+    ]);
+  });
+
+  it('prints nothing when the resolver left nothing out', () => {
+    expect(droppedLines([])).toEqual([]);
   });
 });

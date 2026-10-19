@@ -184,6 +184,13 @@ describe('module manifest schema', () => {
     ],
     ['an empty when stack list', (m) => (m.when = { stack: [] }), 'when.stack', 'list at least 1 entry'],
     ['a when stack that is not supported', (m) => (m.when = { stack: ['go'] }), 'when.stack[0]', '"python"'],
+    ['an empty when tools list', (m) => (m.when = { tools: [] }), 'when.tools', 'list at least 1 entry'],
+    [
+      'a when tool that detection does not know',
+      (m) => (m.when = { tools: ['prettier', 'rustfmt'] }),
+      'when.tools[1]',
+      '"biome"',
+    ],
     [
       'a demo tape that is not an id',
       (m) => (m.demo = { tape: 'Init Tape', section: 'S' }),

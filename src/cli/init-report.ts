@@ -3,6 +3,7 @@ import { configPath } from '../core/config.js';
 import { lockFilePath } from '../core/lock.js';
 import type { OpKind } from '../core/plan-types.js';
 import type { PathSummary, PlanGroup, PlanRow } from '../core/plan-summary.js';
+import type { DroppedModule } from '../core/resolve.js';
 import { LANGUAGE_NAMES, type StackProfile } from '../core/stack-profile.js';
 import { escapeUnprintable } from '../core/text.js';
 import { baseFolder } from './blob-store.js';
@@ -57,6 +58,11 @@ function extrasLine(profile: StackProfile): string[] {
     ...(setup.length > 0 ? [`already has ${setup.join(', ')}`] : []),
   ];
   return extras.length === 0 ? [] : [`  ${extras.join('; ')}`];
+}
+
+/** A line for each module the resolver left out, with its reason, such as a formatter detection did not find (#37). */
+export function droppedLines(dropped: readonly DroppedModule[]): string[] {
+  return dropped.map(({ id, reason }) => escapeUnprintable(`Left out: ${id} (${reason})`));
 }
 
 /** The detected stack in a few lines, the first step of init (#27). */

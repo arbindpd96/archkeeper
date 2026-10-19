@@ -2,6 +2,7 @@ import type { Brand } from '../core/brand.js';
 import type { KitId } from '../core/lock.js';
 import type { Plan } from '../core/plan.js';
 import type { RenderTree } from '../core/render.js';
+import type { DroppedModule } from '../core/resolve.js';
 import type { Stack } from '../core/schema-parts.js';
 import type { StackProfile } from '../core/stack-profile.js';
 import type { Session } from './context.js';
@@ -37,6 +38,8 @@ export interface Planned {
   readonly next: NextConfig;
   readonly stack: readonly Stack[];
   readonly modules: readonly string[];
+  /** The modules the resolver left out, each with the reason init shows. */
+  readonly dropped: readonly DroppedModule[];
   readonly tree: RenderTree;
   /** The install plan, the config included when it changes. */
   readonly plan: Plan;

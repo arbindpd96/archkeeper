@@ -15,6 +15,8 @@ export interface ResolveRequest {
   readonly add?: readonly string[];
   readonly remove?: readonly string[];
   readonly options?: ResolvedOptions;
+  /** The detected tools of the stacks in effect, one of which a module's `when.tools` needs; none when not given. */
+  readonly tools?: readonly string[];
 }
 
 /** A selected module left out because its `when` does not hold, with the reason for the CLI to show. */
@@ -170,7 +172,7 @@ function unmatched({ request, catalog, origins }: Context): Map<string, string> 
     const manifest = catalog.modules.get(id)?.manifest;
     if (manifest === undefined) continue;
     const options = moduleOptions(request.options, manifest);
-    const reason = whenMismatch(manifest.when, request.stack, options);
+    const reason = whenMismatch(manifest.when, request.stack, options, request.tools ?? []);
     if (reason !== undefined) dropped.set(id, reason);
   }
   return dropped;

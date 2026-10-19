@@ -4,12 +4,10 @@ import { configPath } from '../core/config.js';
 import { detectStack } from '../core/detect.js';
 import { type ProblemReport, UsageError } from '../core/errors.js';
 import { withoutImportedBlocks, withoutRefusedImports } from '../core/import-blocks.js';
-import { resolveOptions } from '../core/options.js';
 import { optOutOwnable } from '../core/opt-out.js';
 import { condensePlan, summarizePlan } from '../core/plan-summary.js';
 import type { Plan } from '../core/plan.js';
 import { render, type RenderTree } from '../core/render.js';
-import { resolveModules } from '../core/resolve.js';
 import type { StackProfile } from '../core/stack-profile.js';
 import { escapeUnprintable, quoted } from '../core/text.js';
 import type { CliContext, CommandSetup, Session } from './context.js';
@@ -26,18 +24,20 @@ import {
   presetLine,
   stackFlag,
 } from './init-answers.js';
-import { type ExistingConfig, nextConfig, readExistingConfig, withConfig } from './init-config.js';
+import { type ExistingConfig, readExistingConfig, withConfig } from './init-config.js';
 import { plannedWrites } from './apply.js';
 import { applyPlanned, finishDryRun } from './init-finish.js';
 import {
   condensedPlanLines,
   detectedLines,
+  droppedLines,
   planLines,
   reporterFor,
   stateLines,
   verboseHintLines,
 } from './init-report.js';
 import { type InitFlags, type InitRun, type Planned, textAt } from './init-run.js';
+import { settleModules } from './init-tools.js';
 import { initValues } from './init-values.js';
 import {
   keepingRegisteredScripts,
@@ -168,19 +168,16 @@ function planInit(
   existing: ExistingConfig | undefined,
   preset: string,
 ): Planned {
-  const { catalog } = run.session;
   const stackGiven = stackFlag(run.flags.stack);
-  const changes = moduleChanges(run.flags.modules, existing?.config, catalog);
+  const changes = moduleChanges(run.flags.modules, existing?.config, run.session.catalog);
   const answers = { preset, ...changes, ...(stackGiven === undefined ? {} : { stack: stackGiven }) };
-  const next = nextConfig(existing, answers, run.kit.version, run.brand);
-  const stack = next.config.stack ?? profile.stack;
-  const { options, warnings } = resolveOptions(next.config, catalog, run.brand);
-  warnAll(run, [...next.warnings, ...warnings]);
-  const { add, remove } = next.config.modules;
-  const { modules: kits } = resolveModules({ preset, stack, add, remove, options }, catalog, run.brand);
+  const settled = settleModules(run, profile, existing, answers);
+  const { next, stack, tools, options, resolution } = settled;
+  warnAll(run, settled.warnings);
+  const kits = resolution.modules;
   warnAll(run, unknownOptOutReports(kits, options, run.brand));
-  const rendered = render(kits, { stack, options, values: initValues(run, profile, stack) }, run.brand);
-  const tree = treeToWrite(run, rendered);
+  const values = initValues(run, profile, stack);
+  const tree = treeToWrite(run, render(kits, { stack, options, tools, values }, run.brand));
   const modules = kits.map((kit) => kit.manifest.id);
   const planWith = (entries: readonly ModuleOptOut[]): Plan =>
     planProject(run.rootReal, tree, {
@@ -199,7 +196,8 @@ function planInit(
   const plan = withConfig(installPlan, next, existing, run.brand);
   const written = plannedWrites(run.rootReal, plan, run.brand);
   const hooksKept = ownsHooks(lock, run.brand);
-  return { profile, existing, next, stack, modules, tree, plan, written, optedOut, hooksKept };
+  const { dropped } = resolution;
+  return { profile, existing, next, stack, modules, dropped, tree, plan, written, optedOut, hooksKept };
 }
 
 function planListing(run: InitRun, planned: Planned): string[] {
@@ -216,6 +214,7 @@ function showPlan(run: InitRun, planned: Planned): void {
   say(presetLine(planned.next.config.preset));
   say(`Stack: ${planned.stack.join(', ') || 'none'}`);
   say(`Modules: ${planned.modules.join(', ')}`);
+  for (const line of droppedLines(planned.dropped)) say(line);
   say();
   say(paint('bold', 'Plan:'));
   for (const line of planListing(run, planned)) say(line);
