@@ -1,6 +1,6 @@
 # live
 # Decisions: init writes the decision log, the ADR template and the /why and /adr skills; then, in Claude Code,
-# /why answers from the project's own records and cites the fixture's ADR by path and line. The GIF may run 20 s,
+# /why answers from the project's own records and cites the fixture's ADR by path and line. The GIF may run 30 s,
 # so the tape waits on Claude Code's prompt instead of sleeping; check the prompt's text when recording.
 # fixture: ts-app
 Type "{{brand.binName}} init --yes"

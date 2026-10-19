@@ -8,6 +8,8 @@ export const TAPES = 'docs/media/tapes';
 export const SETTINGS = '_settings.tape';
 /** A tape or fixture name: lowercase words joined by dashes, with an optional leading underscore. */
 export const TAPE_NAME = /^_?[a-z0-9][a-z0-9-]*$/;
+/** A tape's `# live` line: it runs a real Claude Code session, so the maintainer records it, never CI. */
+export const LIVE = /^#\s*live\s*$/m;
 
 const PLACEHOLDER = /\{\{\s*([^{}]*?)\s*\}\}/g;
 // VHS's lexer: comments run to the end of the line, strings and regexes end at a newline, JSON ends at the

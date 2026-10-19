@@ -5,6 +5,7 @@ import { gifBytes, REPO_ROOT, runScript, tempDir, writeFiles, type RunResult } f
 
 const FEATURE_TAPE = '# fixture: ts-app\nType "hello"\n';
 const HERO_TAPE = '# hero\n# fixture: ts-app\nType "hello"\n';
+const LIVE_TAPE = '# live\n# fixture: ts-app\nType "hello"\n';
 
 interface Project {
   tapes?: Record<string, string>;
@@ -64,6 +65,15 @@ describe('check-demos', () => {
     const result = checkDemos({ 'init.gif': gifBytes([3000, 100]) }, { tapes: { 'init.tape': HERO_TAPE } });
     expect(result.status).toBe(1);
     expect(result.stderr).toContain('init.gif runs 31.0 s, over the 30 s hero cap.');
+  });
+
+  it('gives a tape marked # live 30 s, since its GIF also records the wait for Claude', () => {
+    const passed = checkDemos({ 'why.gif': gifBytes([3000]) }, { tapes: { 'why.tape': LIVE_TAPE } });
+    expect(passed.status).toBe(0);
+    expect(passed.stdout).toContain('| why | live | 0.00 MB | 30.0 s |');
+    const result = checkDemos({ 'why.gif': gifBytes([3000, 100]) }, { tapes: { 'why.tape': LIVE_TAPE } });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain('why.gif runs 31.0 s, over the 30 s live cap.');
   });
 
   it('fails a GIF over 2 MB', () => {

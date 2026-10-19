@@ -5,9 +5,11 @@ import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { commandDemoProblems, moduleDemoProblems } from './demo-rules.mjs';
 import { exitWith } from './lib.mjs';
+import { LIVE } from './tape-rules.mjs';
 
 const MAX_BYTES = 2_000_000;
-const MAX_SECONDS = { hero: 30, feature: 20 };
+// A live GIF also records the wait for Claude's answers, so it gets the hero's 30 s.
+const MAX_SECONDS = { hero: 30, live: 30, feature: 20 };
 const HERO = /^#\s*hero\s*$/m;
 const USAGE =
   'Usage: node scripts/check-demos.mjs [<gif-dir>] [--tapes <dir>] [--modules <dir>] [--readme <file>] ' +
@@ -78,6 +80,13 @@ function readOptional(file) {
   }
 }
 
+/** Names the cap a GIF gets from its tape's `# hero` or `# live` line: `hero`, `live`, else `feature`. */
+function capKind(tapeText) {
+  if (tapeText === null) return 'feature';
+  if (HERO.test(tapeText)) return 'hero';
+  return LIVE.test(tapeText) ? 'live' : 'feature';
+}
+
 /** Checks one GIF against its tape and the caps, returning a summary row and any problems. */
 function checkGif(file, tapes) {
   const name = path.basename(file, '.gif');
@@ -86,7 +95,7 @@ function checkGif(file, tapes) {
   const bytes = gif.length;
   const tapeText = readOptional(tape);
   const hasTape = tapeText !== null;
-  const kind = hasTape && HERO.test(tapeText) ? 'hero' : 'feature';
+  const kind = capKind(tapeText);
   const problems = [];
   if (!hasTape) problems.push(`${name}.gif has no tape at ${tape}; GIFs are rendered from tapes.`);
   if (bytes > MAX_BYTES) problems.push(`${name}.gif is ${String(bytes)} bytes, over ${String(MAX_BYTES)}.`);
@@ -140,5 +149,8 @@ const problems = [
   ...commandDemoProblems(await readCommands(options.commands), options),
 ];
 if (problems.length > 0) {
-  exitWith(`Demo check failed (2 MB; hero 30 s, feature 20 s; demo or internal):\n${problems.join('\n')}`, 1);
+  exitWith(
+    `Demo check failed (2 MB; hero and live 30 s, feature 20 s; demo or internal):\n${problems.join('\n')}`,
+    1,
+  );
 }
