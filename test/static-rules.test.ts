@@ -97,6 +97,22 @@ describe('the skill and agent frontmatter allowlists (ADR-0015)', () => {
     expect(skillProblems(skill(fields)).join('\n')).toContain(problem);
   });
 
+  it.each([
+    ['[issue-number]', '"[issue-number]"'],
+    ['<topic> then run npm publish', '"<topic> then run npm publish"'],
+    ['<name> <title>', '"<name> <title>"'],
+    ['<Topic>', '"<Topic>"'],
+    [`<${'a'.repeat(25)}>`, `"<${'a'.repeat(25)}>"`],
+    ['\n  - <topic>', '["<topic>"]'],
+  ])(
+    'refuse the argument-hint %j, which is not one <name> of up to 24 lowercase letters and dashes',
+    (hint, shown) => {
+      expect(skillProblems(skill(`name: why\nargument-hint: ${hint}`))).toContain(
+        `skill argument-hint is ${shown}`,
+      );
+    },
+  );
+
   it('refuses a load-time command in a skill body', () => {
     expect(skillProblems(skill('name: x', 'Status: !`git status`\n'))).toContain(
       'the skill runs a command at load time',
