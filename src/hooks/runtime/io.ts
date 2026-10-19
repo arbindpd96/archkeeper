@@ -58,6 +58,15 @@ export function stringField(record: unknown, name: string): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+/**
+ * Whether a Stop hook's block already keeps Claude working: Claude Code sets `stop_hook_active` then, and a Stop hook
+ * returns at once so it never loops (ADR-0015). Any value but false counts; a missing field reads as false.
+ */
+export function stopHookActive(payload: Payload): boolean {
+  const active = payload.stop_hook_active;
+  return active !== undefined && active !== false;
+}
+
 /** An answer with nothing to say: exit 0 and no output, which lets a tool call go on. */
 export function noAnswer(note?: string): Answer {
   return note === undefined ? { kind: 'done' } : { kind: 'done', note };
