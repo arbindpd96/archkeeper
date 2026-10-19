@@ -1,4 +1,25 @@
 ##### stop-check on examples/ts-app
+=== .claude/hooks/acmekit/stop-check.mjs (owned, stop-check)
+// Stand-in for the stop-check bundle that npm run build makes.
+=== .claude/settings.json (json, stop-check)
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/stop-check.mjs"
+            ],
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}
 === .gitignore (blocks, base, block base)
 CLAUDE.local.md
 .claude/settings.local.json
@@ -37,6 +58,27 @@ Rules for AI coding agents, such as Claude Code, Codex, Cursor, Gemini CLI and C
 - Claude Code reads .claude/settings.json and its hooks at startup, so restart it after changing them.
 
 ##### stop-check on examples/py-app
+=== .claude/hooks/acmekit/stop-check.mjs (owned, stop-check)
+// Stand-in for the stop-check bundle that npm run build makes.
+=== .claude/settings.json (json, stop-check)
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/stop-check.mjs"
+            ],
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}
 === .gitignore (blocks, base, block base)
 CLAUDE.local.md
 .claude/settings.local.json

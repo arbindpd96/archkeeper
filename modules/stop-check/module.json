@@ -5,5 +5,19 @@
   "description": "Runs the project's tests before Claude stops, once the user turns the check on.",
   "presets": ["full"],
   "requires": ["base"],
+  "files": [{ "to": ".claude/settings.json", "strategy": "json", "target": "project" }],
+  "hooks": [{ "event": "Stop", "script": "dist/hooks/stop-check.mjs", "timeout": 600 }],
+  "options": {
+    "checks.stop": {
+      "type": "string-list",
+      "default": [],
+      "description": "The test command to run before Claude stops, as an argument array such as [\"npm\", \"run\", \"test\"]; empty runs nothing, and init sets it only once you confirm."
+    },
+    "checks.stopTimeout": {
+      "type": "number",
+      "default": 300,
+      "description": "The seconds the test command may run, at most 590, before the stop check lets Claude stop without it."
+    }
+  },
   "internal": true
 }

@@ -163,6 +163,16 @@ describe.skipIf(!canSymlink())(
       expect(result.code).toBe(0);
       expect(read(dir, 'CLAUDE.md')).toContain('@AGENTS.md');
     });
+
+    it('needs the stop check left out too with the full preset, since its hook lives under .claude', async () => {
+      const { dir } = linkedClaudeFolder();
+      const modules = '-safety,-feature-memory,-knowledge,-architecture-map,-format-on-edit';
+      const refused = await runInit(dir, ['--yes', '--preset', 'full', '--modules', modules]);
+      expect(refused.code).toBe(1);
+      expect(refused.stderr).toContain('.claude/hooks/');
+      const result = await runInit(dir, ['--yes', '--preset', 'full', '--modules', `${modules},-stop-check`]);
+      expect(result.code).toBe(0);
+    });
   },
 );
 
