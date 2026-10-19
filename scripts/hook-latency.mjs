@@ -26,6 +26,8 @@ const TOKEN = `ghp_${'a'.repeat(36)}`;
 const bash = (command) => ({ tool_name: 'Bash', tool_input: { command } });
 const GIT_IDENTITY = ['-c', 'user.name=latency', '-c', 'user.email=latency@example.invalid'];
 const write = (content) => ({ tool_name: 'Write', tool_input: { file_path: 'src/new.ts', content } });
+// The tools init records for a TS project; the timing project installs neither.
+const RECORDED = { formatters: ['prettier'], linters: ['eslint'] };
 
 // What each hook answers while it is timed: a common call, one it blocks and the heaviest it accepts.
 const SAMPLES = {
@@ -45,6 +47,13 @@ const SAMPLES = {
   'memory-stop': [{ stop_hook_active: false }, { stop_hook_active: true }],
   'pre-compact': [{ trigger: 'manual' }, { trigger: 'auto' }],
   'session-start': [{ source: 'startup' }, { source: 'compact' }, { source: 'resume' }],
+  // A recorded tool that is not installed, a file outside the project and a file no tool takes, so no formatter's
+  // own time is timed (ADR-0015).
+  'format-on-edit': [
+    { tool_name: 'Write', tool_input: { file_path: EDITED_FILE } },
+    { tool_name: 'Edit', tool_input: { file_path: '../outside.ts' } },
+    { tool_name: 'Edit', tool_input: { file_path: '.gitignore' } },
+  ],
 };
 
 // A feature memory at the template's 80-line limit, and a map with an Overview, for the memory hooks to read.
@@ -63,7 +72,7 @@ const MEMORY = [
 ];
 const PROJECT_FILES = {
   '.gitignore': `${BRAND.stateDir}/local/\n`,
-  [`${BRAND.stateDir}/config.json`]: '{ "preset": "full" }\n',
+  [`${BRAND.stateDir}/config.json`]: `${JSON.stringify({ preset: 'full', options: { 'format-on-edit': RECORDED } })}\n`,
   [`${BRAND.stateDir}/local/active-feature`]: 'latency\n',
   [MEMORY_FILE]: [
     ...MEMORY,

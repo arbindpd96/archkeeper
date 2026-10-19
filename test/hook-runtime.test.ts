@@ -12,6 +12,7 @@ import {
   permission,
   refuse,
   respond,
+  systemMessage,
 } from '../src/hooks/runtime/io.js';
 import {
   FAILURE_POLICY,
@@ -116,6 +117,16 @@ describe('hook answers (ADR-0015, reference §1.5)', () => {
       decision: 'block',
       reason: 'Update the memory.',
     });
+  });
+
+  it('prints a message for the user as a top-level systemMessage with exit 0, the note on stderr', () => {
+    const answer = systemMessage('Install ruff.', 'a note');
+    expect(written(answer)).toEqual({
+      code: 0,
+      stdout: '{"systemMessage":"Install ruff."}',
+      stderr: 'a note\n',
+    });
+    expect(outcomeOf(answer)).toBe('message');
   });
 
   it('writes a note to stderr and nothing to stdout when it has nothing to say', () => {

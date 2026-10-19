@@ -102,6 +102,15 @@ export function block(reason: string): Answer {
   return { kind: 'done', output: { decision: 'block', reason } };
 }
 
+/**
+ * A message for the user, not Claude: a top-level `systemMessage` with exit 0, which lets the action stand
+ * (reference §1.5), and an optional one-line note for stderr.
+ */
+export function systemMessage(text: string, note?: string): Answer {
+  const output = { systemMessage: text };
+  return note === undefined ? { kind: 'done', output } : { kind: 'done', output, note };
+}
+
 /** Blocks the action with exit 2 and sends the message to Claude on stderr. */
 export function refuse(message: string): Answer {
   return { kind: 'refuse', message };
