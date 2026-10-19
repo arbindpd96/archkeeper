@@ -8,6 +8,7 @@ import type { Prompter } from '../src/cli/prompts.js';
 import { type Catalog, type KitModule, loadCatalog, type ReadKitFile } from '../src/core/loader.js';
 import { render, type RenderTree } from '../src/core/render.js';
 import { fixtureCopy, REPO_ROOT, writeFiles } from './helpers.js';
+import { filesUnder } from './install-helpers.js';
 import { TEST_BRAND } from './kit-fixtures.js';
 
 /** The Claude Code setup a user had before init: CLAUDE.md with CRLF and its own import, AGENTS.md, settings, a skill. */
@@ -60,14 +61,20 @@ export function doneCode(fixture: string, preset: string): number {
   return fixture === 'existing-claude-setup' && knowledge ? 2 : 0;
 }
 
-/** The kit's modules named by `ids` rendered for the test brand, on a TS stack with no detected commands. */
+/** The template values {@link renderedKit} renders with: no detected command, stack, folder or entry point. */
+export const EMPTY_VALUES = {
+  project: { reference: [] },
+  map: { stack: 'not detected', layout: [], entryPoints: [] },
+} as const;
+
+/** The kit's modules named by `ids` rendered for the test brand, on a TS stack with {@link EMPTY_VALUES}. */
 export function renderedKit(ids: readonly string[]): RenderTree {
   const modules = ids.map((id): KitModule => {
     const kit = KIT.modules.get(id);
     if (kit === undefined) throw new Error(`modules/${id} is missing`);
     return kit;
   });
-  return render(modules, { stack: ['ts'], values: { project: { reference: [] } } }, TEST_BRAND);
+  return render(modules, { stack: ['ts'], values: EMPTY_VALUES }, TEST_BRAND);
 }
 
 /** Each path `module` renders into `tree`, with its strategy and block id (empty for a whole file), in path order. */
@@ -105,6 +112,8 @@ export interface InitSetup {
   /** Answers in the order the questions come; undefined cancels, as Ctrl+C does. */
   readonly answers?: readonly (string | boolean | undefined)[];
   readonly git?: GitState;
+  /** The files git tracks, or null for no list; by default every file in the project when init lists them. */
+  readonly tracked?: readonly string[] | null;
   readonly catalog?: Catalog;
   /** Runs before each answer is given, such as an edit made while init waits. */
   readonly whileAsking?: (question: string) => void;
@@ -162,6 +171,7 @@ export async function runInit(
       written.transcript += `[? ${question}]\n`;
     }),
     gitState: () => setup.git ?? 'clean',
+    trackedFiles: (root) => (setup.tracked === null ? undefined : (setup.tracked ?? filesUnder(root))),
   };
   const code = await main(['init', '--cwd', dir, ...args], context);
   return { code, ...written, asked };

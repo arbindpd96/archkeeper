@@ -8,7 +8,7 @@ import type { Catalog } from '../core/loader.js';
 import { escapeUnprintable } from '../core/text.js';
 import { COMMANDS } from './commands.js';
 import type { CliContext, CommandSetup, GlobalFlags, PackageInfo, Session } from './context.js';
-import { gitState } from './git-state.js';
+import { gitState, trackedFiles } from './git-state.js';
 import { setupInit } from './init.js';
 import { packageRoot, readKit } from './kit.js';
 import { PROCESS_OUTPUT, printError, styled } from './output.js';
@@ -64,6 +64,7 @@ function defaultContext(): CliContext {
     interactive: process.stdin.isTTY && process.stdout.isTTY && !inCi(process.env),
     prompter: CLACK_PROMPTER,
     gitState,
+    trackedFiles,
   };
 }
 

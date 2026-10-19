@@ -8,7 +8,6 @@ import { resolveOptions } from '../core/options.js';
 import { optOutOwnable } from '../core/opt-out.js';
 import { condensePlan, summarizePlan } from '../core/plan-summary.js';
 import type { Plan } from '../core/plan.js';
-import { projectValues } from '../core/project-values.js';
 import { render, type RenderTree } from '../core/render.js';
 import { resolveModules } from '../core/resolve.js';
 import type { StackProfile } from '../core/stack-profile.js';
@@ -39,6 +38,7 @@ import {
   verboseHintLines,
 } from './init-report.js';
 import { type InitFlags, type InitRun, type Planned, textAt } from './init-run.js';
+import { initValues } from './init-values.js';
 import {
   keepingRegisteredScripts,
   type ModuleOptOut,
@@ -179,7 +179,7 @@ function planInit(
   const { add, remove } = next.config.modules;
   const { modules: kits } = resolveModules({ preset, stack, add, remove, options }, catalog, run.brand);
   warnAll(run, unknownOptOutReports(kits, options, run.brand));
-  const rendered = render(kits, { stack, options, values: projectValues(profile, stack) }, run.brand);
+  const rendered = render(kits, { stack, options, values: initValues(run, profile, stack) }, run.brand);
   const tree = treeToWrite(run, rendered);
   const modules = kits.map((kit) => kit.manifest.id);
   const planWith = (entries: readonly ModuleOptOut[]): Plan =>

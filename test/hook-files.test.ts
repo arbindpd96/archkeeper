@@ -229,6 +229,14 @@ describe('programs a hook runs (ADR-0015)', () => {
     expect(run).toEqual({ status: 0, stdout: 'a b|$HOME|;ls', stderr: '' });
   });
 
+  it('stops a program that prints more than maxBuffer bytes, with no status', () => {
+    const dir = tempDir();
+    writeFiles(dir, { 'tool.mjs': 'process.stdout.write("x".repeat(2048));' });
+    const entry = path.join(dir, 'tool.mjs');
+    expect(runNodeTool(entry, [], { cwd: dir, maxBuffer: 1024 }).status).toBeNull();
+    expect(runNodeTool(entry, [], { cwd: dir, maxBuffer: 4096 })).toMatchObject({ status: 0 });
+  });
+
   it.each(['git', 'C:/tools/npm.cmd', '/x/y.BAT'])(
     'refuses to run %j, which is no absolute path to a real program',
     (file) => {

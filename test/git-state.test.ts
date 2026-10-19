@@ -1,7 +1,8 @@
 import { chmodSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { gitState } from '../src/cli/git-state.js';
+import { gitState, trackedFiles } from '../src/cli/git-state.js';
+import { compareText } from '../src/core/text.js';
 import { commitFiles, git, stubEnv, tempDir, tempRepo, writeFiles } from './helpers.js';
 
 describe('gitState', () => {
@@ -118,5 +119,33 @@ describe('gitState hardening', () => {
     mkdirSync(folder);
     writeFiles(folder, { 'notes.md': 'draft\n' });
     expect(gitState(folder)).toBe('dirty');
+  });
+});
+
+describe('trackedFiles (#36)', () => {
+  it.skipIf(process.platform === 'win32')(
+    'lists every tracked file with its name as it is: spaces, non-ASCII letters and a line break',
+    () => {
+      const files = { 'README.md': '', 'my notes/a b.md': '', 'données/é.txt': '', 'src/a\nb.ts': '' };
+      const repo = tempRepo(files);
+      writeFiles(repo, { 'untracked.ts': '' });
+      expect(trackedFiles(repo)?.sort(compareText)).toEqual(Object.keys(files).sort(compareText));
+    },
+  );
+
+  it('lists only the files of a project folder inside a repository, relative to that folder', () => {
+    const repo = tempRepo({ 'packages/web/src/a.ts': '', 'packages/api/b.ts': '', 'README.md': '' });
+    expect(trackedFiles(path.join(repo, 'packages/web'))).toEqual(['src/a.ts']);
+  });
+
+  it('lists nothing in a repository with no tracked file', () => {
+    expect(trackedFiles(tempRepo())).toEqual([]);
+  });
+
+  it('gives no list outside a repository or when no PATH folder holds git', () => {
+    expect(trackedFiles(tempDir())).toBeUndefined();
+    const repo = tempRepo({ 'README.md': '' });
+    stubEnv('PATH', '');
+    expect(trackedFiles(repo)).toBeUndefined();
   });
 });
