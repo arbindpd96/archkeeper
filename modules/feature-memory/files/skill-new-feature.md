@@ -2,6 +2,7 @@
 name: new-feature
 description: Start a feature with its own MEMORY.md, copied from the template, and make it the active feature.
 disable-model-invocation: true
+argument-hint: <name>
 ---
 
 Start the feature named in `$ARGUMENTS`. If no name was given, ask for one.

@@ -136,7 +136,7 @@ Frontmatter can widen access without touching `settings.json` (reference §3.1, 
 
 So every skill and agent the kit generates, for the project or for the plugin ([ADR-0016](0016-delivery-split.md)), follows an allowlist of keys and values. A key that is not on the list fails the static test, so a key Claude Code adds later is refused until it has been reviewed:
 
-- skill keys: `name`, `description`, `disable-model-invocation`, `user-invocable`, `allowed-tools`, `arguments` and `paths`
+- skill keys: `name`, `description`, `argument-hint` (added by the [note of 2026-10-19](#notes)), `disable-model-invocation`, `user-invocable`, `allowed-tools`, `arguments` and `paths`
 - agent keys: `name`, `description`, `tools`, `disallowedTools`, `model`, `permissionMode`, `maxTurns`, `memory` and `skills`
 - never `hooks` or `mcpServers`
 - `permissionMode` only as `default` or `plan`
@@ -197,3 +197,11 @@ These are part of the ADR-0017 contract:
 - **Root-only `Read(./.env)` rules.** Miss nested `.env` files.
 - **Exact native rules such as `Bash(rm -rf /)` instead of `Bash(rm -rf:*)`.** They miss every variant, so they would protect nothing once a hook cannot run.
 - **One global SessionStart cap of 9,000–10,000 characters.** On its own, it would exceed the small preset's whole budget.
+
+## Notes
+
+- **2026-10-19, v0.1 M5: `argument-hint` joins the skill keys.** Owner approved 2026-10-19 ([v0.1-m5-memory memory](../features/v0.1-m5-memory/MEMORY.md)).
+  - Claude Code's skills reference describes it as a "Hint shown during autocomplete to indicate expected arguments", such as `[issue-number]` ([src](https://code.claude.com/docs/en/skills), checked 2026-10-19).
+  - It only shows text while the user types a command: it grants no tool and runs nothing. The skill listing Claude gets holds names and descriptions ([src](https://code.claude.com/docs/en/context-window)), so the always-on context does not change.
+  - The kit's `/new-feature`, `/why` and `/adr` hint `<name>`, `<topic>` and `<title>`; `/handoff` takes no argument.
+  - Like `disable-model-invocation`, it is a Claude Code key outside the Agent Skills spec, so claude.ai uploads and the Skills API refuse a skill that has it. Claude Code accepts it in project and plugin skills, the only places the kit's skills go (ADR-0016).

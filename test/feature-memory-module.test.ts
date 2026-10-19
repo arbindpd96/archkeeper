@@ -94,6 +94,13 @@ describe('the feature-memory module (#34)', () => {
     expect(skill).toContain(`Copy \`${TEMPLATE}\` to \`docs/features/<name>/MEMORY.md\``);
   });
 
+  it('hints the name /new-feature takes during autocomplete, and nothing for /handoff, which takes no argument', () => {
+    const hint = (skill: string): string | string[] | undefined =>
+      frontmatterOf(written(`.claude/skills/${skill}/SKILL.md`))?.get('argument-hint');
+    expect(hint('new-feature')).toBe('<name>');
+    expect(hint('handoff')).toBeUndefined();
+  });
+
   it('points the active-feature file at the new feature only over nothing or a name, and writes no ignore file', () => {
     const skill = written('.claude/skills/new-feature/SKILL.md');
     expect(skill).toContain(`Make it the active feature in \`${POINTER}\``);

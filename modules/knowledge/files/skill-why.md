@@ -1,6 +1,7 @@
 ---
 name: why
 description: Explain why the project is the way it is from its recorded decisions, citing each source by path and line. Use when someone asks why something was chosen, or before changing an established pattern.
+argument-hint: <topic>
 ---
 
 Answer "why $ARGUMENTS?" from the project's records only. If no topic was given, ask for one.

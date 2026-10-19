@@ -326,6 +326,7 @@ Load order: managed > project > plugin > user.
 **Frontmatter (corrected list)** [src](https://code.claude.com/docs/en/skills):
 - `name`
 - `description`: when Claude should use the skill
+- `argument-hint`: a hint shown during autocomplete for the arguments the skill expects, such as `[issue-number]`. It only displays text (verified 2026-10-19) [src](https://code.claude.com/docs/en/skills).
 - `disable-model-invocation`
 - `user-invocable`: `false` means only Claude can invoke it
 - `allowed-tools`: tools Claude may use **without a prompt** during the turn that invokes the skill. It restricts nothing; deny and ask rules still override it.

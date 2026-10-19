@@ -81,6 +81,13 @@ describe('the knowledge module (#34)', () => {
     );
   });
 
+  it('hints the topic /why takes and the title /adr takes during autocomplete', () => {
+    const hint = (skill: string): string | string[] | undefined =>
+      frontmatterOf(written(`.claude/skills/${skill}/SKILL.md`))?.get('argument-hint');
+    expect(hint('why')).toBe('<topic>');
+    expect(hint('adr')).toBe('<title>');
+  });
+
   it('tells agents where decisions and terms live, and to ask before contradicting an accepted ADR', () => {
     const block = written('AGENTS.md');
     for (const doc of [DECISIONS, 'docs/adr/', GLOSSARY, '/why <topic>', '/adr <title>']) {
