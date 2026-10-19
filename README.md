@@ -139,6 +139,10 @@ The medium and full presets add `docs/architecture.md`, a map of your project th
 
 The medium and full presets format and lint every file Claude edits with your project's own tools: prettier or biome plus eslint for TS/JS, and `ruff format` and `ruff check --fix` for Python. `init` records the tools it finds in `.archkeeper/config.json`, where you can also add checks of your own. Formatting happens silently; lint errors that remain go straight back to Claude, which fixes them before moving on. Nothing is downloaded or run through a shell, and a tool that is not installed is skipped with a one-time hint.
 
+## Tests before done
+
+The full preset can run your tests before Claude says a task is done. The check is off until you turn it on: `init` shows the test command it found, such as `npm run test` or `pytest`, and sets it only if you say yes, or when you pass `--stop-check`. Once it is on, the check runs whenever code changed since its last green run, and a failure goes back to Claude with its last lines, once for each set of changes, so Claude fixes it or tells you why. It runs your project's own test runner with no shell and none of npm's pre or post scripts, and `checks.stop` in `.archkeeper/config.json` holds the command.
+
 ## Pick a preset
 
 `init` asks which preset you want; `medium` is the default.
