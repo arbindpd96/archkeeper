@@ -6,6 +6,7 @@ import type { Stack } from '../core/schema-parts.js';
 import type { StackProfile } from '../core/stack-profile.js';
 import { type ConfigAnswers, type ExistingConfig, nextConfig, type NextConfig } from './init-config.js';
 import type { InitRun } from './init-run.js';
+import { stopCheckOptions } from './init-stop-check.js';
 
 const FORMAT_ON_EDIT = 'format-on-edit';
 
@@ -49,18 +50,22 @@ function recordedTools(settled: Settled, profile: StackProfile): ConfigAnswers['
 }
 
 /**
- * Settles the config init leaves and the modules it installs (#27, #37): the stack in effect, the tools detection
+ * Settles the config init leaves and the modules it installs (#27, #37, #38): the stack in effect, the tools detection
  * found for it, the config's options over each module's defaults, and the modules the resolver keeps and leaves out.
  * When format-on-edit is selected and the config sets neither of its tool lists, the config records the tools it
- * runs for the stacks in effect.
+ * runs for the stacks in effect; the stop check's command is recorded as `stopCheckOptions` says, which may ask.
+ * Undefined when the user cancels that question.
  */
-export function settleModules(
+export async function settleModules(
   run: InitRun,
   profile: StackProfile,
   existing: ExistingConfig | undefined,
   answers: ConfigAnswers,
-): Settled {
+): Promise<Settled | undefined> {
   const settled = settle(run, profile, existing, answers);
-  const options = recordedTools(settled, profile);
-  return options === undefined ? settled : settle(run, profile, existing, { ...answers, options });
+  const stopCheck = await stopCheckOptions(run, settled, profile);
+  if (stopCheck === null) return undefined;
+  const options = { ...recordedTools(settled, profile), ...stopCheck };
+  if (Object.keys(options).length === 0) return settled;
+  return settle(run, profile, existing, { ...answers, options: { ...answers.options, ...options } });
 }

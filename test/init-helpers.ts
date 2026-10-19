@@ -104,6 +104,8 @@ export interface InitRan {
   /** stdout and every question, in order, each question as `[? message]`. */
   readonly transcript: string;
   readonly asked: readonly string[];
+  /** The answer each question in `asked` offers first, such as false for a confirm that defaults to no. */
+  readonly defaults: readonly unknown[];
 }
 
 /** How a test runs init: a terminal or not, the answers to give, what git says, and the kit. */
@@ -123,22 +125,23 @@ export interface InitSetup {
   readonly home?: string;
 }
 
-function scriptedPrompter(setup: InitSetup, log: (question: string) => void): Prompter {
+function scriptedPrompter(setup: InitSetup, log: (question: string, initial: unknown) => void): Prompter {
   const answers = [...(setup.answers ?? [])];
-  const answer = (question: string): unknown => {
-    log(question);
+  const answer = (question: string, initial: unknown): unknown => {
+    log(question, initial);
     setup.whileAsking?.(question);
     if (answers.length === 0) throw new Error(`init asked "${question}" with no answer left`);
     return answers.shift();
   };
   return {
-    select: (message, choices) => {
+    select: (message, choices, initial) => {
       const given = answer(
         `${message}: ${choices.map((choice) => `${choice.label} (${choice.hint ?? ''})`).join(' | ')}`,
+        initial,
       );
       return Promise.resolve(given as (typeof choices)[number]['value'] | undefined);
     },
-    confirm: (message) => Promise.resolve(answer(message) as boolean | undefined),
+    confirm: (message, initial) => Promise.resolve(answer(message, initial) as boolean | undefined),
   };
 }
 
@@ -150,6 +153,7 @@ export async function runInit(
 ): Promise<InitRan> {
   const written = { stdout: '', stderr: '', transcript: '' };
   const asked: string[] = [];
+  const defaults: unknown[] = [];
   const context: Partial<CliContext> = {
     output: {
       stdout: (text) => {
@@ -166,13 +170,14 @@ export async function runInit(
     cwd: dir,
     home: setup.home ?? REPO_ROOT,
     interactive: setup.interactive ?? false,
-    prompter: scriptedPrompter(setup, (question) => {
+    prompter: scriptedPrompter(setup, (question, initial) => {
       asked.push(question);
+      defaults.push(initial);
       written.transcript += `[? ${question}]\n`;
     }),
     gitState: () => setup.git ?? 'clean',
     trackedFiles: (root) => (setup.tracked === null ? undefined : (setup.tracked ?? filesUnder(root))),
   };
   const code = await main(['init', '--cwd', dir, ...args], context);
-  return { code, ...written, asked };
+  return { code, ...written, asked, defaults };
 }

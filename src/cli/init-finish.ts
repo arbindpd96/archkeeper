@@ -5,6 +5,7 @@ import { unifiedDiff } from '../core/unified-diff.js';
 import type { ApplyResult } from './apply.js';
 import { diffLines, nextStepLines, sidecarLines } from './init-report.js';
 import { type InitRun, type Planned, textAt } from './init-run.js';
+import { stopCheckSteps } from './init-stop-check.js';
 import { install } from './install.js';
 
 /** Prints the run as one JSON line for --json: the answers, the detected stack, the plan and what applying did. */
@@ -57,7 +58,8 @@ export function applyPlanned(run: InitRun, planned: Planned): number {
     const backup = applied.backup === undefined ? '' : ` A backup of what changed is in ${applied.backup}.`;
     say(escapeUnprintable(`Done.${backup}`));
     say();
-    for (const line of nextStepLines(sidecars, [...planned.tree.keys()], run.brand)) say(line);
+    const more = stopCheckSteps(planned, run.brand);
+    for (const line of nextStepLines(sidecars, [...planned.tree.keys()], run.brand, more)) say(line);
   } else if (sidecars.length > 0) {
     say('Nothing to change, but sidecars still wait for review:');
     for (const line of sidecarLines(sidecars, run.brand)) say(line);

@@ -162,16 +162,17 @@ function warnAll(run: InitRun, reports: readonly ProblemReport[]): void {
   }
 }
 
-function planInit(
+async function planInit(
   run: InitRun,
   profile: StackProfile,
   existing: ExistingConfig | undefined,
   preset: string,
-): Planned {
+): Promise<Planned | undefined> {
   const stackGiven = stackFlag(run.flags.stack);
   const changes = moduleChanges(run.flags.modules, existing?.config, run.session.catalog);
   const answers = { preset, ...changes, ...(stackGiven === undefined ? {} : { stack: stackGiven }) };
-  const settled = settleModules(run, profile, existing, answers);
+  const settled = await settleModules(run, profile, existing, answers);
+  if (settled === undefined) return undefined;
   const { next, stack, tools, options, resolution } = settled;
   warnAll(run, settled.warnings);
   const kits = resolution.modules;
@@ -263,7 +264,8 @@ async function runInit(run: InitRun): Promise<number> {
     configured: existing?.config.preset,
   });
   if (preset === undefined) return cancelled(run);
-  const planned = planInit(run, profile, existing, preset);
+  const planned = await planInit(run, profile, existing, preset);
+  if (planned === undefined) return cancelled(run);
   showPlan(run, planned);
   if (run.flags.dryRun === true) return finishDryRun(run, planned);
   if (planned.written.length > 0 && !(await goAhead(run, planned))) return cancelled(run);
@@ -280,6 +282,7 @@ export const setupInit: CommandSetup = (command, session) => {
     .option('--stack <list>', 'The stack, kept in the config: ts, python, ts,python or none')
     .option('--dry-run', 'Print the plan and a unified diff, and write nothing')
     .option('--verbose', 'List every file in the plan instead of a summary by folder')
+    .option('--stop-check', 'Turn on the stop check (full preset) with the detected test command')
     .action(async (flags: InitFlags) => {
       session.finish(await runInit(startRun(session, flags)));
     });
