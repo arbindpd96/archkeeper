@@ -255,7 +255,7 @@ The first contact with existing user files loses nothing.
 
 - [x] feat(modules): architecture-map module and update-map skill (the module stays internal until map.gif)
 - [x] feat(hooks): format-on-edit PostToolUse hook using local tools only (stays internal until format.gif)
-- [ ] feat(modules): full preset with an optional shell-free stop check
+- [x] feat(modules): full preset with an optional shell-free stop check (stays internal until stop-check.gif)
 - [ ] feat(cli): init offers Superpowers and Spec Kit (print-only in v0.1)
 
 **M7: Lifecycle: update, uninstall, doctor v0, e2e, live acceptance.** Users can take fixes safely, diagnose problems in the install and in their own memory files, and leave cleanly. This is proven on the real tarball, across two kit versions and three OSes, and in a real Claude Code session.
