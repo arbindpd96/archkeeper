@@ -108,13 +108,13 @@ Built-in deny rules back the hooks up, so the worst commands stay blocked even w
 
 ## Feature memory
 
-Each feature you start gets a `MEMORY.md` in `docs/features/<name>/` with its goal, its decisions, what is done and the next step. Hooks put it in front of Claude, so a new session, or the first turn after `/compact`, resumes at the next step:
+Each feature you start gets a `MEMORY.md` in `docs/features/<name>/` with its goal, its decisions, what is done and the next step. Hooks put it in front of Claude, so a new session, or the first turn after `/compact` or an automatic compaction, resumes at the next step:
 
 | When                              | What happens                                                                                                                                                                           |
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | You type `/new-feature <name>`    | Claude asks what "done" means, starts the feature's MEMORY.md from the template and makes it the active feature.                                                                       |
 | A session starts                  | Claude gets the active feature's next step, goal and last five decisions, and checks with you once that it is the right feature. With no active feature, it asks which one you are on. |
-| You type `/compact`               | A hook first saves the branch and the list of uncommitted files. Afterwards Claude gets them back with the memory and resumes at the next step.                                        |
+| The conversation is compacted     | A hook first saves the branch and the list of uncommitted files. After `/compact` or an automatic compaction, Claude gets them back with the memory and resumes at the next step.      |
 | Claude finishes with code changed | When files git tracks, other than docs, changed after the memory was last saved, a hook asks Claude to run `/handoff`, once for each set of changes.                                   |
 | You or Claude run `/handoff`      | Claude records what is done, the next step, new decisions and what failed, and keeps the file short.                                                                                   |
 
