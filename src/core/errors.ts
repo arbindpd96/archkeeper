@@ -29,7 +29,7 @@ export class ArchkeeperError extends Error {
   }
 }
 
-/** A module manifest or `modules/presets.json` that is not valid JSON or breaks the manifest contract (#18). */
+/** A module manifest, `modules/presets.json` or `modules/compose.json` that is not valid JSON or breaks its contract (#18). */
 export class ManifestError extends ArchkeeperError {
   override readonly name = 'ManifestError';
 }

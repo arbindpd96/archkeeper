@@ -1,0 +1,39 @@
+{
+  "checked": "2026-10-19",
+  "checkedWith": "gh release view and gh api, on each tool's release tag",
+  "superpowers": {
+    "name": "Superpowers",
+    "repository": "obra/superpowers",
+    "description": "a Claude Code plugin of brainstorming, planning, TDD and code review skills",
+    "knownGood": { "version": "7.0.0", "released": "2026-10-10" },
+    "commands": ["claude plugin install superpowers@claude-plugins-official --scope project"],
+    "skills": [
+      "brainstorming",
+      "diagnosing-superpowers",
+      "dispatching-parallel-agents",
+      "executing-plans",
+      "finishing-a-development-branch",
+      "receiving-code-review",
+      "requesting-code-review",
+      "subagent-driven-development",
+      "systematic-debugging",
+      "test-driven-development",
+      "using-git-worktrees",
+      "using-superpowers",
+      "verification-before-completion",
+      "writing-plans",
+      "writing-skills"
+    ],
+    "skillPrefixes": []
+  },
+  "specKit": {
+    "name": "Spec Kit",
+    "repository": "github/spec-kit",
+    "description": "spec-driven development: a spec, a plan and tasks before the code",
+    "knownGood": { "version": "1.2.1", "released": "2026-10-16" },
+    "commands": ["uv tool install specify-cli", "specify init --here --integration claude"],
+    "warning": "Never pass --force to specify init without reading specify init --help: it may replace your files.",
+    "skills": [],
+    "skillPrefixes": ["speckit.", "speckit-"]
+  }
+}

@@ -1,4 +1,5 @@
 import type * as z from 'zod/mini';
+import { type ComposeCatalog, composeCatalogSchema } from './compose-schema.js';
 import { type Finding, ManifestError } from './errors.js';
 import { checkSchema } from './issues.js';
 import { parseJson } from './json.js';
@@ -26,16 +27,20 @@ export interface KitModule {
 /** A preset from `modules/presets.json`. */
 export type Preset = PresetCatalog['presets'][number];
 
-/** Everything the kit ships: its modules by id, in id order, and its presets in chain order. */
+/** Everything the kit ships: its modules by id, in id order, its presets in chain order and its compose offers. */
 export interface Catalog {
   readonly modules: ReadonlyMap<string, KitModule>;
   readonly presets: readonly Preset[];
   readonly defaultPreset: string;
+  /** The tools init offers to compose with (ADR-0008), from `modules/compose.json`. */
+  readonly compose: ComposeCatalog;
 }
 
 const MODULE_SCHEMA = 'schema/module.schema.json';
 const PRESETS_FILE = 'modules/presets.json';
 const PRESETS_SCHEMA = 'presetCatalogSchema in src/core/manifest-schema.ts';
+const COMPOSE_FILE = 'modules/compose.json';
+const COMPOSE_SCHEMA = 'composeCatalogSchema in src/core/compose-schema.ts';
 
 /** The package-relative path of a module's manifest. */
 export function manifestPath(id: string): string {
@@ -175,8 +180,8 @@ function checkConflicts(modules: ReadonlyMap<string, KitModule>): void {
 }
 
 /**
- * Loads every module in `moduleIds` and `modules/presets.json`, checking each module's presets against the chain
- * and its conflicts against the modules.
+ * Loads every module in `moduleIds`, `modules/presets.json` and `modules/compose.json`, checking each module's
+ * presets against the chain and its conflicts against the modules.
  */
 export function loadCatalog(moduleIds: readonly string[], read: ReadKitFile): Catalog {
   const presets = loadPresets(read);
@@ -189,5 +194,6 @@ export function loadCatalog(moduleIds: readonly string[], read: ReadKitFile): Ca
     modules.set(id, kit);
   }
   checkConflicts(modules);
-  return { modules, presets: presets.presets, defaultPreset: presets.default };
+  const compose = validate(composeCatalogSchema, readJson(COMPOSE_FILE, read), COMPOSE_FILE, COMPOSE_SCHEMA);
+  return { modules, presets: presets.presets, defaultPreset: presets.default, compose };
 }
