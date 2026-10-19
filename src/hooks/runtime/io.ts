@@ -31,14 +31,16 @@ export interface HookStreams {
   readonly stderr: (text: string) => void;
 }
 
+const unread = (problem: string): HookInput => ({ payload: {}, problem });
+
 /** Reads a hook payload from text: `{}` with the problem named when it is empty, not JSON or not an object. */
 export function parseInput(text: string): HookInput {
-  if (text.trim() === '') return { payload: {}, problem: 'stdin was empty' };
+  if (text.trim() === '') return unread('stdin was empty');
   try {
     const value: unknown = JSON.parse(text);
-    return isRecord(value) ? { payload: value } : { payload: {}, problem: 'stdin was not a JSON object' };
+    return isRecord(value) ? { payload: value } : unread('stdin was not a JSON object');
   } catch {
-    return { payload: {}, problem: 'stdin was not valid JSON' };
+    return unread('stdin was not valid JSON');
   }
 }
 
@@ -47,7 +49,7 @@ export function readInput(): HookInput {
   try {
     return parseInput(readFileSync(0, 'utf8'));
   } catch {
-    return { payload: {}, problem: 'stdin could not be read' };
+    return unread('stdin could not be read');
   }
 }
 
@@ -68,7 +70,7 @@ export function stopHookActive(payload: Payload): boolean {
 }
 
 /** An answer with nothing to say: exit 0 and no output, which lets a tool call go on. */
-export function noAnswer(note?: string): Answer {
+export function noAnswer(note?: string): Extract<Answer, { readonly kind: 'done' }> {
   return note === undefined ? { kind: 'done' } : { kind: 'done', note };
 }
 
@@ -116,8 +118,7 @@ export function block(reason: string): Answer {
  * (reference §1.5), and an optional one-line note for stderr.
  */
 export function systemMessage(text: string, note?: string): Answer {
-  const output = { systemMessage: text };
-  return note === undefined ? { kind: 'done', output } : { kind: 'done', output, note };
+  return { ...noAnswer(note), output: { systemMessage: text } };
 }
 
 /** Blocks the action with exit 2 and sends the message to Claude on stderr. */

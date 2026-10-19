@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   commandTool,
   nodeTool,
+  programTool,
   type ProjectTool,
   pythonTool,
   runProjectTool,
@@ -143,6 +144,25 @@ describe('programs from .venv or PATH (ADR-0015)', () => {
     expect(pythonTool(dir, 'ruff.cmd')).toHaveProperty('refused');
     expect(pythonTool(dir, 'ruff.bat')).toHaveProperty('refused');
   });
+});
+
+describe('programs by name (#38)', () => {
+  it('finds a JS bin, then a program from .venv or PATH, and says where it looked for one it misses', () => {
+    const dir = project();
+    const entry = nodePackage(dir, 'vitest', { bin: { vitest: 'bin/tool.js' } });
+    const pytest = program(tempDir(), 'pytest');
+    stubEnv('PATH', path.dirname(pytest));
+    expect(programTool(dir, 'vitest')).toEqual({ tool: { entry } });
+    expect(programTool(dir, 'pytest')).toEqual({ tool: { program: pytest } });
+    expect(programTool(dir, 'nope')).toEqual({ missing: 'node_modules, .venv or PATH' });
+  });
+
+  it.each(['bash', 'Uv.exe', 'npx', 'poetry', './run-tests', '--help', 'pytest.cmd'])(
+    'refuses %s',
+    (name) => {
+      expect(programTool(project(), name)).toHaveProperty('refused');
+    },
+  );
 });
 
 describe('commands from the config (#37)', () => {

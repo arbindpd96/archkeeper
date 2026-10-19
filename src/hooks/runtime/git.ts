@@ -1,34 +1,34 @@
 import path from 'node:path';
 import { isInside, realOrUndefined } from './project.js';
-import { findProgram, runProgram, type ToolRun } from './tools.js';
+import { absoluteFolders, findProgram, runProgram, type ToolRun } from './tools.js';
 
 /** Runs git with an argument array in one project folder, hardened as {@link gitRunner} describes. */
 export type Git = (args: readonly string[]) => ToolRun;
 
 // No fsmonitor, so a repository's config cannot start its fsmonitor hook; no optional locks, so git writes nothing.
-const SAFE = ['--no-optional-locks', '-c', 'core.fsmonitor=false'];
+const SAFE = '--no-optional-locks -c core.fsmonitor=false'.split(' ');
 const STATUS_HAZARDS = String.raw`^(filter\..*\.(clean|process)|extensions\.partialclone|remote\..*\.promisor)$`;
 const CALLER_VARIABLES = /^(?:GIT_(?!CEILING_DIRECTORIES$)|PATH$)/i;
 const OUT_OF_TIME: ToolRun = { status: null, stdout: '', stderr: 'git ran out of time' };
 
 // Programs git starts come only from absolute PATH folders outside the project too.
 function trustedPath(root: string): string[] {
-  return (process.env.PATH ?? '')
-    .split(path.delimiter)
-    .map((entry) => entry.replace(/^"(.*)"$/, '$1'))
-    .filter((entry) => path.isAbsolute(entry))
-    .filter((entry) => {
-      const real = realOrUndefined(entry);
-      return real !== undefined && !isInside(root, real);
-    });
+  return absoluteFolders(process.env.PATH ?? '').filter((entry) => {
+    const real = realOrUndefined(entry);
+    return real !== undefined && !isInside(root, real);
+  });
 }
 
 // A git hook or `rebase --exec` exports GIT_DIR and friends, which point git at another repository; only the ceiling,
 // which just stops git looking further up, stays. No lazy fetch (git 2.44+), and English messages in every locale.
 function gitEnv(folders: readonly string[]): NodeJS.ProcessEnv {
   const kept = Object.entries(process.env).filter(([name]) => !CALLER_VARIABLES.test(name));
-  const own = { PATH: folders.join(path.delimiter), LC_ALL: 'C', GIT_NO_LAZY_FETCH: '1' };
-  return { ...Object.fromEntries(kept), ...own };
+  return {
+    ...Object.fromEntries(kept),
+    PATH: folders.join(path.delimiter),
+    LC_ALL: 'C',
+    GIT_NO_LAZY_FETCH: '1',
+  };
 }
 
 /**
@@ -65,7 +65,7 @@ export function gitRunner(root: string, budgetMs?: number, maxBuffer?: number): 
  * user's. Undefined when git cannot say.
  */
 export function unsafeForStatus(git: Git): boolean | undefined {
-  const config = git(['config', '--show-scope', '--get-regexp', STATUS_HAZARDS]);
+  const config = git([...'config --show-scope --get-regexp'.split(' '), STATUS_HAZARDS]);
   if (config.status === 1) return false;
   if (config.status !== 0) return undefined;
   return config.stdout.split('\n').some((line) => /^(?:local|worktree)\t/.test(line));

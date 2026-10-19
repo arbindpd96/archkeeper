@@ -3,8 +3,6 @@ import { gitRunner, unsafeForStatus } from './git.js';
 // One deadline for every git call of a status read, so a hook ends well inside its 10-second timeout even when git
 // hangs, and lets the action go on by itself instead of being killed.
 const GIT_BUDGET_MS = 3000;
-const BRANCH_HEAD = '# branch.head ';
-const BRANCH_OID = '# branch.oid ';
 // The space-separated fields before the path in each porcelain v2 record kind; a path may hold spaces.
 const FIELDS_BEFORE_PATH: Readonly<Record<string, number>> = { '1': 8, '2': 9, u: 10, '?': 1, '!': 1 };
 
@@ -30,13 +28,8 @@ function headerValue(records: readonly string[], header: string): string | undef
 }
 
 function pathAfter(record: string, fields: number): string | undefined {
-  let start = 0;
-  for (let field = 0; field < fields; field += 1) {
-    const space = record.indexOf(' ', start);
-    if (space === -1) return undefined;
-    start = space + 1;
-  }
-  return record.slice(start);
+  const words = record.split(' ');
+  return words.length > fields ? words.slice(fields).join(' ') : undefined;
 }
 
 function shortCode(record: string): string {
@@ -50,10 +43,8 @@ function entryOf(record: string, from: string | undefined, prefix: string): Stat
   const file = fields === undefined || record.slice(1, 2) !== ' ' ? undefined : pathAfter(record, fields);
   if (file === undefined) return undefined;
   const inProject = (name: string): string => (name.startsWith(prefix) ? name.slice(prefix.length) : name);
-  const code = shortCode(record);
-  return from === undefined
-    ? { code, path: inProject(file) }
-    : { code, path: inProject(file), from: inProject(from) };
+  const entry = { code: shortCode(record), path: inProject(file) };
+  return from === undefined ? entry : { ...entry, from: inProject(from) };
 }
 
 function entriesOf(records: readonly string[], prefix: string): StatusEntry[] {
@@ -71,8 +62,8 @@ function entriesOf(records: readonly string[], prefix: string): StatusEntry[] {
 /** Reads `git status --porcelain=v2 -z --branch` output, with paths made relative to the project by `prefix`. */
 export function parseStatus(stdout: string, prefix: string): ProjectStatus {
   const records = stdout.split('\0');
-  const branch = headerValue(records, BRANCH_HEAD);
-  const head = headerValue(records, BRANCH_OID);
+  const branch = headerValue(records, '# branch.head ');
+  const head = headerValue(records, '# branch.oid ');
   return {
     branch: branch === '(detached)' ? undefined : branch,
     head: head === '(initial)' ? undefined : head,
@@ -91,14 +82,8 @@ export function projectStatus(projectDir: string, untracked: boolean): ProjectSt
   const prefix = git?.(['rev-parse', '--show-prefix']);
   if (git === undefined || prefix?.status !== 0 || unsafeForStatus(git) !== false) return undefined;
   const files = untracked ? 'normal' : 'no';
-  const args = [
-    'status',
-    '--porcelain=v2',
-    '-z',
-    '--branch',
-    '--ignore-submodules=all',
-    `--untracked-files=${files}`,
-  ];
-  const status = git([...args, '--', '.']);
+  const status = git(
+    `status --porcelain=v2 -z --branch --ignore-submodules=all --untracked-files=${files} -- .`.split(' '),
+  );
   return status.status === 0 ? parseStatus(status.stdout, prefix.stdout.replace(/\r?\n$/, '')) : undefined;
 }
