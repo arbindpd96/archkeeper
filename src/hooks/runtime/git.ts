@@ -35,9 +35,10 @@ function gitEnv(folders: readonly string[]): NodeJS.ProcessEnv {
  * git for one project folder, with no shell and no network (ADR-0015, ADR-0018): found only in absolute PATH
  * folders outside the project, which are also the only PATH it gets, with no `GIT_*` variable from a caller but the
  * ceiling, no fsmonitor, no optional locks and no lazy fetch. With `budgetMs`, all its calls share one deadline
- * that many milliseconds away, and a call after it fails at once. Undefined when no such folder holds git.
+ * that many milliseconds away, and a call after it fails at once; with `maxBuffer`, a call that prints more bytes
+ * fails. Undefined when no such folder holds git.
  */
-export function gitRunner(root: string, budgetMs?: number): Git | undefined {
+export function gitRunner(root: string, budgetMs?: number, maxBuffer?: number): Git | undefined {
   const rootReal = realOrUndefined(root) ?? root;
   const folders = trustedPath(rootReal);
   const git = findProgram('git', rootReal, folders.join(path.delimiter));
@@ -51,6 +52,7 @@ export function gitRunner(root: string, budgetMs?: number): Git | undefined {
       cwd: root,
       env,
       ...(timeoutMs === undefined ? {} : { timeoutMs }),
+      ...(maxBuffer === undefined ? {} : { maxBuffer }),
     });
   };
 }

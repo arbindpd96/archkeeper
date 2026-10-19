@@ -13,11 +13,13 @@ export interface ToolRun {
   readonly stderr: string;
 }
 
-/** Where and how long a program runs. */
+/** Where and how long a program runs, and how much it may print. */
 export interface ToolOptions {
   readonly cwd: string;
   readonly timeoutMs?: number;
   readonly env?: NodeJS.ProcessEnv;
+  /** The most bytes stdout or stderr may hold; past it the program is stopped and its status is null. 1 MiB by default. */
+  readonly maxBuffer?: number;
 }
 
 function isProgram(file: string): boolean {
@@ -44,6 +46,7 @@ export function runProgram(file: string, args: readonly string[], options: ToolO
     timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     windowsHide: true,
     ...(options.env === undefined ? {} : { env: options.env }),
+    ...(options.maxBuffer === undefined ? {} : { maxBuffer: options.maxBuffer }),
   });
   const status = run.error === undefined ? run.status : null;
   return { status, stdout: run.stdout, stderr: run.stderr };

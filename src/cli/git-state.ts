@@ -1,5 +1,8 @@
 import { gitRunner, unsafeForStatus } from '../hooks/runtime/git.js';
 
+const LIST_BUDGET_MS = 5_000;
+const LIST_MAX_BYTES = 32 * 1024 * 1024;
+
 /**
  * What git says about a project folder: nothing to commit, uncommitted changes, no repository, a folder its
  * repository ignores, no answer, or a repository whose own config sets a filter program or a promisor remote, which
@@ -25,4 +28,16 @@ export function gitState(root: string): GitState {
   const ignored = git(['check-ignore', '-q', '--', '.']).status;
   if (ignored === 0) return 'ignored';
   return ignored === 1 ? 'clean' : 'unknown';
+}
+
+/**
+ * The files git tracks in `root`, relative to it, which seed the architecture map (#36): `git ls-files -z -- .`
+ * through the same hardened runner, reading only the index, so it runs no filter program and fetches nothing, and
+ * no name is quoted or split. Undefined when git is missing, the folder is in no repository, git fails or takes
+ * over 5 seconds, or the list is over 32 MiB.
+ */
+export function trackedFiles(root: string): string[] | undefined {
+  const listed = gitRunner(root, LIST_BUDGET_MS, LIST_MAX_BYTES)?.(['ls-files', '-z', '--', '.']);
+  if (listed?.status !== 0) return undefined;
+  return listed.stdout.split('\0').filter((file) => file !== '');
 }
