@@ -131,6 +131,10 @@ The medium and full presets keep a decision log, so Claude can say why your code
 
 When the records have no answer, `/why` searches the commit history and cites the commit, or says that nothing is recorded and offers `/adr`. Claude can also use `/why` on its own before it changes an established pattern; `/adr` runs only when you ask.
 
+## Architecture map
+
+The medium and full presets add `docs/architecture.md`, a map of your project that Claude checks before it creates anything. `init` seeds it with the detected stack, a table of the folders git tracks for Claude to describe, and the entry points in `package.json` and `pyproject.toml`, and never changes it once it exists. After a module, package, command or shared util is added or removed, `/update-map` brings the map up to date, and each session with an active feature starts with the map's Overview.
+
 ## Pick a preset
 
 `init` asks which preset you want; `medium` is the default.
