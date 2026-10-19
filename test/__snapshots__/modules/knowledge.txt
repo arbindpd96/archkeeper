@@ -4,6 +4,7 @@
 name: adr
 description: Record an architecture decision as a numbered ADR in docs/adr/ and add it to docs/decisions.md.
 disable-model-invocation: true
+argument-hint: <title>
 ---
 
 Record the decision `$ARGUMENTS` as an ADR. If no title was given, ask for one.
@@ -17,6 +18,7 @@ Record the decision `$ARGUMENTS` as an ADR. If no title was given, ask for one.
 ---
 name: why
 description: Explain why the project is the way it is from its recorded decisions, citing each source by path and line. Use when someone asks why something was chosen, or before changing an established pattern.
+argument-hint: <topic>
 ---
 
 Answer "why $ARGUMENTS?" from the project's records only. If no topic was given, ask for one.
@@ -116,6 +118,7 @@ Terms with a specific meaning in this project. Add a row when a term starts to m
 name: adr
 description: Record an architecture decision as a numbered ADR in docs/adr/ and add it to docs/decisions.md.
 disable-model-invocation: true
+argument-hint: <title>
 ---
 
 Record the decision `$ARGUMENTS` as an ADR. If no title was given, ask for one.
@@ -129,6 +132,7 @@ Record the decision `$ARGUMENTS` as an ADR. If no title was given, ask for one.
 ---
 name: why
 description: Explain why the project is the way it is from its recorded decisions, citing each source by path and line. Use when someone asks why something was chosen, or before changing an established pattern.
+argument-hint: <topic>
 ---
 
 Answer "why $ARGUMENTS?" from the project's records only. If no topic was given, ask for one.

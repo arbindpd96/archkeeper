@@ -11,6 +11,7 @@ const FORBIDDEN_TOP = ['model', 'autoMode', 'enabledMcpServers'];
 const SKILL_KEYS = new Set([
   'name',
   'description',
+  'argument-hint',
   'disable-model-invocation',
   'user-invocable',
   'allowed-tools',

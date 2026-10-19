@@ -80,7 +80,7 @@ describe('the skill and agent frontmatter allowlists (ADR-0015)', () => {
 
   it('pass a skill of allowed keys whose tools only read or run one exact command', () => {
     const text = skill(
-      'name: why\ndescription: Explain a decision.\nallowed-tools:\n  - Read\n  - Grep\n  - Bash(git log --oneline)',
+      'name: why\ndescription: Explain a decision.\nargument-hint: <topic>\nallowed-tools:\n  - Read\n  - Grep\n  - Bash(git log --oneline)',
     );
     expect(skillProblems(text)).toEqual([]);
   });

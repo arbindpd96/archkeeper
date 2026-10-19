@@ -2,6 +2,7 @@
 name: adr
 description: Record an architecture decision as a numbered ADR in docs/adr/ and add it to docs/decisions.md.
 disable-model-invocation: true
+argument-hint: <title>
 ---
 
 Record the decision `$ARGUMENTS` as an ADR. If no title was given, ask for one.
