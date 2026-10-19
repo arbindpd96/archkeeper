@@ -78,12 +78,15 @@ describe.skipIf(process.platform === 'win32')('render-tapes', () => {
     expect(result.runs[0]?.env.ANTHROPIC_API_KEY).toBeUndefined();
   });
 
-  it('records only the named live tape with --live', () => {
-    const root = maintainedProject({ 'demo.tape': DEMO_TAPE, 'recorded.tape': `# live\n${DEMO_TAPE}` });
+  it('records only the named live tape with --live, in a fixture copy with one commit for # repo', () => {
+    const tapes = { 'demo.tape': DEMO_TAPE, 'recorded.tape': `# live\n# repo\n${DEMO_TAPE}` };
+    const root = maintainedProject(tapes);
     const out = path.join(root, 'gifs');
-    const result = renderTapes(root, ['--live', 'recorded', '--out', out, '--tarball', packedCli()]);
+    const args = ['--live', 'recorded', '--out', out, '--tarball', packedCli()];
+    const result = renderTapes(root, args, { HOME: tempDir() });
     expect(result.status).toBe(0);
     expect(result.runs).toHaveLength(1);
+    expect(result.runs[0]?.repo).toEqual({ commits: '1', status: '' });
     expect(existsSync(path.join(out, 'recorded.gif'))).toBe(true);
     expect(existsSync(path.join(out, 'demo.gif'))).toBe(false);
   });
