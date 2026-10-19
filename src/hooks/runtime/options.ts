@@ -42,11 +42,8 @@ export function configPreset(projectDir: string, brand: Brand = BRAND): string |
  */
 export function readModuleOptions(projectDir: string, moduleId: string, brand: Brand = BRAND): ModuleOptions {
   const read = readConfig(projectDir, brand);
-  if ('missing' in read) return { values: {} };
   if ('problem' in read) return { problem: read.problem };
-  const config = read.config;
-  const options = isRecord(config) ? config.options : undefined;
-  if (options === undefined) return { values: {} };
+  const options = 'config' in read && isRecord(read.config) ? read.config.options : undefined;
   const values = isRecord(options) ? options[moduleId] : undefined;
   if (values === undefined) return { values: {} };
   return isRecord(values) ? { values } : { problem: `options.${moduleId} is not an object` };

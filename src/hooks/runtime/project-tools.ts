@@ -2,11 +2,10 @@ import { accessSync, constants, lstatSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { isRecord } from '../../core/text.js';
 import { isInside, readRegularFile, realOrUndefined } from './project.js';
-import { findProgram, runNodeTool, runProgram, type ToolOptions, type ToolRun } from './tools.js';
+import { findProgram, runNodeTool, runProgram, SHIM, type ToolOptions, type ToolRun } from './tools.js';
 
 // A program's bare name, never a path or an option, so it can name only a package folder or a program.
 const PROGRAM_NAME = /^[A-Za-z0-9][\w.+-]*$/;
-const SHIM = /\.(?:cmd|bat)$/i;
 /** The packages of the Node.js tools whose bin is named otherwise, such as biome's `@biomejs/biome`. */
 const PACKAGE_OF: ReadonlyMap<string, string> = new Map([
   ['biome', '@biomejs/biome'],
@@ -33,7 +32,8 @@ export type CommandLookup =
   | { readonly missing: string }
   | { readonly refused: string };
 
-function isRegularFile(file: string): boolean {
+/** Whether a path, followed through any link, is a regular file. */
+export function isRegularFile(file: string): boolean {
   try {
     return statSync(file).isFile();
   } catch {
@@ -107,19 +107,28 @@ function scriptCommand(projectDir: string, args: readonly string[]): CommandLook
 }
 
 /**
- * The tool an argument array names first, run with no shell (ADR-0015): `node` with a JS file of the project, a JS
- * bin from node_modules, or a program from `.venv` or PATH. A path, an option, a `.cmd` or `.bat` shim, a shell, a
- * wrapper and a package runner are refused, npm included, since it runs scripts through a shell.
+ * A program by its bare name, run with no shell (ADR-0015): a JS bin from node_modules, else a program from `.venv`
+ * or PATH. A path, an option, a `.cmd` or `.bat` shim, a shell, a wrapper and a package runner are refused, npm
+ * included, since it runs scripts through a shell.
+ */
+export function programTool(projectDir: string, name: string): ToolLookup {
+  const bare = name.replace(/\.exe$/i, '');
+  if (!PROGRAM_NAME.test(name) || SHIM.test(name)) return { refused: `${name} is not a program name` };
+  if (REFUSED.has(bare.toLowerCase())) return { refused: `${name} is a shell, wrapper or package runner` };
+  const node = nodeTool(projectDir, bare);
+  const found = 'tool' in node ? node : pythonTool(projectDir, bare);
+  return 'tool' in found ? found : { missing: 'node_modules, .venv or PATH' };
+}
+
+/**
+ * The tool an argument array names first, run with no shell (ADR-0015): `node` with a JS file of the project, else
+ * the JS bin or program {@link programTool} finds.
  */
 export function commandTool(projectDir: string, argv: readonly string[]): CommandLookup {
   const [first = '', ...rest] = argv;
-  const bare = first.replace(/\.exe$/i, '');
-  if (!PROGRAM_NAME.test(first) || SHIM.test(first)) return { refused: `${first} is not a program name` };
-  if (REFUSED.has(bare.toLowerCase())) return { refused: `${first} is a shell, wrapper or package runner` };
-  if (bare.toLowerCase() === 'node') return scriptCommand(projectDir, rest);
-  const node = nodeTool(projectDir, bare);
-  const found = 'tool' in node ? node : pythonTool(projectDir, bare);
-  return 'tool' in found ? { tool: found.tool, args: rest } : { missing: 'node_modules, .venv or PATH' };
+  if (/^node(?:\.exe)?$/i.test(first)) return scriptCommand(projectDir, rest);
+  const found = programTool(projectDir, first);
+  return 'tool' in found ? { tool: found.tool, args: rest } : found;
 }
 
 /** Runs a project tool with an argument array and no shell: a JS entry through `runNodeTool`, else the program. */

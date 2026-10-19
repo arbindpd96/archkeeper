@@ -23,11 +23,6 @@ const STATE_NAME = /^(?!\.{1,2}(?:\/|$))[\w.-]+(?:\/(?!\.{1,2}(?:\/|$))[\w.-]+)*
 // Created exclusively, so a file or link planted at the temp name is never written through.
 const CREATE_FLAGS = constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | NO_FOLLOW;
 
-/** A hook state write that was refused, never redirected (ADR-0015); the hook reports the problem. */
-export class StateRefused extends Error {
-  override name = 'StateRefused';
-}
-
 /** The outcome of a state write: written, or skipped with the reason the hook reports on stderr. */
 export type StateWrite = { readonly written: true } | { readonly written: false; readonly problem: string };
 
@@ -36,8 +31,9 @@ interface StateFile {
   readonly rootReal: string;
 }
 
+// A refused state write is never redirected (ADR-0015): it throws, and the hook reports the message.
 function refused(folder: string, problem: string): never {
-  throw new StateRefused(`${folder} ${problem}`);
+  throw new Error(`${folder} ${problem}`);
 }
 
 // Every folder on the way must be a real folder whose real path is inside the project; a missing one is created
@@ -59,17 +55,14 @@ function writeExclusively(file: string, content: string, rootReal: string): void
   const temp = path.join(path.dirname(file), `.${path.basename(file)}.${randomBytes(6).toString('hex')}.tmp`);
   const descriptor = openSync(temp, CREATE_FLAGS, PRIVATE_FILE);
   try {
-    if (!isInside(rootReal, realpathSync.native(path.dirname(temp)))) {
-      refused(path.dirname(file), 'moved outside the project');
+    try {
+      if (!isInside(rootReal, realpathSync.native(path.dirname(temp)))) {
+        refused(path.dirname(file), 'moved outside the project');
+      }
+      writeSync(descriptor, content);
+    } finally {
+      closeSync(descriptor);
     }
-    writeSync(descriptor, content);
-  } catch (error) {
-    closeSync(descriptor);
-    rmSync(temp, { force: true });
-    throw error;
-  }
-  closeSync(descriptor);
-  try {
     renameSync(temp, file);
   } catch (error) {
     rmSync(temp, { force: true });
@@ -102,7 +95,7 @@ function localFolder(projectDir: string, brand: Brand, create: boolean): { local
 /** Where `<state dir>/local/<name>` is, with every folder on the way checked, and created when `create` is set. */
 function stateFile(projectDir: string, name: string, brand: Brand, create: boolean): StateFile {
   if (!STATE_NAME.test(name) || name === IGNORE_FILE) {
-    throw new StateRefused(`${name} is not a plain relative state name`);
+    refused(name, 'is not a plain relative state name');
   }
   const { local, rootReal } = localFolder(projectDir, brand, create);
   const parts = name.split('/');

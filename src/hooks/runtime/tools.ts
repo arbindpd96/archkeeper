@@ -4,7 +4,8 @@ import path from 'node:path';
 import { isInside, realOrUndefined } from './project.js';
 
 const DEFAULT_TIMEOUT_MS = 10_000;
-const SHIM = /\.(?:cmd|bat)$/i;
+/** An npm `.cmd` or `.bat` shim, which needs a shell on Windows (ADR-0015). */
+export const SHIM = /\.(?:cmd|bat)$/i;
 
 /** What a program printed and how it ended; `status` is null when it could not start or was killed. */
 export interface ToolRun {
@@ -57,6 +58,14 @@ export function runNodeTool(entry: string, args: readonly string[], options: Too
   return runProgram(process.execPath, [entry, ...args], options);
 }
 
+/** The absolute folders of a PATH value, quotes taken off; an empty or relative entry is left out. */
+export function absoluteFolders(pathValue: string): string[] {
+  return pathValue
+    .split(path.delimiter)
+    .map((entry) => entry.replace(/^"(.*)"$/, '$1'))
+    .filter((entry) => path.isAbsolute(entry));
+}
+
 /**
  * Finds a program such as git in the absolute PATH folders outside the project: Windows looks in the working
  * folder first and an empty or relative PATH entry means it on POSIX, so a program the project ships would run
@@ -69,10 +78,7 @@ export function findProgram(
 ): string | undefined {
   const rootReal = realOrUndefined(projectDir) ?? projectDir;
   const file = process.platform === 'win32' ? `${name}.exe` : name;
-  return pathValue
-    .split(path.delimiter)
-    .map((entry) => entry.replace(/^"(.*)"$/, '$1'))
-    .filter((entry) => path.isAbsolute(entry))
+  return absoluteFolders(pathValue)
     .map((folder) => path.join(folder, file))
     .find((candidate) => {
       const real = realOrUndefined(candidate);
