@@ -46,3 +46,37 @@ describe('nextConfig', () => {
     expect(JSON.parse(next.text)).toEqual({ ...WRITTEN, preset: 'full' });
   });
 });
+
+describe('nextConfig and the module options init records', () => {
+  const recorded = { 'format-on-edit': { formatters: ['prettier'], linters: ['eslint'] } };
+
+  it('adds them beside every option the user wrote, in their module and in others', () => {
+    const options = { 'format-on-edit': { commands: [['node', 'x.mjs']] }, safety: { blockNoVerify: true } };
+    const next = nextConfig(
+      existingConfig(JSON.stringify({ ...WRITTEN, options })),
+      { ...SAME, options: recorded },
+      '2.0.0',
+      TEST_BRAND,
+    );
+    expect(next.changed).toBe(true);
+    expect(JSON.parse(next.text)).toEqual({
+      ...WRITTEN,
+      options: {
+        'format-on-edit': { commands: [['node', 'x.mjs']], formatters: ['prettier'], linters: ['eslint'] },
+        safety: { blockNoVerify: true },
+      },
+    });
+  });
+
+  it('starts a new config with them', () => {
+    const next = nextConfig(undefined, { ...SAME, options: recorded }, '2.0.0', TEST_BRAND);
+    expect(JSON.parse(next.text)).toMatchObject({ preset: 'small', options: recorded });
+  });
+
+  it('leaves the file byte for byte when it already holds them', () => {
+    const text = `${JSON.stringify({ ...WRITTEN, options: recorded }, null, 4)}\n`;
+    const next = nextConfig(existingConfig(text), { ...SAME, options: recorded }, '2.0.0', TEST_BRAND);
+    expect(next.changed).toBe(false);
+    expect(next.text).toBe(text);
+  });
+});

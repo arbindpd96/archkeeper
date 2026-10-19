@@ -114,18 +114,20 @@ describe('init with the safety optOut option (#33, ADR-0014)', () => {
 });
 
 describe('init with the safety module left out (#33)', () => {
-  it('writes no deny rule, guard or safety block, only the memory hooks', async () => {
+  it('writes no deny rule, guard or safety block, only the memory and format-on-edit hooks', async () => {
     const { dir } = fixtureCopy('ts-app');
     expect((await runInit(dir, ['--yes', '--modules', '-safety'])).code).toBe(0);
     expect(settingsOf(dir).permissions).toBeUndefined();
     expect(settingsOf(dir).hooks?.PreToolUse).toBeUndefined();
-    expect(readdirSync(path.join(dir, TEST_BRAND.hookDir)).sort()).toEqual(MEMORY_HOOKS);
+    const hooks = readdirSync(path.join(dir, TEST_BRAND.hookDir)).sort();
+    expect(hooks).toEqual(['format-on-edit.mjs', ...MEMORY_HOOKS]);
     expect(readFileSync(path.join(dir, 'AGENTS.md'), 'utf8')).not.toContain('Safety guards');
   });
 
-  it('writes no settings or hook scripts at all once feature memory is left out too', async () => {
+  it('writes no settings or hook scripts at all once feature memory and format-on-edit are left out too', async () => {
     const { dir } = fixtureCopy('ts-app');
-    expect((await runInit(dir, ['--yes', '--modules', '-safety,-feature-memory'])).code).toBe(0);
+    const modules = '-safety,-feature-memory,-format-on-edit';
+    expect((await runInit(dir, ['--yes', '--modules', modules])).code).toBe(0);
     expect(existsSync(path.join(dir, SETTINGS))).toBe(false);
     expect(existsSync(path.join(dir, TEST_BRAND.hookDir))).toBe(false);
   });

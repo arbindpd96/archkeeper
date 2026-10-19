@@ -1,4 +1,26 @@
 ##### format-on-edit on examples/ts-app
+=== .claude/hooks/acmekit/format-on-edit.mjs (owned, format-on-edit)
+// Stand-in for the format-on-edit bundle that npm run build makes.
+=== .claude/settings.json (json, format-on-edit)
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/format-on-edit.mjs"
+            ],
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
 === .gitignore (blocks, base, block base)
 CLAUDE.local.md
 .claude/settings.local.json
@@ -37,6 +59,28 @@ Rules for AI coding agents, such as Claude Code, Codex, Cursor, Gemini CLI and C
 - Claude Code reads .claude/settings.json and its hooks at startup, so restart it after changing them.
 
 ##### format-on-edit on examples/py-app
+=== .claude/hooks/acmekit/format-on-edit.mjs (owned, format-on-edit)
+// Stand-in for the format-on-edit bundle that npm run build makes.
+=== .claude/settings.json (json, format-on-edit)
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/acmekit/format-on-edit.mjs"
+            ],
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
 === .gitignore (blocks, base, block base)
 CLAUDE.local.md
 .claude/settings.local.json
