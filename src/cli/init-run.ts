@@ -17,6 +17,8 @@ export interface InitFlags {
   readonly stack?: string;
   readonly dryRun?: boolean;
   readonly verbose?: boolean;
+  /** Turn on the stop check with the detected test command (#38), which a scripted run sets only when asked. */
+  readonly stopCheck?: boolean;
 }
 
 /** One run of `init`: the session, its flags, the project folder, the kit and how it may ask. */

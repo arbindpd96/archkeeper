@@ -176,11 +176,12 @@ describe('init, scripted', () => {
 describe('init, interactive', () => {
   it('shows the stack, asks for a preset with its token budget, shows the plan, confirms, then writes', async () => {
     const { dir } = fixtureCopy('ts-app');
-    const result = await runInit(dir, [], { interactive: true, answers: ['full', true] });
+    const result = await runInit(dir, [], { interactive: true, answers: ['full', false, true] });
     expect(result.code).toBe(0);
     const order = [
       'Detected: TypeScript (npm)',
       '[? Choose a preset',
+      '[? Turn on the stop check?',
       'Plan:',
       '[? Apply this plan?]',
       'Next steps:',
