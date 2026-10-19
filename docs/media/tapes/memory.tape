@@ -1,16 +1,19 @@
 # live
+# repo
 # Feature memory: init installs the memory hooks and /new-feature. In Claude Code, /new-feature starts a feature's
 # MEMORY.md and makes it the active feature; /compact runs pre-compact, which saves a snapshot, and then
 # session-start injects the memory again, so the first answer after compaction resumes at the recorded Next step.
-# acceptEdits lets /new-feature write its two files without a prompt, and the fixture is no git repository, so it
-# offers no branch: keep it so, or the tape stops at that question. The GIF may run 30 s, so the tape waits on
-# Claude Code's screen instead of sleeping; check each pattern when recording.
+# The fixture copy is a git repository with one commit on main, as a real project is, so pre-compact's snapshot and
+# memory-stop have git to read. The tape starts the feature's branch before Claude Code, since /new-feature offers
+# one on the default branch and the tape would stop at that question; acceptEdits lets /new-feature write its two
+# files without a prompt. The GIF may run 30 s, so the tape waits on Claude Code's screen instead of sleeping; check
+# each pattern when recording.
 # fixture: ts-app
 Type "{{brand.binName}} init --yes --preset small"
 Enter
 Wait+Screen /Next steps/
 Sleep 1s
-Type "clear && claude --permission-mode acceptEdits"
+Type "clear && git switch -c greet-shout && claude --permission-mode acceptEdits"
 Enter
 Wait+Screen /for shortcuts/
 Type "/new-feature greet-shout: done means greet() can shout the name in capitals"

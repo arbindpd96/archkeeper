@@ -1,6 +1,9 @@
 # live
+# repo
 # Safety: init installs the guards, then Claude Code is asked to force-push with the flag at the end,
-# which a prefix deny rule misses; guard-bash denies it before it runs and Claude reports why.
+# which a prefix deny rule misses; guard-bash denies it before it runs and Claude reports why. The fixture copy
+# is a git repository with one commit, where a force-push makes sense and init has nothing to warn about;
+# guard-bash judges the command alone, so it denies the push as it would anywhere.
 # fixture: ts-app
 Type "{{brand.binName}} init --yes --preset small"
 Enter
