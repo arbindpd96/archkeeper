@@ -3,7 +3,7 @@ import { configPath } from '../core/config.js';
 import { lockFilePath } from '../core/lock.js';
 import type { OpKind } from '../core/plan-types.js';
 import type { PathSummary, PlanGroup, PlanRow } from '../core/plan-summary.js';
-import type { Language, StackProfile } from '../core/stack-profile.js';
+import { LANGUAGE_NAMES, type StackProfile } from '../core/stack-profile.js';
 import { escapeUnprintable } from '../core/text.js';
 import { baseFolder } from './blob-store.js';
 import { type CliOutput, type StyleFormat, styled } from './output.js';
@@ -27,12 +27,6 @@ export function reporterFor(output: CliOutput, json: boolean): Reporter {
     paint: (format, text) => styled(output, format, text),
   };
 }
-
-const LANGUAGE_NAMES: Readonly<Record<Language, string>> = {
-  typescript: 'TypeScript',
-  javascript: 'JavaScript',
-  python: 'Python',
-};
 
 function toolLine(profile: StackProfile): string[] {
   const { formatters, linters, typeCheckers, testRunners } = profile.tools;

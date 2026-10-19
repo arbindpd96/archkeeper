@@ -21,6 +21,13 @@ export const LANGUAGES = ['typescript', 'javascript', 'python'] as const;
 /** A language from {@link LANGUAGES}. */
 export type Language = (typeof LANGUAGES)[number];
 
+/** Each language's name as init's report and the architecture map print it. */
+export const LANGUAGE_NAMES: Readonly<Record<Language, string>> = {
+  typescript: 'TypeScript',
+  javascript: 'JavaScript',
+  python: 'Python',
+};
+
 /** The tools detection knows, by the job each does, in report order; biome and ruff do two jobs. */
 export const TOOL_JOBS = {
   formatters: ['prettier', 'biome', 'ruff', 'black'],
