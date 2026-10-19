@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
+import { devNull } from 'node:os';
 import path from 'node:path';
 
 const REVISION = /^(?!-)[\w./^~@{}-]+$/;
@@ -14,13 +15,22 @@ export function exitWith(message, code) {
   process.exit(code);
 }
 
-/** Runs git without a shell and returns stdout, or exits 2 saying what could not be done and what to do next. */
-export function git(args, { cwd = process.cwd(), action, nextStep }) {
+/** Runs git without a shell (in `env` when given) and returns stdout, or exits 2 saying what failed and what to do. */
+export function git(args, { cwd = process.cwd(), env, action, nextStep }) {
   try {
-    return execFileSync('git', args, { cwd, ...OUTPUT });
+    return execFileSync('git', args, { cwd, env, ...OUTPUT });
   } catch (error) {
     return exitWith(`${toolName()}: git could not ${action} in ${cwd}.\n${reasonOf(error)}\n${nextStep}`, 2);
   }
+}
+
+/**
+ * This process's environment for a git isolated from the caller's setup: no `GIT_*` variable, which could point it
+ * at another repository, no system config, and only `globalConfig` as global config.
+ */
+export function isolatedGitEnv(globalConfig = devNull) {
+  const kept = Object.entries(process.env).filter(([name]) => !/^GIT_/i.test(name));
+  return { ...Object.fromEntries(kept), GIT_CONFIG_GLOBAL: globalConfig, GIT_CONFIG_NOSYSTEM: '1' };
 }
 
 /** Finds npm's JS entry: the npm that launched this script, else the npm installed beside this Node.js. */

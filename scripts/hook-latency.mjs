@@ -16,7 +16,7 @@ import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { parseArgs } from 'node:util';
 import { BRAND } from '../src/core/brand.ts';
-import { exitWith } from './lib.mjs';
+import { exitWith, isolatedGitEnv } from './lib.mjs';
 
 const USAGE = 'Usage: node scripts/hook-latency.mjs [<root>] [--gate] [--runs <n>]';
 const EDITED_FILE = 'src/latency.ts';
@@ -111,11 +111,10 @@ function readBudget(root) {
 
 /** Runs git in the throwaway project with no user or system config, so none of their hooks or templates run. */
 function projectGit(work, dir, args) {
-  const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => !/^GIT_/i.test(name)));
   const run = spawnSync('git', [...GIT_IDENTITY, ...args], {
     cwd: dir,
     encoding: 'utf8',
-    env: { ...env, GIT_CONFIG_GLOBAL: path.join(work, 'gitconfig'), GIT_CONFIG_NOSYSTEM: '1' },
+    env: isolatedGitEnv(path.join(work, 'gitconfig')),
   });
   if (run.status !== 0) {
     exitWith(`hook-latency: git ${args[0]} failed in the timing project: ${run.stderr}`, 1);

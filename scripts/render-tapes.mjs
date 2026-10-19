@@ -14,7 +14,7 @@ import {
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { exitWith, git, npm } from './lib.mjs';
+import { exitWith, git, isolatedGitEnv, npm } from './lib.mjs';
 import {
   fillPlaceholders,
   LIVE,
@@ -63,14 +63,28 @@ function readTape(root, feature) {
   return { feature, text, live: LIVE.test(text), repo: REPO.test(text), fixture: FIXTURE.exec(text)?.[1] };
 }
 
-/** Makes a fixture copy a git repository with one commit, as a real project is, for a tape marked `# repo`. */
-function commitFixture(project) {
+/**
+ * Makes a fixture copy a git repository with one commit, as a real project is, for a tape marked `# repo`. git runs
+ * with none of the maintainer's `GIT_*` variables, config or templates, and the copy's own empty hooks folder
+ * outranks a global `core.hooksPath`, so the tape's and Claude's git calls in it run no hook either.
+ */
+function commitFixture(project, fixture) {
   const options = {
     cwd: project,
+    env: isolatedGitEnv(),
     action: 'commit the fixture copy',
     nextStep: 'Check that git is installed.',
   };
-  git(['-c', 'init.defaultBranch=main', 'init', '-q'], options);
+  git(['-c', 'init.defaultBranch=main', 'init', '-q', '--template='], options);
+  const remotes = git(['remote'], options).split('\n').filter(Boolean);
+  if (remotes.length > 0) {
+    exitWith(
+      `render-tapes: after git init, git remote lists ${remotes.join(', ')} in the copy of examples/${fixture}, ` +
+        `so the copy is not a fresh repository. Check that examples/${fixture} holds no .git.`,
+      1,
+    );
+  }
+  git(['config', 'core.hooksPath', mkdtempSync(path.join(project, '.git', 'empty-hooks-'))], options);
   git(['add', '-A'], options);
   const identity = [
     '-c',
@@ -187,7 +201,7 @@ function render(tape, { root, work, env, settings, out }) {
   const gif = path.join(work, 'gifs', `${tape.feature}.gif`);
   const script = path.join(work, 'tapes', `${tape.feature}.tape`);
   cpSync(path.join(root, 'examples', tape.fixture), project, { recursive: true });
-  if (tape.repo) commitFixture(project);
+  if (tape.repo) commitFixture(project, tape.fixture);
   mkdirSync(path.dirname(gif), { recursive: true });
   mkdirSync(path.dirname(script), { recursive: true });
   writeFileSync(script, renderedTape(settings, tape, gif));
