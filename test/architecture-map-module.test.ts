@@ -63,7 +63,7 @@ describe('the architecture-map module (#36)', () => {
   it('tells Claude what to update, what to leave alone and how to report', () => {
     const skill = moduleContent(TREE, 'architecture-map', SKILL);
     for (const step of [
-      'Run `git ls-files`',
+      'Run `git ls-files` exactly as written, with no option or pipe, so it needs no prompt',
       'the first 400 paths are enough',
       'look for them with Glob too',
       'In **Layout**, add a row for each new folder',
