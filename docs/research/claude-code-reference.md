@@ -336,6 +336,11 @@ Load order: managed > project > plugin > user.
 - `arguments` (positional)
 - `paths`: glob activation
 
+**Frontmatter outside Claude Code** [src](https://code.claude.com/docs/en/skills#using-skill-frontmatter-outside-claude-code):
+- claude.ai skill uploads, the Skills API and packaging with `package_skill.py` accept only the Agent Skills spec's `name`, `description`, `license`, `compatibility`, `metadata` and `allowed-tools`.
+- Any other key, `argument-hint` and `disable-model-invocation` included, fails the upload or the packaging with a hard error instead of being ignored (verified 2026-10-19).
+- Claude Code accepts every key, at every level and in plugin skills.
+
 **Body features** [src](https://code.claude.com/docs/en/skills):
 - `` !`cmd` `` runs at load time and embeds the output. It never prompts: outside auto mode, a command that the permission rules or `allowed-tools` do not allow aborts the invocation. `"disableSkillShellExecution": true` replaces each command with a placeholder [src](https://code.claude.com/docs/en/skills).
 - `$ARGUMENTS`, `$0`, `$1` and `$name` are substituted.
