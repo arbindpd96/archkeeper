@@ -47,7 +47,7 @@
       }
     },
     "when": {
-      "description": "Render only when the project stack is one of `stack` and every listed option of this module has its value.",
+      "description": "Render only when the project stack is one of `stack`, detection found one of `tools` for the stacks in effect, and every listed option of this module has its value.",
       "type": "object",
       "properties": {
         "stack": {
@@ -58,6 +58,26 @@
             "enum": [
               "ts",
               "python"
+            ]
+          }
+        },
+        "tools": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "prettier",
+              "biome",
+              "ruff",
+              "black",
+              "eslint",
+              "tsc",
+              "mypy",
+              "pyright",
+              "vitest",
+              "jest",
+              "pytest"
             ]
           }
         },
@@ -105,7 +125,7 @@
                 ]
               },
               "when": {
-                "description": "Render only when the project stack is one of `stack` and every listed option of this module has its value.",
+                "description": "Render only when the project stack is one of `stack`, detection found one of `tools` for the stacks in effect, and every listed option of this module has its value.",
                 "type": "object",
                 "properties": {
                   "stack": {
@@ -116,6 +136,26 @@
                       "enum": [
                         "ts",
                         "python"
+                      ]
+                    }
+                  },
+                  "tools": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "prettier",
+                        "biome",
+                        "ruff",
+                        "black",
+                        "eslint",
+                        "tsc",
+                        "mypy",
+                        "pyright",
+                        "vitest",
+                        "jest",
+                        "pytest"
                       ]
                     }
                   },
@@ -163,7 +203,7 @@
                 "const": "project"
               },
               "when": {
-                "description": "Render only when the project stack is one of `stack` and every listed option of this module has its value.",
+                "description": "Render only when the project stack is one of `stack`, detection found one of `tools` for the stacks in effect, and every listed option of this module has its value.",
                 "type": "object",
                 "properties": {
                   "stack": {
@@ -174,6 +214,26 @@
                       "enum": [
                         "ts",
                         "python"
+                      ]
+                    }
+                  },
+                  "tools": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "prettier",
+                        "biome",
+                        "ruff",
+                        "black",
+                        "eslint",
+                        "tsc",
+                        "mypy",
+                        "pyright",
+                        "vitest",
+                        "jest",
+                        "pytest"
                       ]
                     }
                   },
@@ -221,7 +281,7 @@
                 "const": "project"
               },
               "when": {
-                "description": "Render only when the project stack is one of `stack` and every listed option of this module has its value.",
+                "description": "Render only when the project stack is one of `stack`, detection found one of `tools` for the stacks in effect, and every listed option of this module has its value.",
                 "type": "object",
                 "properties": {
                   "stack": {
@@ -232,6 +292,26 @@
                       "enum": [
                         "ts",
                         "python"
+                      ]
+                    }
+                  },
+                  "tools": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "prettier",
+                        "biome",
+                        "ruff",
+                        "black",
+                        "eslint",
+                        "tsc",
+                        "mypy",
+                        "pyright",
+                        "vitest",
+                        "jest",
+                        "pytest"
                       ]
                     }
                   },
@@ -281,7 +361,7 @@
                 "const": "project"
               },
               "when": {
-                "description": "Render only when the project stack is one of `stack` and every listed option of this module has its value.",
+                "description": "Render only when the project stack is one of `stack`, detection found one of `tools` for the stacks in effect, and every listed option of this module has its value.",
                 "type": "object",
                 "properties": {
                   "stack": {
@@ -292,6 +372,26 @@
                       "enum": [
                         "ts",
                         "python"
+                      ]
+                    }
+                  },
+                  "tools": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "prettier",
+                        "biome",
+                        "ruff",
+                        "black",
+                        "eslint",
+                        "tsc",
+                        "mypy",
+                        "pyright",
+                        "vitest",
+                        "jest",
+                        "pytest"
                       ]
                     }
                   },

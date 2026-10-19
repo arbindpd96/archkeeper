@@ -76,6 +76,29 @@ describe('resolveModules', () => {
     ]);
   });
 
+  it('leaves out a module whose when.tools names no detected tool, with the reason', () => {
+    const catalog = catalogOf([
+      plainManifest('base', { presets: ALL }),
+      plainManifest('formatting', {
+        presets: MEDIUM_UP,
+        requires: ['base'],
+        when: { tools: ['prettier', 'biome', 'ruff'] },
+      }),
+      plainManifest('typing', { presets: MEDIUM_UP, requires: ['base'], when: { tools: ['mypy'] } }),
+    ]);
+    const request = { preset: 'medium', stack: ['ts', 'python'], tools: ['eslint', 'tsc'] } as const;
+    const resolution = resolveModules(request, catalog);
+    expect(resolution.modules.map((kit) => kit.manifest.id)).toEqual(['base']);
+    expect(resolution.dropped).toEqual([
+      { id: 'formatting', reason: 'needs prettier, biome or ruff, and none was detected' },
+      { id: 'typing', reason: 'needs mypy, which was not detected' },
+    ]);
+    expect(resolveModules({ ...request, tools: ['ruff'] }, catalog).dropped.map(({ id }) => id)).toEqual([
+      'typing',
+    ]);
+    expect(resolveModules({ preset: 'medium', stack: ['ts'] }, catalog).dropped).toHaveLength(2);
+  });
+
   it('leaves out a module that only a left-out module required', () => {
     const catalog = catalogOf([
       plainManifest('base', { presets: ALL }),

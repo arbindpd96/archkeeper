@@ -13,6 +13,7 @@ import {
   STACKS,
   targetPath,
 } from './schema-parts.js';
+import { TOOLS } from './stack-profile.js';
 
 /** Hook events a module may register (ADR-0015). PreToolUse and PostToolUse are the tool events. */
 export const HOOK_EVENTS = ['SessionStart', 'PreToolUse', 'PostToolUse', 'PreCompact', 'Stop'] as const;
@@ -37,11 +38,12 @@ export function ignoreLineProblem(line: string): string | undefined {
 
 const when = z.strictObject({
   stack: z.optional(z.array(z.enum(STACKS)).check(z.minLength(1))),
+  tools: z.optional(z.array(z.enum(TOOLS)).check(z.minLength(1))),
   options: z.optional(z.record(optionName, z.union([z.boolean(), z.string()]))),
 });
 const whenField = described(
   z.optional(when),
-  'Render only when the project stack is one of `stack` and every listed option of this module has its value.',
+  'Render only when the project stack is one of `stack`, detection found one of `tools` for the stacks in effect, and every listed option of this module has its value.',
 );
 
 const command = z.array(z.string()).check(z.minLength(1));

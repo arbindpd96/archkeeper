@@ -42,6 +42,9 @@ export type ToolsByJob = { readonly [Job in keyof typeof TOOL_JOBS]: readonly st
 /** A tool from {@link TOOL_JOBS}; a language's detection can report no other name, so none is dropped. */
 export type Tool = (typeof TOOL_JOBS)[keyof typeof TOOL_JOBS][number];
 
+/** Every tool of {@link TOOL_JOBS} once, in its order, as a module's `when.tools` may name them. */
+export const TOOLS: readonly Tool[] = [...new Set(Object.values(TOOL_JOBS).flat())];
+
 /** Frameworks detection reports, in this order; nothing depends on them yet. */
 export const FRAMEWORKS = ['react', 'next', 'django', 'fastapi'] as const;
 
