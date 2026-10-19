@@ -106,6 +106,31 @@ Two guard hooks check Claude's shell commands and file edits before they happen.
 
 Built-in deny rules back the hooks up, so the worst commands stay blocked even where a hook cannot run. Options and known limits are in [docs/guards.md](docs/guards.md).
 
+## Feature memory
+
+Each feature you start gets a `MEMORY.md` in `docs/features/<name>/` with its goal, its decisions, what is done and the next step. Hooks put it in front of Claude, so a new session, or the first turn after `/compact`, resumes at the next step:
+
+| When                              | What happens                                                                                                                                                                           |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| You type `/new-feature <name>`    | Claude asks what "done" means, starts the feature's MEMORY.md from the template and makes it the active feature.                                                                       |
+| A session starts                  | Claude gets the active feature's next step, goal and last five decisions, and checks with you once that it is the right feature. With no active feature, it asks which one you are on. |
+| You type `/compact`               | A hook first saves the branch and the list of uncommitted files. Afterwards Claude gets them back with the memory and resumes at the next step.                                        |
+| Claude finishes with code changed | When files git tracks, other than docs, changed after the memory was last saved, a hook asks Claude to run `/handoff`, once for each set of changes.                                   |
+| You or Claude run `/handoff`      | Claude records what is done, the next step, new decisions and what failed, and keeps the file short.                                                                                   |
+
+The memory is plain Markdown: read it, edit it and commit it with your code. Every preset includes it, and what a session start adds is capped at 1,200, 3,000 or 4,000 characters in small, medium and full.
+
+## Decisions
+
+The medium and full presets keep a decision log, so Claude can say why your code is the way it is instead of guessing. `docs/decisions.md` lists the decisions, `docs/adr/` holds a short record (an ADR) of each one, and `docs/glossary.md` defines your project's terms:
+
+| You type       | What Claude does                                                                                                                                                     |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/why <topic>` | Searches the decision log, the ADRs, the decisions in feature memories and the mistakes log, then answers in a few sentences, citing each source as `path:line`.     |
+| `/adr <title>` | Writes the next numbered ADR from the template and adds it to the decision log. It sets `accepted` only once you agree, and marks any ADR it replaces as superseded. |
+
+When the records have no answer, `/why` searches the commit history and cites the commit, or says that nothing is recorded and offers `/adr`. Claude can also use `/why` on its own before it changes an established pattern; `/adr` runs only when you ask.
+
 ## Pick a preset
 
 `init` asks which preset you want; `medium` is the default.
