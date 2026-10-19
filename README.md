@@ -143,6 +143,10 @@ The medium and full presets format and lint every file Claude edits with your pr
 
 The full preset can run your tests before Claude says a task is done. The check is off until you turn it on: `init` shows the test command it found, such as `npm run test` or `pytest`, and sets it only if you say yes, or when you pass `--stop-check`. Once it is on, the check runs whenever code changed since its last green run, and a failure goes back to Claude with its last lines, once for each set of changes, so Claude fixes it or tells you why. It runs your project's own test runner with no shell and none of npm's pre or post scripts, and `checks.stop` in `.archkeeper/config.json` holds the command.
 
+## Works with Superpowers and Spec Kit
+
+`init` offers [Superpowers](https://github.com/obra/superpowers), a Claude Code plugin of planning, TDD and code review skills, and [Spec Kit](https://github.com/github/spec-kit), for spec-driven development. Right after the preset it asks whether you want either or both, defaulting to no; `--with superpowers,speckit` answers in a scripted run. A yes is recorded in `.archkeeper/config.json`, and `init` prints the exact install commands, with a warning about Spec Kit's `--force`. Nothing is installed or downloaded, and none of archkeeper's skills shares a name with theirs.
+
 ## Pick a preset
 
 `init` asks which preset you want; `medium` is the default.
@@ -189,7 +193,7 @@ No. It has no runtime dependencies and makes no network calls: <code>init</code>
 <details>
 <summary><b>Does it replace Superpowers or Spec Kit?</b></summary>
 <br>
-No, it works alongside them. <code>init</code> offers both <a href="https://github.com/obra/superpowers">Superpowers</a> and <a href="https://github.com/github/spec-kit">Spec Kit</a>, off by default.
+No, it works alongside them. <code>init</code> offers both <a href="https://github.com/obra/superpowers">Superpowers</a> and <a href="https://github.com/github/spec-kit">Spec Kit</a>, off by default, and prints how to add them, as <a href="#works-with-superpowers-and-spec-kit">Works with Superpowers and Spec Kit</a> shows.
 </details>
 
 <details>
