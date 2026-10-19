@@ -135,6 +135,10 @@ When the records have no answer, `/why` searches the commit history and cites th
 
 The medium and full presets add `docs/architecture.md`, a map of your project that Claude checks before it creates anything. `init` seeds it with the detected stack, a table of the folders git tracks for Claude to describe, and the entry points in `package.json` and `pyproject.toml`, and never changes it once it exists. After a module, package, command or shared util is added or removed, `/update-map` brings the map up to date, and each session with an active feature starts with the map's Overview.
 
+## Format on edit
+
+The medium and full presets format and lint every file Claude edits with your project's own tools: prettier or biome plus eslint for TS/JS, and `ruff format` and `ruff check --fix` for Python. `init` records the tools it finds in `.archkeeper/config.json`, where you can also add checks of your own. Formatting happens silently; lint errors that remain go straight back to Claude, which fixes them before moving on. Nothing is downloaded or run through a shell, and a tool that is not installed is skipped with a one-time hint.
+
 ## Pick a preset
 
 `init` asks which preset you want; `medium` is the default.
