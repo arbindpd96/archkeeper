@@ -22,8 +22,10 @@ function settingsOf(dir: string): Settings {
   return parse(readFileSync(path.join(dir, SETTINGS), 'utf8')) as Settings;
 }
 
+// The config holds its compose choice, so a run on a terminal asks only what the optOut entries raise.
 function configWith(optOut: readonly string[]): string {
-  return `${JSON.stringify({ version: 1, preset: 'small', options: { safety: { optOut } } }, null, 2)}\n`;
+  const compose = { superpowers: false, specKit: false };
+  return `${JSON.stringify({ version: 1, preset: 'small', options: { safety: { optOut } }, compose }, null, 2)}\n`;
 }
 
 describe('init with the safety optOut option (#33, ADR-0014)', () => {

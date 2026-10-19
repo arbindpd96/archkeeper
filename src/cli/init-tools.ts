@@ -4,6 +4,7 @@ import { resolveOptions, type ResolvedOptions } from '../core/options.js';
 import { type Resolution, resolveModules } from '../core/resolve.js';
 import type { Stack } from '../core/schema-parts.js';
 import type { StackProfile } from '../core/stack-profile.js';
+import { chooseCompose } from './init-compose.js';
 import { type ConfigAnswers, type ExistingConfig, nextConfig, type NextConfig } from './init-config.js';
 import type { InitRun } from './init-run.js';
 import { stopCheckOptions } from './init-stop-check.js';
@@ -50,11 +51,12 @@ function recordedTools(settled: Settled, profile: StackProfile): ConfigAnswers['
 }
 
 /**
- * Settles the config init leaves and the modules it installs (#27, #37, #38): the stack in effect, the tools detection
- * found for it, the config's options over each module's defaults, and the modules the resolver keeps and leaves out.
- * When format-on-edit is selected and the config sets neither of its tool lists, the config records the tools it
- * runs for the stacks in effect; the stop check's command is recorded as `stopCheckOptions` says, which may ask.
- * Undefined when the user cancels that question.
+ * Settles the config init leaves and the modules it installs (#27, #37, #38, #39): the compose choice, as
+ * `chooseCompose` gives it right after the preset, the stack in effect, the tools detection found for it, the
+ * config's options over each module's defaults, and the modules the resolver keeps and leaves out. When
+ * format-on-edit is selected and the config sets neither of its tool lists, the config records the tools it runs for
+ * the stacks in effect; the stop check's command is recorded as `stopCheckOptions` says. Both of those may ask;
+ * undefined when the user cancels a question.
  */
 export async function settleModules(
   run: InitRun,
@@ -62,10 +64,13 @@ export async function settleModules(
   existing: ExistingConfig | undefined,
   answers: ConfigAnswers,
 ): Promise<Settled | undefined> {
-  const settled = settle(run, profile, existing, answers);
+  const compose = await chooseCompose(run, existing);
+  if (compose === null) return undefined;
+  const answered = compose === undefined ? answers : { ...answers, compose };
+  const settled = settle(run, profile, existing, answered);
   const stopCheck = await stopCheckOptions(run, settled, profile);
   if (stopCheck === null) return undefined;
   const options = { ...recordedTools(settled, profile), ...stopCheck };
   if (Object.keys(options).length === 0) return settled;
-  return settle(run, profile, existing, { ...answers, options: { ...answers.options, ...options } });
+  return settle(run, profile, existing, { ...answered, options: { ...answered.options, ...options } });
 }

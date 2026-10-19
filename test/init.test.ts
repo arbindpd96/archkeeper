@@ -176,11 +176,12 @@ describe('init, scripted', () => {
 describe('init, interactive', () => {
   it('shows the stack, asks for a preset with its token budget, shows the plan, confirms, then writes', async () => {
     const { dir } = fixtureCopy('ts-app');
-    const result = await runInit(dir, [], { interactive: true, answers: ['full', false, true] });
+    const result = await runInit(dir, [], { interactive: true, answers: ['full', 'no', false, true] });
     expect(result.code).toBe(0);
     const order = [
       'Detected: TypeScript (npm)',
       '[? Choose a preset',
+      '[? Add Superpowers or Spec Kit?',
       '[? Turn on the stop check?',
       'Plan:',
       '[? Apply this plan?]',
@@ -197,10 +198,10 @@ describe('init, interactive', () => {
   it('asks, once the plan is shown, before going on in a project git cannot undo, and stops on a no', async () => {
     const { dir } = fixtureCopy('ts-app');
     const before = projectText(dir);
-    const answers = ['medium', false];
+    const answers = ['medium', 'no', false];
     const result = await runInit(dir, [], { interactive: true, git: 'not-a-repo', answers });
     expect(result.code).toBe(1);
-    expect(result.asked.slice(1)).toEqual(['Continue anyway?']);
+    expect(result.asked.slice(2)).toEqual(['Continue anyway?']);
     expect(result.transcript.indexOf('Plan:')).toBeLessThan(
       result.transcript.indexOf('[? Continue anyway?]'),
     );
@@ -209,7 +210,7 @@ describe('init, interactive', () => {
   });
 
   it.each([
-    ['declines the plan', ['medium', false]],
+    ['declines the plan', ['medium', 'no', false]],
     ['cancels the preset question', [undefined]],
   ])('writes nothing when the user %s', async (_name, answers) => {
     const { dir } = fixtureCopy('ts-app');
@@ -226,7 +227,11 @@ describe('init, interactive', () => {
         writeFileSync(path.join(dir, 'CLAUDE.md'), '# Written meanwhile\n');
       }
     };
-    const result = await runInit(dir, [], { interactive: true, answers: ['medium', true], whileAsking });
+    const result = await runInit(dir, [], {
+      interactive: true,
+      answers: ['medium', 'no', true],
+      whileAsking,
+    });
     expect(result.code).toBe(1);
     expect(result.stderr).toContain('CLAUDE.md');
     expect(read(dir, 'CLAUDE.md')).toBe('# Written meanwhile\n');
