@@ -9,7 +9,9 @@ import { type Stack, STACKS } from '../core/schema-parts.js';
 import { quoted } from '../core/text.js';
 import type { GitState } from './git-state.js';
 import type { Choice, Prompter } from './prompts.js';
+import { composeFlag } from './init-compose.js';
 import type { Reporter } from './init-report.js';
+import type { InitFlags } from './init-run.js';
 
 /** What init needs to ask a question or decide without one. */
 export interface Asking {
@@ -75,7 +77,7 @@ export function moduleChanges(
 
 /** Checks init's own flags before anything is read or asked, so a typo fails at once with the flag to fix (#27). */
 export function checkInitFlags(
-  flags: { readonly preset?: string; readonly modules?: string; readonly stack?: string },
+  flags: Pick<InitFlags, 'preset' | 'modules' | 'stack' | 'with'>,
   catalog: Catalog,
 ): void {
   const names = catalog.presets.map((preset) => preset.name);
@@ -90,6 +92,7 @@ export function checkInitFlags(
   }
   stackFlag(flags.stack);
   moduleChanges(flags.modules, undefined, catalog);
+  composeFlag(flags.with);
 }
 
 const GIT_PROBLEMS: Readonly<Record<Exclude<GitState, 'clean'>, readonly [problem: string, fix: string]>> = {

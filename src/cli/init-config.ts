@@ -19,8 +19,9 @@ export interface ExistingConfig {
 }
 
 /**
- * What init settles for the config: the preset, the module changes, the stack when the user named one, and module
- * option values init records, by module id, such as the tools format-on-edit runs.
+ * What init settles for the config: the preset, the module changes, the stack when the user named one, module
+ * option values init records, by module id, such as the tools format-on-edit runs, and the compose choice when the
+ * user gave one in this run.
  */
 export interface ConfigAnswers {
   readonly preset: string;
@@ -28,6 +29,7 @@ export interface ConfigAnswers {
   readonly remove: readonly string[];
   readonly stack?: readonly Stack[];
   readonly options?: Readonly<Record<string, Readonly<Record<string, OptionValue>>>>;
+  readonly compose?: ProjectConfig['compose'];
 }
 
 /** The config init leaves: its text, whether that differs from the file on disk, its parsed value and warnings. */
@@ -68,13 +70,26 @@ function sameOptions(config: ProjectConfig, answers: ConfigAnswers): boolean {
   );
 }
 
-function sameAnswers(config: ProjectConfig, answers: ConfigAnswers): boolean {
+// A config without compose reads as no to both, so a no is on disk only where the config has the key.
+function sameCompose(existing: ExistingConfig, answers: ConfigAnswers): boolean {
+  if (answers.compose === undefined) return true;
+  const { superpowers, specKit } = existing.config.compose;
+  return (
+    existing.raw.compose !== undefined &&
+    superpowers === answers.compose.superpowers &&
+    specKit === answers.compose.specKit
+  );
+}
+
+function sameAnswers(existing: ExistingConfig, answers: ConfigAnswers): boolean {
+  const { config } = existing;
   return (
     config.preset === answers.preset &&
     sameList(config.modules.add, answers.add) &&
     sameList(config.modules.remove, answers.remove) &&
     (answers.stack === undefined || sameList(config.stack, answers.stack)) &&
-    sameOptions(config, answers)
+    sameOptions(config, answers) &&
+    sameCompose(existing, answers)
   );
 }
 
@@ -95,11 +110,16 @@ function optionsField(raw: Readonly<Record<string, unknown>>, answers: ConfigAns
   return { options: { ...options, ...Object.fromEntries(recorded) } };
 }
 
+function composeField(raw: Readonly<Record<string, unknown>>, answers: ConfigAnswers): object {
+  if (answers.compose === undefined) return {};
+  return { compose: { ...(isRecord(raw.compose) ? raw.compose : {}), ...answers.compose } };
+}
+
 /**
  * The config init writes (#27, ADR-0014): the existing file untouched when the answers match it, or its keys,
- * unknown ones included, with the preset, modules, named stack and recorded options changed. A new config starts
- * with `$schema` (see `configSchemaUrl`) and `version`. `stack` is written only when the user named one, so
- * detection decides otherwise.
+ * unknown ones included, with the preset, modules, named stack, recorded options and compose choice changed. A new
+ * config starts with `$schema` (see `configSchemaUrl`) and `version`. `stack` is written only when the user named
+ * one, so detection decides otherwise, and `compose` only when the user answered in this run.
  */
 export function nextConfig(
   existing: ExistingConfig | undefined,
@@ -107,7 +127,7 @@ export function nextConfig(
   version: string,
   brand: Brand,
 ): NextConfig {
-  if (existing !== undefined && sameAnswers(existing.config, answers)) {
+  if (existing !== undefined && sameAnswers(existing, answers)) {
     return { text: existing.text, changed: false, config: existing.config, warnings: existing.warnings };
   }
   const raw = existing?.raw ?? { $schema: configSchemaUrl(version, brand), version: CONFIG_VERSION };
@@ -118,6 +138,7 @@ export function nextConfig(
     ...modulesField(raw, answers),
     ...stack,
     ...optionsField(raw, answers),
+    ...composeField(raw, answers),
   };
   const text = `${JSON.stringify(value, null, 2)}\n`;
   return { text, changed: true, ...parseConfig(text, brand) };

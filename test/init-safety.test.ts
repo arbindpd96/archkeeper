@@ -72,7 +72,7 @@ describe('init and a config edited while it waits', () => {
       if (question === 'Apply this plan?') writeFileSync(path.join(dir, CONFIG), edited);
     };
     const before = projectText(dir).replace(read(dir, CONFIG), edited);
-    const answers = [true];
+    const answers = ['no', true];
     const result = await runInit(dir, ['--preset', 'medium'], { interactive: true, answers, whileAsking });
     expect(result.code).toBe(1);
     expect(result.stderr).toContain('config.json');
@@ -85,7 +85,11 @@ describe('init and a config edited while it waits', () => {
     const whileAsking = (question: string): void => {
       if (question === 'Apply this plan?') writeFileSync(path.join(dir, 'AGENTS.md'), '# Mine\n');
     };
-    const result = await runInit(dir, [], { interactive: true, answers: ['medium', true], whileAsking });
+    const result = await runInit(dir, [], {
+      interactive: true,
+      answers: ['medium', 'no', true],
+      whileAsking,
+    });
     expect(result.code).toBe(1);
     expect(existsSync(path.join(dir, CONFIG))).toBe(false);
     expect(existsSync(path.join(dir, 'CLAUDE.md'))).toBe(false);
@@ -96,9 +100,9 @@ describe('init with the safety guards left out', () => {
   it('warns and, on a terminal, asks before going on, writing nothing on a no', async () => {
     const { dir } = fixtureCopy('ts-app');
     const args = ['--preset', 'medium', '--modules', '-safety'];
-    const result = await runInit(dir, args, { interactive: true, answers: [false] });
+    const result = await runInit(dir, args, { interactive: true, answers: ['no', false] });
     expect(result.stderr).toContain('leaves out safety');
-    expect(result.asked).toEqual(['Continue without safety?']);
+    expect(result.asked.slice(1)).toEqual(['Continue without safety?']);
     expect(result.code).toBe(1);
     expect(existsSync(path.join(dir, CONFIG))).toBe(false);
   });

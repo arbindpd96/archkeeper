@@ -31,10 +31,10 @@ function writeConfig(dir: string, stop: readonly string[]): void {
 describe('init asks to turn on the stop check in full (#38, ADR-0015)', () => {
   it('asks after the preset, showing the exact command and defaulting to no, and records a yes', async () => {
     const { dir } = fixtureCopy('ts-app');
-    const result = await runInit(dir, [], { interactive: true, answers: ['full', true, true] });
+    const result = await runInit(dir, [], { interactive: true, answers: ['full', 'no', true, true] });
     expect(result.code).toBe(0);
-    expect(result.asked[1]).toBe(question('npm run test'));
-    expect(result.defaults[1]).toBe(false);
+    expect(result.asked[2]).toBe(question('npm run test'));
+    expect(result.defaults[2]).toBe(false);
     expect(result.transcript.indexOf(`[? ${question('npm run test')}]`)).toBeLessThan(
       result.transcript.indexOf('Plan:'),
     );
@@ -44,8 +44,8 @@ describe('init asks to turn on the stop check in full (#38, ADR-0015)', () => {
 
   it('records a no as an empty command, says nothing of it, and asks nothing on the next init', async () => {
     const { dir } = fixtureCopy('py-app');
-    const result = await runInit(dir, [], { interactive: true, answers: ['full', false, true] });
-    expect(result.asked[1]).toBe(question('pytest'));
+    const result = await runInit(dir, [], { interactive: true, answers: ['full', 'no', false, true] });
+    expect(result.asked[2]).toBe(question('pytest'));
     expect(stopCheckOf(dir)).toEqual({ 'checks.stop': [] });
     expect(result.stdout).not.toContain('The stop check runs');
     const again = await runInit(dir, [], { interactive: true });
@@ -57,29 +57,29 @@ describe('init asks to turn on the stop check in full (#38, ADR-0015)', () => {
     ['pytest where Python is the stack in effect', ['--stack', 'python'], 'pytest'],
   ])('proposes %s', async (_name, args, command) => {
     const { dir } = fixtureCopy('mixed');
-    const result = await runInit(dir, args, { interactive: true, answers: ['full', true, true] });
-    expect(result.asked[1]).toBe(question(command));
+    const result = await runInit(dir, args, { interactive: true, answers: ['full', 'no', true, true] });
+    expect(result.asked[2]).toBe(question(command));
     expect(stopCheckOf(dir)).toEqual({ 'checks.stop': command.split(' ') });
   });
 
   it('never asks with the medium preset, which has no stop check', async () => {
     const { dir } = fixtureCopy('ts-app');
-    const result = await runInit(dir, [], { interactive: true, answers: ['medium', true] });
-    expect(result.asked).toHaveLength(2);
-    expect(result.asked[1]).toBe('Apply this plan?');
+    const result = await runInit(dir, [], { interactive: true, answers: ['medium', 'no', true] });
+    expect(result.asked).toHaveLength(3);
+    expect(result.asked[2]).toBe('Apply this plan?');
   });
 
   it('asks nothing where it detects no test command', async () => {
     const dir = tempDir();
     writeFiles(dir, { 'package.json': JSON.stringify({ devDependencies: { prettier: '^3.0.0' } }) });
-    const result = await runInit(dir, [], { interactive: true, answers: ['full', true] });
-    expect(result.asked.slice(1)).toEqual(['Apply this plan?']);
+    const result = await runInit(dir, [], { interactive: true, answers: ['full', 'no', true] });
+    expect(result.asked.slice(2)).toEqual(['Apply this plan?']);
   });
 
   it('writes nothing when the question is cancelled', async () => {
     const { dir } = fixtureCopy('ts-app');
     const before = projectText(dir);
-    const result = await runInit(dir, [], { interactive: true, answers: ['full', undefined] });
+    const result = await runInit(dir, [], { interactive: true, answers: ['full', 'no', undefined] });
     expect(result.code).toBe(1);
     expect(result.stdout).toContain('Cancelled. Nothing was written.');
     expect(projectText(dir)).toBe(before);

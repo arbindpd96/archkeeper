@@ -3,6 +3,7 @@ import { pendingSidecars, summarizePlan } from '../core/plan-summary.js';
 import { escapeUnprintable } from '../core/text.js';
 import { unifiedDiff } from '../core/unified-diff.js';
 import type { ApplyResult } from './apply.js';
+import { composeSteps } from './init-compose.js';
 import { diffLines, nextStepLines, sidecarLines } from './init-report.js';
 import { type InitRun, type Planned, textAt } from './init-run.js';
 import { stopCheckSteps } from './init-stop-check.js';
@@ -18,6 +19,7 @@ function printJson(run: InitRun, planned: Planned, applied: ApplyResult | null, 
     preset: planned.next.config.preset,
     stack: planned.stack,
     modules: planned.modules,
+    compose: planned.next.config.compose,
     detected: planned.profile,
     plan: summarizePlan(planned.plan),
     config: { path: configPath(run.brand), changed: planned.next.changed },
@@ -58,7 +60,10 @@ export function applyPlanned(run: InitRun, planned: Planned): number {
     const backup = applied.backup === undefined ? '' : ` A backup of what changed is in ${applied.backup}.`;
     say(escapeUnprintable(`Done.${backup}`));
     say();
-    const more = stopCheckSteps(planned, run.brand);
+    const more = [
+      ...stopCheckSteps(planned, run.brand),
+      ...composeSteps(planned, run.session.catalog.compose),
+    ];
     for (const line of nextStepLines(sidecars, [...planned.tree.keys()], run.brand, more)) say(line);
   } else if (sidecars.length > 0) {
     say('Nothing to change, but sidecars still wait for review:');

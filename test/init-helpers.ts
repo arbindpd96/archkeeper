@@ -133,15 +133,23 @@ function scriptedPrompter(setup: InitSetup, log: (question: string, initial: unk
     if (answers.length === 0) throw new Error(`init asked "${question}" with no answer left`);
     return answers.shift();
   };
+  // An answer the question cannot take fails the test, so a question init adds cannot swallow the next one's answer.
+  const refuse = (question: string, given: unknown): never => {
+    throw new Error(`init asked "${question}", which cannot take the answer ${JSON.stringify(given)}`);
+  };
   return {
     select: (message, choices, initial) => {
-      const given = answer(
-        `${message}: ${choices.map((choice) => `${choice.label} (${choice.hint ?? ''})`).join(' | ')}`,
-        initial,
-      );
-      return Promise.resolve(given as (typeof choices)[number]['value'] | undefined);
+      const question = `${message}: ${choices.map((choice) => `${choice.label} (${choice.hint ?? ''})`).join(' | ')}`;
+      const given = answer(question, initial);
+      const choice = choices.find(({ value }) => value === given);
+      if (given !== undefined && choice === undefined) refuse(question, given);
+      return Promise.resolve(choice?.value);
     },
-    confirm: (message, initial) => Promise.resolve(answer(message, initial) as boolean | undefined),
+    confirm: (message, initial) => {
+      const given = answer(message, initial);
+      if (given !== undefined && typeof given !== 'boolean') refuse(message, given);
+      return Promise.resolve(given as boolean | undefined);
+    },
   };
 }
 

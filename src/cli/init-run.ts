@@ -19,6 +19,8 @@ export interface InitFlags {
   readonly verbose?: boolean;
   /** Turn on the stop check with the detected test command (#38), which a scripted run sets only when asked. */
   readonly stopCheck?: boolean;
+  /** The tools to compose with, `superpowers`, `speckit` or both (#39): the answer to init's offer, from a script too. */
+  readonly with?: string;
 }
 
 /** One run of `init`: the session, its flags, the project folder, the kit and how it may ask. */

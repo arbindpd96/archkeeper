@@ -283,6 +283,7 @@ export const setupInit: CommandSetup = (command, session) => {
     .option('--dry-run', 'Print the plan and a unified diff, and write nothing')
     .option('--verbose', 'List every file in the plan instead of a summary by folder')
     .option('--stop-check', 'Turn on the stop check (full preset) with the detected test command')
+    .option('--with <list>', 'Print how to add superpowers, speckit or both, and record it; installs nothing')
     .action(async (flags: InitFlags) => {
       session.finish(await runInit(startRun(session, flags)));
     });
