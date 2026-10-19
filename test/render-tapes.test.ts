@@ -1,55 +1,17 @@
-import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
+import { REPO_ROOT, commitFiles, git, tempDir } from './helpers.js';
 import {
-  REPO_ROOT,
-  commitFiles,
-  fakeBin,
-  gifBytes,
-  git,
-  runScript,
-  tempDir,
-  withEnv,
-  writeFiles,
-  type RunResult,
-} from './helpers.js';
-
-const SETTINGS = readFileSync(path.join(REPO_ROOT, 'docs/media/tapes/_settings.tape'), 'utf8');
-const DEMO_TAPE = '# fixture: app\nSet TypingSpeed 10ms\nType "{{brand.binName}} --version"\nEnter\n';
-const GIF = gifBytes([100, 200]);
-
-// A stand-in for vhs: it logs the tape it was given, what the packed CLI printed, the environment it got,
-// which VHS hands on to the tape's shell, and the fixture copy's commits and status when it is a git
-// repository, then writes a GIF.
-const FAKE_VHS = `#!/usr/bin/env node
-const { execFileSync } = require('node:child_process');
-const fs = require('node:fs');
-const [arg] = process.argv.slice(2);
-if (arg === '--version') {
-  process.stdout.write(process.env.FAKE_VHS_VERSION + '\\n');
-  process.exit(0);
-}
-if (fs.existsSync(__dirname + '/fail')) process.exit(1);
-const tape = fs.readFileSync(arg, 'utf8');
-const printed = execFileSync('${BRAND.binName}', ['--version'], { encoding: 'utf8' }).trim();
-const gitOutput = (args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
-const repo = fs.existsSync('.git')
-  ? { commits: gitOutput(['rev-list', '--count', 'HEAD']), status: gitOutput(['status', '--porcelain']) }
-  : null;
-const run = { tape, cwd: process.cwd(), printed, env: process.env, repo };
-fs.appendFileSync(__dirname + '/vhs.log', JSON.stringify(run) + '\\n');
-fs.writeFileSync(JSON.parse(/^Output (.*)$/m.exec(tape)[1]), Buffer.from('${GIF.toString('base64')}', 'base64'));
-`;
-
-interface VhsRun {
-  tape: string;
-  cwd: string;
-  printed: string;
-  env: Record<string, string>;
-  repo: { commits: string; status: string } | null;
-}
+  DEMO_TAPE,
+  GIF,
+  SETTINGS,
+  maintainedProject,
+  packedCli,
+  project,
+  renderTapes,
+} from './render-tapes-helpers.js';
 
 const OUTSIDE_SECRETS = {
   GH_TOKEN: 'gh-secret',
@@ -60,75 +22,6 @@ const OUTSIDE_SECRETS = {
   SSH_AUTH_SOCK: '/tmp/agent.sock',
   NODE_OPTIONS: '--no-deprecation',
 };
-
-/** Keeps npm's cache, logs and update check out of the real home directory. */
-function npmIsolation(): NodeJS.ProcessEnv {
-  return { npm_config_cache: tempDir(), npm_config_update_notifier: 'false' };
-}
-
-function project(tapes: Record<string, string>, settings = SETTINGS): string {
-  const root = tempDir();
-  const files = Object.fromEntries(
-    Object.entries(tapes).map(([name, text]) => [`docs/media/tapes/${name}`, text]),
-  );
-  writeFiles(root, {
-    'docs/media/tapes/_settings.tape': settings,
-    'examples/app/README.md': '# App\n',
-    ...files,
-  });
-  return root;
-}
-
-/** A project committed by the maintainer, test@example.com, which is also its repo-local user.email. */
-function maintainedProject(tapes: Record<string, string>): string {
-  const root = project(tapes);
-  git(root, 'init', '-q', '-b', 'main');
-  git(root, 'config', 'user.email', 'test@example.com');
-  git(root, 'add', '-A');
-  git(root, 'commit', '-q', '-m', 'init');
-  return root;
-}
-
-function packedCli(): string {
-  const dir = tempDir();
-  writeFiles(dir, {
-    'package.json': JSON.stringify({
-      name: 'fixture-kit',
-      version: '9.9.9',
-      bin: { [BRAND.binName]: 'cli.js' },
-    }),
-    'cli.js': "#!/usr/bin/env node\nprocess.stdout.write('9.9.9\\n');\n",
-  });
-  const packed = execFileSync('npm', ['pack', '--json', '--pack-destination', dir], {
-    cwd: dir,
-    encoding: 'utf8',
-    env: withEnv(npmIsolation()),
-  });
-  return path.join(dir, (JSON.parse(packed) as { filename: string }[])[0]?.filename ?? '');
-}
-
-function renderTapes(
-  root: string,
-  args: string[],
-  env: NodeJS.ProcessEnv = {},
-): RunResult & { runs: VhsRun[] } {
-  const bin = fakeBin('vhs', FAKE_VHS);
-  const log = path.join(bin, 'vhs.log');
-  // The tape's environment is allowlisted, so the stand-in reads its controls from files beside it.
-  writeFiles(bin, { 'vhs.log': '', ...(env.FAKE_VHS_FAIL === undefined ? {} : { fail: '' }) });
-  const result = runScript('scripts/render-tapes.mjs', {
-    args,
-    cwd: root,
-    env: {
-      PATH: `${bin}${path.delimiter}${process.env.PATH ?? ''}`,
-      FAKE_VHS_VERSION: 'vhs version v0.12.1 (0123abc)',
-      ...npmIsolation(),
-      ...env,
-    },
-  });
-  const lines = readFileSync(log, 'utf8').split('\n').filter(Boolean);
-  return { ...result, runs: lines.map((line) => JSON.parse(line) as VhsRun) };
-}
 
 describe.skipIf(process.platform === 'win32')('render-tapes', () => {
   it('renders each tape not marked live in a fixture copy, with the packed CLI on PATH', () => {
@@ -147,15 +40,6 @@ describe.skipIf(process.platform === 'win32')('render-tapes', () => {
     expect(run?.printed).toBe('9.9.9');
     expect(readFileSync(path.join(out, 'demo.gif'))).toEqual(GIF);
     expect(existsSync(path.join(out, 'recorded.gif'))).toBe(false);
-  });
-
-  it('runs a tape marked # repo in a fixture copy that is a git repository with one commit', () => {
-    const root = project({ 'committed.tape': `# repo\n${DEMO_TAPE}`, 'plain.tape': DEMO_TAPE });
-    const result = renderTapes(root, ['--out', path.join(root, 'gifs'), '--tarball', packedCli()]);
-    expect(result.status).toBe(0);
-    const repoByTape = new Map(result.runs.map((run) => [path.basename(path.dirname(run.cwd)), run.repo]));
-    expect(repoByTape.get('committed')).toEqual({ commits: '1', status: '' });
-    expect(repoByTape.get('plain')).toBeNull();
   });
 
   it('renders the same GIF again over an existing one', () => {
