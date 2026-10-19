@@ -63,7 +63,7 @@ v0.1 milestone M4 (issues #30, #31, #32, #33): the safety layer the kit installs
 ## Next step
 
 1. Merge PR #85 once CI is green (the owner approved it on 2026-10-17). Its body says "Closes #30, #31, #32" and "Refs #33", since #33 waits on the live GIF.
-2. The live GIF, batched with M5's and M6's live tapes: the maintainer runs `npm run build`, then `node scripts/render-tapes.mjs --live guard` (VHS 0.12.1, JetBrains Mono) in a throwaway VM or container, checks the GIF is at most 2 MB and 20 s, adjusts the tape's `Sleep` or `Wait` if Claude Code's screen differs, and commits `docs/media/guard.gif`. Then, in the same commit:
+2. The live GIF, batched with M5's and M6's live tapes: the maintainer runs `npm run build`, then `node scripts/render-tapes.mjs --live guard` (VHS 0.12.1, JetBrains Mono) in a throwaway VM or container, checks the GIF is at most 2 MB and 30 s (the live cap since 2026-10-19), adjusts the tape's `Sleep` or `Wait` if Claude Code's screen differs, and commits `docs/media/guard.gif`. Then, in the same commit:
    - `modules/safety/module.json`: replace `"internal": true` with `"demo": { "tape": "guard", "section": "Safety" }`.
    - `README.md` Safety section: add `<p align="center"><img src="docs/media/guard.gif" alt="Claude Code asks to run git push origin main -f, and the guard denies it: plain force-push is blocked" width="100%"></p>` right under the `## Safety` heading.
    - `docs/architecture.md` Modules intro: drop "`safety` … stays `internal` until the maintainer records `guard.gif`".

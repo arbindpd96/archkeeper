@@ -17,6 +17,7 @@ import { parseArgs } from 'node:util';
 import { exitWith, git, npm } from './lib.mjs';
 import {
   fillPlaceholders,
+  LIVE,
   SETTINGS,
   settingsProblems,
   TAPE_NAME,
@@ -27,7 +28,6 @@ import {
 // Pinned with the vhs-action input in .github/workflows/demo-gifs.yml; a test keeps the two equal.
 const VHS_VERSION = '0.12.1';
 const FIXTURE = /^#\s*fixture:\s*(\S+)\s*$/m;
-const LIVE = /^#\s*live\s*$/m;
 const REPO = /^#\s*repo\s*$/m;
 // Everything else, such as tokens, SSH_AUTH_SOCK, cloud keys and npm config, stays out of the tape's shell.
 const PASSED_ENV = /^(?:PATH|TERM|COLORTERM|LANG|LC_\w+|TZ|TMPDIR|VHS_\w+)$/;
