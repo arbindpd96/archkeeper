@@ -103,12 +103,35 @@ export function plainManifest(id: string, fields: ManifestData = {}): ManifestDa
   return { schemaVersion: 1, id, description: `The ${id} module.`, internal: true, ...fields };
 }
 
-/** The kit files for a set of manifests plus `modules/presets.json`. */
+/** A compose offers file with one skill name and one prefix to avoid, as data a test may change before loading. */
+export function composeData(): ManifestData {
+  const tool = (name: string): ManifestData => ({
+    name,
+    repository: `example/${name.toLowerCase()}`,
+    description: `The ${name} tool.`,
+    knownGood: { version: '1.0.0', released: '2026-10-01' },
+    commands: [`install ${name.toLowerCase()}`],
+    skills: [],
+    skillPrefixes: [],
+  });
+  return {
+    checked: '2026-10-19',
+    checkedWith: 'gh',
+    superpowers: { ...tool('Superpowers'), skills: ['brainstorming'] },
+    specKit: { ...tool('Speckit'), warning: 'Read its help first.', skillPrefixes: ['speckit-'] },
+  };
+}
+
+/** The kit files for a set of manifests plus `modules/presets.json` and `modules/compose.json`. */
 export function kitFiles(
   manifests: readonly ManifestData[],
   extra: Record<string, string> = {},
 ): Record<string, string> {
-  const files: Record<string, string> = { 'modules/presets.json': JSON.stringify(PRESETS), ...extra };
+  const files: Record<string, string> = {
+    'modules/presets.json': JSON.stringify(PRESETS),
+    'modules/compose.json': JSON.stringify(composeData()),
+    ...extra,
+  };
   for (const manifest of manifests) {
     files[`modules/${String(manifest.id)}/module.json`] = JSON.stringify(manifest);
   }

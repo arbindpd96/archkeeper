@@ -19,6 +19,7 @@ modules/base/files/agents.md
 modules/base/files/claude-code.md
 modules/base/files/claude-import.md
 modules/base/module.json
+modules/compose.json
 modules/feature-memory/files/agents-feature-memory.md
 modules/feature-memory/files/memory-template.md
 modules/feature-memory/files/mistakes.md
