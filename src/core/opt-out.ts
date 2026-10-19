@@ -23,7 +23,8 @@ export function hookName(hook: Hook): string {
 
 function optedOut(options: ModuleOptions): ReadonlySet<string> {
   const value = options[OPT_OUT];
-  return new Set(Array.isArray(value) ? value.map((entry) => entry.trim()) : []);
+  const entries = Array.isArray(value) ? value.filter((entry) => typeof entry === 'string') : [];
+  return new Set(entries.map((entry) => entry.trim()));
 }
 
 /** Every name a module's optOut may list: its permission rules and its hooks' bundle names. */

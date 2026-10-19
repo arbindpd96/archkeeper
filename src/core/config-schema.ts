@@ -19,9 +19,13 @@ export const composeShape = {
   specKit: described(z._default(z.boolean(), false), 'Whether to use github/spec-kit alongside the kit.'),
 };
 
-const optionValue = z.union([z.boolean(), z.string(), z.array(z.string())], {
-  error: "set it to true or false, a string, or a list of strings, as the module's option declares",
-});
+const optionValue = z.union(
+  [z.boolean(), z.number(), z.string(), z.array(z.string()), z.array(z.array(z.string()))],
+  {
+    error:
+      "set it to true or false, a number, a string, a list of strings or a list of commands, as the module's option declares",
+  },
+);
 const PRESET_HINT = 'set preset to the preset to install, such as small, medium or full';
 
 /**

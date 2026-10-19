@@ -145,6 +145,18 @@ describe('loadModule cross-field rules', () => {
       'files[1].when.options.optOut',
       'a when can compare only those',
     ],
+    [
+      'a when that compares a number option',
+      (m) => (m.when = { options: { timeout: '300' } }),
+      'when.options.timeout',
+      'a when can compare only those',
+    ],
+    [
+      'a when that compares a command-list option',
+      (m) => (m.when = { options: { commands: 'npm test' } }),
+      'when.options.commands',
+      'a when can compare only those',
+    ],
     ['an id that differs from its folder', (m) => (m.id = 'other'), 'id', 'set id to "rich"'],
   ])('rejects %s', (_name, change, location, fix) => {
     const error = loadRich(change);

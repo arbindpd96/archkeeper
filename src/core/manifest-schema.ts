@@ -44,10 +44,13 @@ const whenField = described(
   'Render only when the project stack is one of `stack` and every listed option of this module has its value.',
 );
 
+const command = z.array(z.string()).check(z.minLength(1));
 const option = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('boolean'), default: z.boolean(), description: oneLine }),
+  z.strictObject({ type: z.literal('number'), default: z.number(), description: oneLine }),
   z.strictObject({ type: z.literal('string'), default: z.string(), description: oneLine }),
   z.strictObject({ type: z.literal('string-list'), default: z.array(z.string()), description: oneLine }),
+  z.strictObject({ type: z.literal('command-list'), default: z.array(command), description: oneLine }),
 ]);
 
 const PROJECT_ONLY = 'use project: the plugin carries only owned skills and agents (ADR-0016)';

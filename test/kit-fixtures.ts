@@ -70,6 +70,8 @@ export function richManifest(): ManifestData {
     options: {
       blockNoVerify: { type: 'boolean', default: false, description: 'Deny git commit --no-verify.' },
       optOut: { type: 'string-list', default: [], description: 'Rules removed on purpose.' },
+      timeout: { type: 'number', default: 300, description: 'Seconds a check may run.' },
+      commands: { type: 'command-list', default: [], description: 'Extra commands to run.' },
     },
     mcpServers: [
       { name: 'docs', type: 'http', url: 'https://example.com/mcp', headers: { 'X-Team': '${TEAM_ID}' } },

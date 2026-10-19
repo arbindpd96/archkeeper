@@ -22,12 +22,26 @@ export function moduleOptions(options: ResolvedOptions | undefined, manifest: Mo
   return options?.get(manifest.id) ?? optionDefaults(manifest);
 }
 
+function isStringList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+// A command is an argument array that names its program first, so an empty one names nothing to run.
 function matchesType(spec: OptionSpec, value: OptionValue): boolean {
-  if (spec.type === 'string-list') return Array.isArray(value);
+  if (spec.type === 'string-list') return isStringList(value);
+  if (spec.type === 'command-list') {
+    return Array.isArray(value) && value.every((item) => isStringList(item) && item.length > 0);
+  }
   return typeof value === spec.type;
 }
 
-const EXPECTED = { boolean: 'true or false', string: 'a string', 'string-list': 'a list of strings' };
+const EXPECTED: Readonly<Record<OptionSpec['type'], string>> = {
+  boolean: 'true or false',
+  number: 'a number',
+  string: 'a string',
+  'string-list': 'a list of strings',
+  'command-list': 'a list of commands, each a list of strings such as ["node", "scripts/check.mjs"]',
+};
 
 function typeHint(name: string, spec: OptionSpec): string {
   return `set ${name} to ${EXPECTED[spec.type]} (default ${JSON.stringify(spec.default)}): ${spec.description}`;

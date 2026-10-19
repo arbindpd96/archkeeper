@@ -146,9 +146,27 @@ describe('module manifest schema', () => {
     ],
     [
       'an unknown option type',
-      (m) => (option(m, 'blockNoVerify').type = 'number'),
+      (m) => (option(m, 'blockNoVerify').type = 'integer'),
       'options.blockNoVerify.type',
-      '"string-list"',
+      '"command-list"',
+    ],
+    [
+      'a number option with a string default',
+      (m) => (option(m, 'timeout').default = '300'),
+      'options.timeout.default',
+      'a number',
+    ],
+    [
+      'a command-list default with an empty command',
+      (m) => (option(m, 'commands').default = [['node', 'x.mjs'], []]),
+      'options.commands.default[1]',
+      'list at least 1 entry',
+    ],
+    [
+      'a command-list default of strings',
+      (m) => (option(m, 'commands').default = ['node']),
+      'options.commands.default[0]',
+      'a list',
     ],
     [
       'an option name that is not camelCase',
