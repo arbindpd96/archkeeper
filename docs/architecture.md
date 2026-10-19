@@ -1,7 +1,7 @@
 # Architecture map
 
 > The living map of archkeeper. Read it before creating anything new; update it (or run `/update-map`) after adding a
-> source layer, module, pack or shared util. Status: **v0.1 M6 map, in progress: the stop-check module in full, which runs the project's tests before Claude stops once a command is set, format-on-edit, which formats and lints each edited file with the project's own tools, and the architecture-map module's `docs/architecture.md` and `/update-map`, in medium and full, on M5's feature memory and decisions, M4's guards and M3's `init`** (see `docs/ROADMAP.md`). Rows marked _planned_ are the agreed target (handoff §8, ADR-0002/0003/0011).
+> source layer, module, pack or shared util. Status: **v0.1 M6 map, in progress: init's Superpowers and Spec Kit offers, which only print their install commands (`modules/compose.json`), the stop-check module in full, which runs the project's tests before Claude stops once a command is set, format-on-edit, which formats and lints each edited file with the project's own tools, and the architecture-map module's `docs/architecture.md` and `/update-map`, in medium and full, on M5's feature memory and decisions, M4's guards and M3's `init`** (see `docs/ROADMAP.md`). Rows marked _planned_ are the agreed target (handoff §8, ADR-0002/0003/0011).
 
 ## Overview
 

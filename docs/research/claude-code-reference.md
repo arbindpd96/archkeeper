@@ -583,11 +583,18 @@ Sources: [src](https://code.claude.com/docs/en/mcp), [src](https://help.figma.co
 - MIT, about 296.7k stars.
 - Install: `/plugin install superpowers@claude-plugins-official`, or `claude plugin install superpowers@claude-plugins-official --scope project` for the CLI.
 - An alternative marketplace route is in §12.
+- **v7.0.0 (2026-10-10), checked with `gh` on 2026-10-19.** The official marketplace (`anthropics/claude-plugins-official`) pins `superpowers` to commit `bb92a77`, the v7.0.0 tag's commit, so the install above gets v7.0.0. It ships no `commands/` folder, only 15 skills, namespaced `superpowers:<skill>` (§4.1): brainstorming, diagnosing-superpowers, dispatching-parallel-agents, executing-plans, finishing-a-development-branch, receiving-code-review, requesting-code-review, subagent-driven-development, systematic-debugging, test-driven-development, using-git-worktrees, using-superpowers, verification-before-completion, writing-plans and writing-skills [src](https://github.com/obra/superpowers/tree/v7.0.0/skills). `modules/compose.json` records them.
 
 **Spec Kit** (github/spec-kit) [src](https://github.github.io/spec-kit/installation.html):
 - v1.1.2 (2026-10-07), about 140.5k stars. Needs Python 3.11+.
 - **uv is recommended, not required:** `uv tool install specify-cli`, `pipx install specify-cli` and `pip install specify-cli` all work. A git install also works: `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git` [src](https://github.com/github/spec-kit).
 - For an existing project: `specify init --here --force --integration claude`. This writes `.specify/` and installs skills into `.claude/skills/`. **`--force` "may replace files at conflicting managed paths"** [src](https://github.github.io/spec-kit/guides/existing-projects.html).
+- **v1.2.1 (2026-10-16), checked with `gh` on 2026-10-19** [src](https://github.com/github/spec-kit/blob/v1.2.1/src/specify_cli/integrations/claude/__init__.py):
+  - The README installs with `uv tool install specify-cli`. `specify init` takes `--here` for the current folder and `--integration claude`, and no longer has `--ai`.
+  - Without `--force`, `specify init --here` warns that the folder is not empty and asks before merging. With it ("Force merge/overwrite when using --here (skip confirmation)"), it merges at once and may overwrite files.
+  - The Claude integration names its skills `speckit-` plus the command, any `.` becoming `-`: `speckit-analyze`, `-checklist`, `-clarify`, `-constitution`, `-converge`, `-implement`, `-plan`, `-specify`, `-tasks` and `-taskstoissues`, invoked as `/speckit-<command>`. The references write them in dotted notation, `/speckit.<command>` [src](https://github.com/github/spec-kit/blob/v1.2.1/docs/reference/integrations.md).
+  - They are model-invocable unless `--integration-options="--no-model-invocation"` makes the core ones user-only.
+  - v1.2.2 came out at 14:48 UTC on 2026-10-19, after the check. Its release notes change neither `specify init` nor the skill names, and `modules/compose.json` keeps v1.2.1 as known good.
 
 **Composition rules for init:**
 - Both installs are opt-in. Ask for explicit consent, and show the exact command and the files it touches.
@@ -896,10 +903,10 @@ Cross-collection aliases use `com.figma.aliasData`. Tokens that use `rem`, `ms`,
 | `.claude/rules/` symlinks to network paths skipped silently | Unverified risk note. |
 | Figma MCP tool names and count (`get_design_context`, `get_variable_defs`, `get_screenshot`, `get_metadata`, `get_code_connect_map`, `add_code_connect_map`, `create_design_system_rules`, `use_figma`, …, ~25 tools) and its capabilities (writing to the canvas, JS execution) | **Unverified**; the Figma developer docs were not reachable. |
 | Figma free-seat limit "6 tool calls/month" | From a Figma blog; plan limits change. Re-check at launch. |
-| Superpowers command names (`/superpowers:brainstorm`, `:write-plan`, `:execute-plan`) and the "Prime Radiant" attribution | Unverified. |
+| Superpowers command names (`/superpowers:brainstorm`, `:write-plan`, `:execute-plan`) and the "Prime Radiant" attribution | **Refuted for v7.0.0** (checked with `gh` on 2026-10-19): it ships no `commands/` folder, only the 15 skills in §6, such as `superpowers:brainstorming`, `:writing-plans` and `:executing-plans`. The attribution is still unverified. |
 | Superpowers alternative route `/plugin marketplace add obra/superpowers-marketplace` | Verifiers disagree (OPT1: unverified; E46: confirmed). Prefer `superpowers@claude-plugins-official`. |
-| Spec Kit `specify init <name> --ai claude` | Older flag (SPEC1). The v1.1.2 docs use `--integration claude`. Check `specify init --help` at runtime. |
-| Spec Kit commands `/speckit.constitution`, `.specify`, `.plan`, `.tasks`, `.implement` | Unverified. |
+| Spec Kit `specify init <name> --ai claude` | Older flag (SPEC1). The v1.1.2 docs use `--integration claude`, and v1.2.1 has no `--ai` (checked with `gh` on 2026-10-19). Check `specify init --help` at runtime. |
+| Spec Kit commands `/speckit.constitution`, `.specify`, `.plan`, `.tasks`, `.implement` | **Corrected for v1.2.1** (checked with `gh` on 2026-10-19): the dotted names are the references' notation; for Claude Code, Spec Kit installs skills named `speckit-<command>`, ten core ones in all (§6). The kit's skills avoid both prefixes (`modules/compose.json`). |
 | Spec Kit via `athola/claude-night-market` | Unverified; don't offer it. |
 | Storybook MCP "three toolsets (docs, development, testing)" | Unverified. |
 | Storybook MCP "React-only as of 2026-03-25" | **Refuted / unclear.** The code moved into `storybookjs/storybook` v10.6.0. |
