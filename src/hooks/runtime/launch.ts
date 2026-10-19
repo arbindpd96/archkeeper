@@ -27,6 +27,7 @@ export const FAILURE_POLICY: Readonly<Record<string, FailurePolicy>> = {
   'memory-stop': 'open',
   'pre-compact': 'open',
   'session-start': 'open',
+  'stop-check': 'open',
 };
 
 /** Where a hook runs: the project folder Claude Code names and the user's home folder. */

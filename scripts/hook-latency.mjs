@@ -28,6 +28,10 @@ const GIT_IDENTITY = ['-c', 'user.name=latency', '-c', 'user.email=latency@examp
 const write = (content) => ({ tool_name: 'Write', tool_input: { file_path: 'src/new.ts', content } });
 // The tools init records for a TS project; the timing project installs neither.
 const RECORDED = { formatters: ['prettier'], linters: ['eslint'] };
+// A stop-check command no runner takes, so the check reads git and hashes the change set but starts no test (#38).
+const STOP = { 'checks.stop': ['npx', 'vitest', 'run'] };
+/** A payload to answer in another timing project, such as one whose config sets no stop-check command. */
+const elsewhere = (project, payload) => ({ project, payload });
 
 // What each hook answers while it is timed: a common call, one it blocks and the heaviest it accepts.
 const SAMPLES = {
@@ -54,6 +58,12 @@ const SAMPLES = {
     { tool_name: 'Edit', tool_input: { file_path: '../outside.ts' } },
     { tool_name: 'Edit', tool_input: { file_path: '.gitignore' } },
   ],
+  // A command no runner takes, a stop a Stop hook caused, and checks.stop unset: no sample starts a test (ADR-0015).
+  'stop-check': [
+    { stop_hook_active: false },
+    { stop_hook_active: true },
+    elsewhere('unset', { stop_hook_active: false }),
+  ],
 };
 
 // A feature memory at the template's 80-line limit, and a map with an Overview, for the memory hooks to read.
@@ -72,7 +82,7 @@ const MEMORY = [
 ];
 const PROJECT_FILES = {
   '.gitignore': `${BRAND.stateDir}/local/\n`,
-  [`${BRAND.stateDir}/config.json`]: `${JSON.stringify({ preset: 'full', options: { 'format-on-edit': RECORDED } })}\n`,
+  [`${BRAND.stateDir}/config.json`]: `${JSON.stringify({ preset: 'full', options: { 'format-on-edit': RECORDED, 'stop-check': STOP } })}\n`,
   [`${BRAND.stateDir}/local/active-feature`]: 'latency\n',
   [MEMORY_FILE]: [
     ...MEMORY,
@@ -151,6 +161,14 @@ function project(work) {
   return dir;
 }
 
+/** A second timing project whose config sets no stop-check command, so stop-check returns before it reads git. */
+function unsetProject(work) {
+  const dir = path.join(work, 'unset');
+  mkdirSync(path.join(dir, BRAND.stateDir), { recursive: true });
+  writeFileSync(path.join(dir, BRAND.stateDir, 'config.json'), `${JSON.stringify({ preset: 'full' })}\n`);
+  return dir;
+}
+
 /** Times one run of a hook answering a payload on stdin, the way Claude Code runs it, in milliseconds. */
 function timeRun(hook, payload, dir) {
   const start = performance.now();
@@ -171,12 +189,14 @@ function timeRun(hook, payload, dir) {
 /** The value at quantile `q` of sorted times. */
 const quantile = (times, q) => times[Math.min(times.length - 1, Math.ceil(q * times.length) - 1)];
 
-/** Times every payload of a hook `runs` times after one warm-up run, returning p50 and p95. */
-function measure(hook, payloads, dir, runs) {
-  timeRun(hook, payloads[0], dir);
-  const times = payloads.flatMap((payload) =>
-    Array.from({ length: runs }, () => timeRun(hook, payload, dir)),
-  );
+/** Times every sample of a hook `runs` times after one warm-up run, each in its timing project, returning p50 and p95. */
+function measure(hook, samples, projects, runs) {
+  const timed = (sample) =>
+    'project' in sample
+      ? timeRun(hook, sample.payload, projects[sample.project])
+      : timeRun(hook, sample, projects.main);
+  timed(samples[0]);
+  const times = samples.flatMap((sample) => Array.from({ length: runs }, () => timed(sample)));
   times.sort((a, b) => a - b);
   return { p50: quantile(times, 0.5), p95: quantile(times, 0.95) };
 }
@@ -206,12 +226,12 @@ if (unsampled.length > 0) {
 
 const work = mkdtempSync(path.join(tmpdir(), 'hook-latency-'));
 process.on('exit', () => rmSync(work, { recursive: true, force: true }));
-const dir = project(work);
+const projects = { main: project(work), unset: unsetProject(work) };
 const rows = [];
 const problems = [];
 for (const file of hooks) {
   const name = path.basename(file, '.mjs');
-  const { p50, p95 } = measure(path.join(hooksDir, file), SAMPLES[name], dir, options.runs);
+  const { p50, p95 } = measure(path.join(hooksDir, file), SAMPLES[name], projects, options.runs);
   rows.push(`| ${name} | ${p50.toFixed(1)} ms | ${p95.toFixed(1)} ms | ${budget} ms |`);
   if (p95 > budget) problems.push(`${name} has a p95 of ${p95.toFixed(1)} ms, over its ${budget} ms.`);
 }
