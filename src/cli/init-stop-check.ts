@@ -33,9 +33,9 @@ function refuseFlag(problem: string, hint: string): never {
 // init detected.
 function warnKept(run: InitRun, kept: readonly string[], detected: readonly string[] | undefined): void {
   if (detected === undefined || JSON.stringify(kept) === JSON.stringify(detected)) return;
-  const [from, not] = [quoted(kept.join(' ')), quoted(detected.join(' '))];
+  const [keptText, detectedText] = [quoted(kept.join(' ')), quoted(detected.join(' '))];
   run.asking.report.warn(
-    `--stop-check keeps ${from} from ${OPTION} in ${configPath(run.brand)}, not the detected ${not}`,
+    `--stop-check keeps ${keptText} from ${OPTION} in ${configPath(run.brand)}, not the detected ${detectedText}`,
   );
 }
 
