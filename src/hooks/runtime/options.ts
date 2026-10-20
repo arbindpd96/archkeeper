@@ -1,5 +1,5 @@
 import { BRAND, type Brand } from '../../core/brand.js';
-import { BYTE_ORDER_MARK, isRecord, isStringList } from '../../core/text.js';
+import { BYTE_ORDER_MARK, isCommandList, isRecord, isStringList } from '../../core/text.js';
 import { readProjectFile } from './project.js';
 
 const MAX_CONFIG_BYTES = 256_000;
@@ -60,8 +60,6 @@ export function booleanOption(
   return typeof value === 'boolean' ? value : undefined;
 }
 
-const isCommand = (value: unknown): value is string[] => isStringList(value) && value.length > 0;
-
 /** A string-list option's value, `[]` when it is unset, or undefined when it is not a list of strings. */
 export function stringListOption(
   values: Readonly<Record<string, unknown>>,
@@ -93,5 +91,5 @@ export function commandListOption(
 ): string[][] | undefined {
   const value = values[name];
   if (value === undefined) return [];
-  return Array.isArray(value) && value.every(isCommand) ? value : undefined;
+  return isCommandList(value) ? value : undefined;
 }

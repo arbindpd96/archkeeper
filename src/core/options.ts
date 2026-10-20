@@ -5,7 +5,7 @@ import { ConfigError, type ProblemReport } from './errors.js';
 import { jsonPath } from './issues.js';
 import type { Catalog } from './loader.js';
 import type { ModuleManifest, OptionSpec } from './manifest-schema.js';
-import { isStringList } from './text.js';
+import { isCommandList, isStringList } from './text.js';
 
 /** One module's option values, defaults included. */
 export type ModuleOptions = Readonly<Record<string, OptionValue>>;
@@ -23,12 +23,9 @@ export function moduleOptions(options: ResolvedOptions | undefined, manifest: Mo
   return options?.get(manifest.id) ?? optionDefaults(manifest);
 }
 
-// A command is an argument array that names its program first, so an empty one names nothing to run.
 function matchesType(spec: OptionSpec, value: OptionValue): boolean {
   if (spec.type === 'string-list') return isStringList(value);
-  if (spec.type === 'command-list') {
-    return Array.isArray(value) && value.every((item) => isStringList(item) && item.length > 0);
-  }
+  if (spec.type === 'command-list') return isCommandList(value);
   return typeof value === spec.type;
 }
 
