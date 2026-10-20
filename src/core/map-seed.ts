@@ -8,6 +8,9 @@ import { compareText, UNPRINTABLE } from './text.js';
 
 const LEFT_OUT = new Set([
   'node_modules',
+  '.yarn',
+  'bower_components',
+  'jspm_packages',
   'vendor',
   'dist',
   'build',

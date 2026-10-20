@@ -97,6 +97,9 @@ describe('the map layout (#36)', () => {
 
   it.each([
     'node_modules',
+    '.yarn',
+    'bower_components',
+    'jspm_packages',
     'vendor',
     'dist',
     'build',
