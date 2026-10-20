@@ -27,6 +27,8 @@ const LEFT_OUT = new Set([
 const MAX_ROWS = 40;
 const MAX_ENTRY_POINTS = 20;
 const MAX_CONDITIONS = 4;
+// A name, condition or target past 100 characters reads as prose, not an identifier, in the map Claude checks.
+const MAX_NAME = 100;
 // A backtick ends the code span a name sits in and a bar splits its table row; a comment delimiter would let render's
 // import check, which cuts HTML comments first, read two names as one word.
 const BREAKS_MARKDOWN = /[`|]|<!--|-->/;
@@ -51,10 +53,12 @@ function stackLine(profile: StackProfile): string {
   return `${summary}${frameworks}`;
 }
 
-// The names a line quotes, then the line as render checks it: no control character, block marker or refused @
-// import in a value, and no likely secret in the file.
+// The names a line quotes, each short and plain, then the line as render checks it: no control character, block
+// marker or refused @ import in a value, and no likely secret in the file.
 function writable(names: readonly string[], line: string, brand: Brand): boolean {
-  const plain = names.every((name) => !BREAKS_MARKDOWN.test(name) && !UNPRINTABLE_CHARACTER.test(name));
+  const plain = names.every(
+    (name) => name.length <= MAX_NAME && !BREAKS_MARKDOWN.test(name) && !UNPRINTABLE_CHARACTER.test(name),
+  );
   return plain && unsafeValue({ line }, brand) === undefined && findSecret(line) === undefined;
 }
 
@@ -172,9 +176,11 @@ function scriptEntryPoints(view: ProjectView): EntryPoint[] {
   }
 }
 
+// Every value from the project sits in a code span, export conditions too, since they are arbitrary keys.
 function entryLine({ source, name, conditions, target }: EntryPoint): string {
   const named = name === '' ? '' : ` \`${name}\``;
-  const when = conditions.length === 0 ? '' : ` (${conditions.join(', ')})`;
+  const when =
+    conditions.length === 0 ? '' : ` (${conditions.map((condition) => `\`${condition}\``).join(', ')})`;
   return `- ${source}${named}${when}: \`${target}\``;
 }
 
@@ -193,8 +199,9 @@ function entryPointLines(view: ProjectView, brand: Brand): string[] {
  * The template values that seed `docs/architecture.md` (#36), the same bytes for the same project: `map.stack`,
  * one line of the detected languages, package managers and frameworks; `map.layout`, a table of the folders in
  * `tracked`, the files git tracks, or a line asking for `/update-map` when git gave no list; and `map.entryPoints`,
- * from package.json and pyproject.toml, none from a malformed one. A name that could break the Markdown, or that
- * render refuses, is left out, so no file name can make render throw.
+ * from package.json and pyproject.toml, none from a malformed one, each value in a code span. A name over 100
+ * characters, one that could break the Markdown, or one that render refuses, is left out, so no file name can make
+ * render throw.
  */
 export function mapValues(
   profile: StackProfile,
