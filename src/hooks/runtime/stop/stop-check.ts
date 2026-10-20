@@ -10,6 +10,7 @@ import {
   stringListOption,
 } from '../options.js';
 import { type ProjectTool, runProjectTool } from '../project-tools.js';
+import { slashed } from '../project.js';
 import { readState, writeState } from '../state.js';
 import type { ToolRun } from '../tools.js';
 import { changeFingerprint } from './fingerprint.js';
@@ -39,7 +40,7 @@ function stateOf(projectDir: string): Readonly<Record<string, unknown>> {
 // Undefined once recorded, else the note saying why not.
 function record(check: Check, change: object): string | undefined {
   const saved = writeState(check.projectDir, STATE, `${JSON.stringify({ ...check.state, ...change })}\n`);
-  return saved.written ? undefined : `stop-check: ${saved.problem}`;
+  return saved.written ? undefined : `stop-check: ${slashed(saved.problem)}`;
 }
 
 function named(check: Check): string {
