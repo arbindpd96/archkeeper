@@ -1,12 +1,10 @@
 import type { Brand } from '../core/brand.js';
 import { configPath } from '../core/config.js';
-import { isStringList, quoted } from '../core/text.js';
+import { isCommandList, isStringList, quoted } from '../core/text.js';
 import type { Asking } from './init-answers.js';
 import type { Planned } from './init-run.js';
 
 const shown = (command: readonly string[]): string => quoted(command.join(' '));
-const isCommandList = (value: unknown): value is string[][] =>
-  Array.isArray(value) && value.every(isStringList);
 
 // The value the config on disk gives a selected module's option: this run's answers, such as a yes to the stop
 // check, are not on disk yet, and a module left out runs nothing.

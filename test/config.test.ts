@@ -5,6 +5,7 @@ import { ConfigError } from '../src/core/errors.js';
 import { loadCatalog } from '../src/core/loader.js';
 import { resolveOptions } from '../src/core/options.js';
 import { hasControlCharacter } from '../src/core/paths.js';
+import { isCommandList } from '../src/core/text.js';
 import { kitFiles, memoryReader, plainManifest, richManifest, richSources } from './kit-fixtures.js';
 
 const CONFIG = configPath();
@@ -139,6 +140,19 @@ describe('parseConfig', () => {
   it('names the config file under the brand it is given', () => {
     const brand: Brand = { ...BRAND, stateDir: '.acmekit' };
     expect(() => parseConfig('{}', brand)).toThrow('.acmekit/config.json: preset: ');
+  });
+});
+
+describe('isCommandList', () => {
+  it.each<[string, unknown, boolean]>([
+    ['an empty list', [], true],
+    ['commands that each name a program', [['node', 'x.mjs'], ['ruff']], true],
+    ['a list holding an empty command', [['node', 'x.mjs'], []], false],
+    ['a list of strings', ['node', 'x.mjs'], false],
+    ['a command holding a number', [['node', 1]], false],
+    ['a string', 'node x.mjs', false],
+  ])('takes %s as a list of commands: %s', (_name, value, expected) => {
+    expect(isCommandList(value)).toBe(expected);
   });
 });
 

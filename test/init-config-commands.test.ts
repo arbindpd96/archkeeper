@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { configCommandWarnings } from '../src/cli/init-config-commands.js';
+import type { Planned } from '../src/cli/init-run.js';
 import { fixtureCopy, writeFiles } from './helpers.js';
 import { projectText } from './install-helpers.js';
 import { runInit } from './init-helpers.js';
@@ -50,6 +52,12 @@ describe('init names the commands a config has the hooks run (#37, #38, ADR-0015
     });
     expect(result.code).toBe(0);
     expect(result.asked).toEqual([QUESTION, 'Apply this plan?']);
+  });
+
+  it('names no format-on-edit commands from a value the hook would not run, such as one with an empty command', () => {
+    const options = { 'format-on-edit': { commands: [['node', 'scripts/check.mjs'], []] } };
+    const planned = { modules: ['format-on-edit'], existing: { config: { options } } } as unknown as Planned;
+    expect(configCommandWarnings(planned, TEST_BRAND)).toEqual([]);
   });
 
   it('names no command this run set, and none of a module the preset leaves out', async () => {

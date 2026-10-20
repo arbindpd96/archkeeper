@@ -44,6 +44,14 @@ export function isStringList(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
+/**
+ * True when a parsed JSON value is a list of commands, each an argument array that names its program first, so an
+ * empty command, which names nothing to run, does not count; an empty list does.
+ */
+export function isCommandList(value: unknown): value is string[][] {
+  return Array.isArray(value) && value.every((item) => isStringList(item) && item.length > 0);
+}
+
 /** The text that starts a file with a byte-order mark. */
 export const BYTE_ORDER_MARK = String.fromCodePoint(0xfeff);
 
