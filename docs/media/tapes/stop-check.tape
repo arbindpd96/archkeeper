@@ -15,7 +15,7 @@ Sleep 1s
 Type@10ms "clear && claude --permission-mode acceptEdits"
 Enter
 Wait+Screen /for shortcuts/
-Type@10ms "In src/py_app/__init__.py only, make greet() shout in capitals, run nothing and say DONE. If the stop check then fails, update the test and end with a line FIXED:"
+Type@10ms "In src/py_app/__init__.py only, make greet() shout in capitals, run nothing and say DONE. If the stop check then fails, update the test and end with one line that starts with FIXED:, saying what you changed"
 Enter
 Wait+Screen@120s /AssertionError|FAILED/
 Wait+Screen@120s /FIXED: \S/

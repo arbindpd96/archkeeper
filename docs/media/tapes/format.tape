@@ -15,7 +15,7 @@ Sleep 1s
 Type@10ms "clear && claude --permission-mode acceptEdits"
 Enter
 Wait+Screen /for shortcuts/
-Type@10ms "Write src/py_app/shout.py as def shout(name): unused = 1; return name.upper(), then a line DONE:"
+Type@10ms "Write src/py_app/shout.py as def shout(name): unused = 1; return name.upper(), then end with one line that starts with DONE:, saying what you fixed"
 Enter
 Wait+Screen@120s /F841/
 Wait+Screen@120s /DONE: \S/
