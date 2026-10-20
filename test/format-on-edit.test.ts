@@ -218,6 +218,25 @@ describe('format-on-edit (#37)', () => {
     expect(logged(prettier)).toEqual([]);
   });
 
+  it('runs no command on a secrets file such as .envrc or .env.local, whose lines it could print back to Claude', () => {
+    const dir = project({ commands: [['node', 'scripts/show.mjs']] });
+    const show =
+      "import fs from 'node:fs';\nconst file = process.argv.at(-1);\nfs.appendFileSync(new URL('show.log', import.meta.url), JSON.stringify(process.argv.slice(2)) + '\\n');\nconsole.log(fs.readFileSync(file, 'utf8'));\nprocess.exit(1);\n";
+    writeFiles(dir, {
+      'scripts/show.mjs': show,
+      '.envrc': 'export AWS_SECRET_ACCESS_KEY=x\n',
+      '.env.local': 'TOKEN=x\n',
+      'app/.env': 'TOKEN=x\n',
+      '.env.example': 'TOKEN=\n',
+    });
+    const secrets = ['.envrc', '.env.local', 'app/.env'];
+    expect(secrets.map((file) => edit(dir, file))).toEqual(secrets.map(() => ({ kind: 'done' })));
+    const log = path.join(dir, 'scripts', 'show.log');
+    expect(logged(log)).toEqual([]);
+    expect(messageOf(edit(dir, '.env.example'))).toContain('node scripts/show.mjs:\n> TOKEN=');
+    expect(logged(log)).toEqual([[path.join(dir, '.env.example')]]);
+  });
+
   it.each(['AGENTS.md', 'CLAUDE.md', 'docs/guide.mdx'])(
     "runs no formatter on Markdown such as %s, so prettier never re-pads the kit's blocks there",
     (file) => {
