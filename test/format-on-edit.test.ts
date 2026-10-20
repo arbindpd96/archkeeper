@@ -18,6 +18,9 @@ const FORMAT =
 const LINT =
   "if (fs.readFileSync(file, 'utf8').includes('unused')) {\n  for (let i = 1; i <= 60; i++) console.log(`  ${i}:1  error  \\u001b[31mx\\u001b[0m is unused`);\n  process.exit(1);\n}";
 const SLOW = 'Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 5000);';
+// eslint under eslintrc, as ESLint 8 runs by default: a flat-config flag is an invalid option, which exits 2.
+const ESLINTRC =
+  "if (process.argv.includes('--no-warn-ignored')) { console.error(\"Invalid option '--no-warn-ignored'\"); process.exit(2); }\nconsole.log('  1:7  error  x is unused');\nprocess.exit(1);";
 
 /** A project under a path with a space and an é, whose config records these format-on-edit options. */
 function project(options: object): string {
@@ -67,7 +70,7 @@ describe('format-on-edit (#37)', () => {
     expect(edit(dir, 'src/a.ts')).toEqual({ kind: 'done' });
     const file = path.join(dir, 'src', 'a.ts');
     expect(logged(prettier)).toEqual([['--write', '--ignore-unknown', '--log-level', 'warn', file]]);
-    expect(logged(eslint)).toEqual([['--quiet', '--no-warn-ignored', file]]);
+    expect(logged(eslint)).toEqual([['--quiet', file]]);
     expect(readFileSync(file, 'utf8')).toBe('export const a = 1;\n');
   });
 
@@ -111,6 +114,15 @@ describe('format-on-edit (#37)', () => {
     expect(lines.slice(1, 3)).toEqual(['eslint:', '  1:1  error  \\u001b[31mx\\u001b[0m is unused']);
     expect(lines.at(-1)).toBe('…(23 more lines)');
     expect(written.stderr).not.toContain('\u001b');
+  });
+
+  it('sends what eslint reports to Claude in an eslintrc project too, passing it no flat-config flag', () => {
+    const dir = project({ linters: ['eslint'] });
+    nodeTool(dir, 'eslint', ESLINTRC, { eslint: './bin/tool.js' });
+    writeFiles(dir, { 'src/a.ts': 'const x = 1;\n' });
+    const answer = edit(dir, 'src/a.ts');
+    expect(answer.kind).toBe('refuse');
+    expect(messageOf(answer)).toContain('eslint:\n  1:7  error  x is unused');
   });
 
   it.skipIf(onWindows)('sends what ruff check leaves to Claude, after ruff fixed what it could', () => {
