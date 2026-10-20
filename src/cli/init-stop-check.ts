@@ -16,11 +16,14 @@ const selected = (settled: Settled): boolean =>
 
 /**
  * The test command init proposes for the stop check (#38): the package.json `test` script through npm, whatever the
- * package manager, since npm ships with Node.js; else `pytest` where detection found it. TS/JS comes first in a
- * mixed project, and only a stack in effect counts.
+ * package manager, since npm ships with Node.js, unless the script starts a watcher, which would hold every stop
+ * until its timeout; else `pytest` where detection found it. TS/JS comes first in a mixed project, and only a stack
+ * in effect counts.
  */
 export function proposedStopCommand(profile: StackProfile, settled: Settled): string[] | undefined {
-  const testScript = profile.commands.some((command) => command.stack === 'ts' && command.purpose === 'test');
+  const testScript = profile.commands.some(
+    (command) => command.stack === 'ts' && command.purpose === 'test' && command.watches !== true,
+  );
   if (testScript && settled.stack.includes('ts')) return ['npm', 'run', 'test'];
   return settled.tools.includes('pytest') ? ['pytest'] : undefined;
 }
@@ -57,7 +60,7 @@ function flagged(run: InitRun, settled: Settled, profile: StackProfile): ConfigA
   }
   if (proposed === undefined) {
     refuseFlag(
-      'found no test command: no package.json test script and no pytest',
+      'found no test command: no package.json test script that exits on its own, and no pytest',
       `set "${OPTION}" in ${where} to yours, such as ["vitest", "run"]`,
     );
   }
@@ -96,7 +99,7 @@ export async function stopCheckOptions(
   if (!run.asking.interactive || !selected(settled) || Object.hasOwn(own, OPTION) || proposed === undefined) {
     return undefined;
   }
-  const question = `Turn on the stop check? Before Claude stops, it runs ${quoted(proposed.join(' '))}, and so the code Claude wrote, without asking.`;
+  const question = `Turn on the stop check? Before Claude stops, it runs ${quoted(proposed.join(' '))}, and so the code Claude wrote, without asking. The command must exit on its own, with no watch mode.`;
   const yes = await run.asking.prompter.confirm(question, false);
   if (yes !== true) return yes === undefined ? null : { [MODULE]: { [OPTION]: [] } };
   warnWithoutGit(run);

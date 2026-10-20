@@ -101,6 +101,42 @@ describe('detectStack', () => {
     expect(commands.map((command) => command.command)).toEqual(['npm run build']);
   });
 
+  const testCommandOf = (script: string): unknown =>
+    detectIn({ 'package.json': JSON.stringify({ scripts: { test: script } }) }).commands.find(
+      (command) => command.purpose === 'test',
+    );
+
+  it.each([
+    'jest --watch',
+    'jest --watchAll',
+    'vitest --watch=true',
+    'react-scripts test',
+    'react-scripts test --env=jsdom',
+    'ng test',
+    'npx ng test --code-coverage',
+  ])('marks a test script that starts a watcher, %j, which never exits on its own', (script) => {
+    expect(testCommandOf(script)).toEqual({
+      stack: 'ts',
+      purpose: 'test',
+      command: 'npm run test',
+      watches: true,
+    });
+  });
+
+  it.each([
+    'vitest run',
+    'jest',
+    'jest --watchman',
+    'jest --watchPathIgnorePatterns=dist',
+    'jest --watch=false',
+    'react-scripts test --watchAll=false',
+    'ng test --watch=false',
+    'ng test --no-watch',
+    'npm run lint && turbo run test',
+  ])('leaves a test script that exits on its own, %j, unmarked', (script) => {
+    expect(testCommandOf(script)).toEqual({ stack: 'ts', purpose: 'test', command: 'npm run test' });
+  });
+
   it('formats with black when a project has both black and ruff, which it then uses to lint', () => {
     const pyproject = '[tool.black]\nline-length = 100\n\n[tool.ruff]\nselect = ["E"]\n';
     const commands = detectIn({ 'pyproject.toml': pyproject }).commands.map((command) => command.command);

@@ -29,6 +29,10 @@ const TOOLS: readonly (readonly [tool: Tool, pkg: string, config: RegExp])[] = [
 const NODE_FRAMEWORKS: readonly Framework[] = ['react', 'next'];
 // `npm init` writes a test script that only fails; listing it would tell agents to run a command that always fails.
 const NPM_PLACEHOLDER = 'no test specified';
+// A runner in watch mode never exits on its own: `--watch` or `--watchAll`, and react-scripts test and ng test, which
+// watch unless the script turns it off.
+const WATCHES = /\b(?:react-scripts|ng) test\b|--watch(?:All)?(?:=true)?(?![\w=-])/;
+const WATCH_OFF = /--(?:no-watch|watch(?:All)?=false)(?![\w-])/;
 const WORKSPACE_FILES = ['pnpm-workspace.yaml', 'lerna.json', 'nx.json', 'turbo.json', 'rush.json'];
 const SCRIPT_NAMES: Readonly<Record<CommandPurpose, readonly string[]>> = {
   build: ['build'],
@@ -43,6 +47,8 @@ const DEPENDENCY_FIELDS = ['dependencies', 'devDependencies', 'peerDependencies'
 interface PackageFacts {
   readonly packages: ReadonlySet<string>;
   readonly scripts: ReadonlySet<string>;
+  /** The scripts that start a watcher, which never exits on its own. */
+  readonly watching: ReadonlySet<string>;
   readonly manager: string | undefined;
   readonly workspaces: boolean;
 }
@@ -50,6 +56,7 @@ interface PackageFacts {
 const NO_FACTS: PackageFacts = {
   packages: new Set(),
   scripts: new Set(),
+  watching: new Set(),
   manager: undefined,
   workspaces: false,
 };
@@ -66,6 +73,17 @@ function scriptNames(value: unknown): Set<string> {
     stringKeys(scripts).filter((name) => {
       const text = scripts[name];
       return typeof text === 'string' && !text.includes(NPM_PLACEHOLDER);
+    }),
+  );
+}
+
+// The script's text only marks a script that watches; it never reaches a template either.
+function watchingScripts(value: unknown): Set<string> {
+  const scripts = recordOf(value) ?? {};
+  return new Set(
+    stringKeys(scripts).filter((name) => {
+      const text = scripts[name];
+      return typeof text === 'string' && WATCHES.test(text) && !WATCH_OFF.test(text);
     }),
   );
 }
@@ -91,6 +109,7 @@ function packageFacts(text: string, warnings: ProblemReport[]): PackageFacts {
   return {
     packages: new Set(DEPENDENCY_FIELDS.flatMap((field) => stringKeys(manifest[field]))),
     scripts: scriptNames(manifest.scripts),
+    watching: watchingScripts(manifest.scripts),
     manager: declaredManager(manifest),
     workspaces: manifest.workspaces !== undefined,
   };
@@ -130,12 +149,12 @@ function runCommand(manager: string, script: string): string {
 }
 
 // Commands come from fixed script names, never from a script's text, so no project data reaches a template.
-function scriptCommands(scripts: ReadonlySet<string>, manager: string): DetectedCommand[] {
+function scriptCommands(facts: PackageFacts, manager: string): DetectedCommand[] {
   return PURPOSES.flatMap((purpose) => {
-    const script = SCRIPT_NAMES[purpose].find((name) => scripts.has(name));
-    return script === undefined
-      ? []
-      : [{ stack: 'ts' as const, purpose, command: runCommand(manager, script) }];
+    const script = SCRIPT_NAMES[purpose].find((name) => facts.scripts.has(name));
+    if (script === undefined) return [];
+    const command: DetectedCommand = { stack: 'ts', purpose, command: runCommand(manager, script) };
+    return [facts.watching.has(script) ? { ...command, watches: true } : command];
   });
 }
 
@@ -162,7 +181,7 @@ export function nodeSignals(
     tools: tools.map(([tool]) => tool),
     frameworks: NODE_FRAMEWORKS.filter((framework) => facts.packages.has(framework)),
     monorepo: facts.workspaces || WORKSPACE_FILES.some((file) => names.includes(file)),
-    commands: scriptCommands(facts.scripts, manager),
+    commands: scriptCommands(facts, manager),
     warnings,
   };
 }
