@@ -25,6 +25,7 @@ import {
   stackFlag,
 } from './init-answers.js';
 import { type ExistingConfig, readExistingConfig, withConfig } from './init-config.js';
+import { configCommandWarnings, goOnWithCommands } from './init-config-commands.js';
 import { plannedWrites } from './apply.js';
 import { applyPlanned, finishDryRun } from './init-finish.js';
 import {
@@ -227,6 +228,7 @@ function showPlan(run: InitRun, planned: Planned): void {
         'off for everyone who runs init with this config',
     );
   }
+  for (const warning of configCommandWarnings(planned, run.brand)) run.asking.report.warn(warning);
 }
 
 function cancelled(run: InitRun): number {
@@ -244,10 +246,12 @@ function detect(run: InitRun): StackProfile {
   return profile;
 }
 
-// Only a plan that writes asks: about guards the config leaves out, a folder git cannot undo, then for the yes.
+// Only a plan that writes asks: about guards the config leaves out, commands it has the hooks run, a folder git cannot
+// undo, then for the yes.
 async function goAhead(run: InitRun, planned: Planned): Promise<boolean> {
   const leftOut = [...guardsLeftOut(planned.next.config), ...planned.optedOut];
   if (!(await goOnWithoutGuards(run.asking, leftOut))) return false;
+  if (!(await goOnWithCommands(run.asking, configCommandWarnings(planned, run.brand)))) return false;
   const git = run.session.context.gitState(run.rootReal);
   return (await goOnWithoutGit(run.asking, git, run.root)) && confirmApply(run.asking);
 }
