@@ -9,7 +9,10 @@ import { type InitRun, type Planned, textAt } from './init-run.js';
 import { stopCheckSteps } from './init-stop-check.js';
 import { install } from './install.js';
 
-/** Prints the run as one JSON line for --json: the answers, the detected stack, the plan and what applying did. */
+/**
+ * Prints the run as one JSON line for --json: the answers, the modules and those left out with why, the detected
+ * stack, the plan and what applying did.
+ */
 function printJson(run: InitRun, planned: Planned, applied: ApplyResult | null, exitCode: number): void {
   if (!run.json) return;
   const value = {
@@ -19,6 +22,7 @@ function printJson(run: InitRun, planned: Planned, applied: ApplyResult | null, 
     preset: planned.next.config.preset,
     stack: planned.stack,
     modules: planned.modules,
+    dropped: planned.dropped,
     compose: planned.next.config.compose,
     detected: planned.profile,
     plan: summarizePlan(planned.plan),
