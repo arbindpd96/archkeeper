@@ -20,7 +20,7 @@ import {
   guardsLeftOut,
   guardsOffWarning,
   moduleChanges,
-  ownsHooks,
+  ownedHooks,
   presetLine,
   stackFlag,
 } from './init-answers.js';
@@ -197,7 +197,7 @@ async function planInit(
   const optedOut = unrecordedOptOuts(optOuts, lock, installPlan.ops);
   const plan = withConfig(installPlan, next, existing, run.brand);
   const written = plannedWrites(run.rootReal, plan, run.brand);
-  const hooksKept = ownsHooks(lock, run.brand);
+  const hooksKept = ownedHooks(lock, run.brand);
   const { dropped } = resolution;
   return { profile, existing, next, stack, modules, dropped, tree, plan, written, optedOut, hooksKept };
 }
@@ -221,7 +221,8 @@ function showPlan(run: InitRun, planned: Planned): void {
   say(paint('bold', 'Plan:'));
   for (const line of planListing(run, planned)) say(line);
   const guards = guardsLeftOut(planned.next.config);
-  if (guards.length > 0) run.asking.report.warn(guardsOffWarning(guards, planned.hooksKept, run.brand));
+  const installed = planned.hooksKept.length > 0;
+  if (guards.length > 0) run.asking.report.warn(guardsOffWarning(guards, installed, run.brand));
   if (planned.optedOut.length > 0) {
     run.asking.report.warn(
       `optOut in ${configPath(run.brand)} leaves out ${planned.optedOut.join(', ')}, so these protections are ` +

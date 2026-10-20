@@ -56,8 +56,26 @@ describe('init names the commands a config has the hooks run (#37, #38, ADR-0015
 
   it('names no format-on-edit commands from a value the hook would not run, such as one with an empty command', () => {
     const options = { 'format-on-edit': { commands: [['node', 'scripts/check.mjs'], []] } };
-    const planned = { modules: ['format-on-edit'], existing: { config: { options } } } as unknown as Planned;
+    const existing = { config: { options } };
+    const planned = { modules: ['format-on-edit'], existing, hooksKept: [] } as unknown as Planned;
     expect(configCommandWarnings(planned, TEST_BRAND)).toEqual([]);
+  });
+
+  it('warns and asks about the command of a module left out whose hook init keeps, which still runs it', async () => {
+    const { dir } = fixtureCopy('py-app');
+    expect((await runInit(dir, ['--yes', '--preset', 'full', '--stop-check'])).code).toBe(0);
+    const result = await runInit(dir, ['--modules', '-stop-check'], {
+      interactive: true,
+      answers: ['no', true, true],
+    });
+    expect(result.code).toBe(0);
+    expect(result.stderr).toContain(
+      `checks.stop in ${CONFIG} runs "pytest" before Claude stops, without asking;`,
+    );
+    expect(result.asked.slice(1)).toEqual([QUESTION, 'Apply this plan?']);
+    expect(result.stdout).toContain(
+      `The stop check still runs "pytest" before Claude stops, until update removes its hook; to turn it off now, set checks.stop in ${CONFIG} to [].`,
+    );
   });
 
   it('names no command this run set, and none of a module the preset leaves out', async () => {

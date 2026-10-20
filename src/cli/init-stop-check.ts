@@ -120,13 +120,21 @@ function offStep(planned: Planned, where: string): string {
 
 /**
  * The Next steps line while the stop-check module is in: the command it runs and where the config sets it, or, while
- * the config sets no `checks.stop`, that it runs nothing until one is set; none after a no, recorded as `[]`.
+ * the config sets no `checks.stop`, that it runs nothing until one is set; none after a no, recorded as `[]`. While
+ * the module is left out but init keeps the hook it installed earlier, the line says the command still runs.
  */
 export function stopCheckSteps(planned: Planned, brand: Brand): string[] {
-  if (!planned.modules.includes(MODULE)) return [];
+  const selected = planned.modules.includes(MODULE);
+  const kept = planned.hooksKept.includes(`${brand.hookDir}/${MODULE}.mjs`);
   const command = planned.next.config.options[MODULE]?.[OPTION];
   const where = `${OPTION} in ${configPath(brand)}`;
-  if (command === undefined) return [offStep(planned, where)];
+  if (!selected && !kept) return [];
+  if (selected && command === undefined) return [offStep(planned, where)];
   if (!isStringList(command) || command.length === 0) return [];
-  return [`The stop check runs ${quoted(command.join(' '))} before Claude stops (${where}).`];
+  const runs = quoted(command.join(' '));
+  return selected
+    ? [`The stop check runs ${runs} before Claude stops (${where}).`]
+    : [
+        `The stop check still runs ${runs} before Claude stops, until update removes its hook; to turn it off now, set ${where} to [].`,
+      ];
 }
