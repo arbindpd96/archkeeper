@@ -137,17 +137,28 @@ The medium and full presets add `docs/architecture.md`, a map of your project th
 
 ## Format on edit
 
-Where `init` finds prettier, biome or ruff, the medium and full presets format and lint every file Claude edits with your project's own tools: prettier or biome plus eslint for TS/JS, and `ruff format` and `ruff check --fix` for Python. `init` records the tools it finds in `.archkeeper/config.json`, where you can also add checks of your own. Formatting happens silently; lint errors that remain go straight back to Claude, which fixes them before moving on. Nothing is downloaded or run through a shell, and a tool that is not installed is skipped with a one-time hint.
+Where `init` finds prettier, biome or ruff, the medium and full presets format and lint every file Claude edits with your project's own tools: prettier or biome plus eslint for TS/JS, and `ruff format` and `ruff check --fix` for Python. prettier leaves Markdown alone, so archkeeper's marked blocks in `CLAUDE.md` and `AGENTS.md` keep their shape. `init` records the tools it finds in `.archkeeper/config.json`, where you can also add checks of your own (the example under [Tests before done](#tests-before-done) shows where). Formatting happens silently; lint errors that remain go straight back to Claude, which fixes them before moving on. Nothing is downloaded or run through a shell, and a tool that is not installed is skipped with a one-time hint. The tools load your project's own configs and plugins, such as `eslint.config.js`, without asking, so in `acceptEdits` mode an edit Claude makes can run code with no Bash prompt; leave the module out with `--modules -format-on-edit` if that matters to you.
 
 ## Tests before done
 
-The full preset can run your tests before Claude says a task is done. The check is off until you turn it on: `init` shows the test command it found, such as `npm run test` or `pytest`, and sets it only if you say yes, or when you pass `--stop-check`. Once it is on, the check runs whenever code changed since its last green run, and a failure goes back to Claude with its last lines, once for each set of changes, so Claude fixes it or tells you why. It learns what changed from git, so it runs only in a git repository.
+The full preset can run your tests before Claude says a task is done. The check is off until you turn it on: `init` shows the test command it found, such as `npm run test` or `pytest`, and sets it only if you say yes, or when you pass `--stop-check`. Once it is on, the check runs when your uncommitted work, docs aside, differs from the last commit and that set of changes has neither passed nor failed before, so work Claude commits before it stops is not checked. A failure goes back to Claude with its last lines, quoted as data, once for each set of changes, so Claude fixes it or tells you why. It learns what changed from git, so it runs only in a git repository. It runs your tests, and so the code Claude wrote, without asking, so in `acceptEdits` mode an edit Claude makes can run code with no Bash prompt; that is why the check is off until you turn it on.
 
-`checks.stop` in `.archkeeper/config.json` holds the command as a list of arguments: `npm test` or `npm run <script>`, a tool's own bin from `node_modules`, such as `vitest`, or a program from `.venv` or PATH, such as `pytest` rather than `python -m pytest`. The hook starts no shell itself and skips npm's pre and post scripts, while npm runs your test script as it always does. A run that takes longer than `checks.stopTimeout` seconds, 300 by default, lets Claude stop; raise it if your tests need longer.
+`checks.stop` holds the command as a list of arguments: `npm test` or `npm run <script>`, a tool's own bin from `node_modules`, such as `vitest`, or a program from `.venv` or PATH, such as `pytest` rather than `python -m pytest`. The hook starts no shell itself and skips npm's pre and post scripts, while npm runs your test script as it always does. A run that takes longer than `checks.stopTimeout` seconds, 300 by default, lets Claude stop; raise it if your tests need longer. Both options, and the `commands` format on edit runs with the edited file's path added, go under their module's name in the config's `options`:
+
+```json
+{
+  "options": {
+    "stop-check": { "checks.stop": ["pytest"], "checks.stopTimeout": 300 },
+    "format-on-edit": { "commands": [["node", "scripts/check.mjs"]] }
+  }
+}
+```
+
+Trust these commands as you trust your `package.json` scripts: the hooks run them as written, and the programs they refuse, such as shells and package runners, only catch mistakes. When the config `init` reads already names such commands, as a cloned repository's may, `init` lists them under the plan and, on a terminal, asks before it applies.
 
 ## Works with Superpowers and Spec Kit
 
-`init` offers [Superpowers](https://github.com/obra/superpowers), a Claude Code plugin of planning, TDD and code review skills, and [Spec Kit](https://github.com/github/spec-kit), for spec-driven development. Right after the preset it asks whether you want either or both, defaulting to no; `--with superpowers,speckit` answers in a scripted run. A yes is recorded in `.archkeeper/config.json`, and `init` prints the exact install commands, with a warning about Spec Kit's `--force`. Nothing is installed or downloaded, and none of archkeeper's skills shares a name with theirs.
+`init` offers [Superpowers](https://github.com/obra/superpowers), a Claude Code plugin of planning, TDD and code review skills, and [Spec Kit](https://github.com/github/spec-kit), for spec-driven development. Right after the preset it asks whether you want either or both, defaulting to no; `--with superpowers,speckit` answers in a scripted run. A yes is recorded in `.archkeeper/config.json`, and `init` prints the exact install commands, Spec Kit's pinned to the version we checked, with a warning about its `--force`. Nothing is installed or downloaded, and none of archkeeper's skills shares a name with theirs.
 
 ## Pick a preset
 
