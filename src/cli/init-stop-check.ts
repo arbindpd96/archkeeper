@@ -103,10 +103,15 @@ export async function stopCheckOptions(
   return { [MODULE]: { [OPTION]: proposed } };
 }
 
-/** The Next steps line while the stop check is on: the command it runs and where the config sets it. */
+/**
+ * The Next steps line while the stop-check module is in: the command it runs and where the config sets it, or, while
+ * the config sets no `checks.stop`, that it runs nothing until one is set; none after a no, recorded as `[]`.
+ */
 export function stopCheckSteps(planned: Planned, brand: Brand): string[] {
+  if (!planned.modules.includes(MODULE)) return [];
   const command = planned.next.config.options[MODULE]?.[OPTION];
-  if (!planned.modules.includes(MODULE) || !Array.isArray(command) || command.length === 0) return [];
-  const runs = quoted(command.join(' '));
-  return [`The stop check runs ${runs} before Claude stops (${OPTION} in ${configPath(brand)}).`];
+  const where = `${OPTION} in ${configPath(brand)}`;
+  if (command === undefined) return [`The stop check is off: set ${where}, or run init with --stop-check.`];
+  if (!isStringList(command) || command.length === 0) return [];
+  return [`The stop check runs ${quoted(command.join(' '))} before Claude stops (${where}).`];
 }

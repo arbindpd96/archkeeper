@@ -47,7 +47,7 @@ describe('init asks to turn on the stop check in full (#38, ADR-0015)', () => {
     const result = await runInit(dir, [], { interactive: true, answers: ['full', 'no', false, true] });
     expect(result.asked[2]).toBe(question('pytest'));
     expect(stopCheckOf(dir)).toEqual({ 'checks.stop': [] });
-    expect(result.stdout).not.toContain('The stop check runs');
+    expect(result.stdout).not.toContain('The stop check');
     const again = await runInit(dir, [], { interactive: true });
     expect([again.code, again.asked]).toEqual([0, []]);
   });
@@ -87,12 +87,15 @@ describe('init asks to turn on the stop check in full (#38, ADR-0015)', () => {
 });
 
 describe('init sets the stop check in a scripted run only with --stop-check (#38)', () => {
-  it('leaves checks.stop unset without the flag', async () => {
+  it('leaves checks.stop unset without the flag, and says under Next steps that the check is off', async () => {
     const { dir } = fixtureCopy('ts-app');
     const result = await runInit(dir, ['--yes', '--preset', 'full']);
     expect(result.code).toBe(0);
     expect(stopCheckOf(dir)).toBeUndefined();
     expect(result.stdout).not.toContain('The stop check runs');
+    expect(result.stdout).toContain(
+      `\n  3. The stop check is off: set checks.stop in ${CONFIG}, or run init with --stop-check.\n`,
+    );
   });
 
   it('records the detected command with the flag, and a second init plans no change', async () => {
