@@ -118,6 +118,11 @@ const GIT_PROBLEMS: Readonly<Record<Exclude<GitState, 'clean'>, readonly [proble
   ],
 };
 
+/** What to do about a git state other than clean, as init's git warning says, such as `run git init and commit first`. */
+export function gitFix(state: Exclude<GitState, 'clean'>): string {
+  return GIT_PROBLEMS[state][1];
+}
+
 /**
  * Warns when the project is not a clean git repository and asks whether to go on (#27). --yes goes on; without a
  * terminal the run stops with the flag to pass. Init keeps a backup of every file it changes either way.

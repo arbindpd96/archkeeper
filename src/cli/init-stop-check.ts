@@ -3,6 +3,7 @@ import { configPath } from '../core/config.js';
 import { UsageError } from '../core/errors.js';
 import type { StackProfile } from '../core/stack-profile.js';
 import { quoted } from '../core/text.js';
+import { gitFix } from './init-answers.js';
 import type { ConfigAnswers } from './init-config.js';
 import type { InitRun, Planned } from './init-run.js';
 import type { Settled } from './init-tools.js';
@@ -50,18 +51,33 @@ function flagged(run: InitRun, settled: Settled, profile: StackProfile): ConfigA
   return { [MODULE]: { [OPTION]: proposed } };
 }
 
+// The hook checks only the changes git lists, so init says where git lists none, and records the command all the
+// same: the folder may become a repository later.
+function warnWithoutGit(run: InitRun): void {
+  const state = run.session.context.gitState(run.rootReal);
+  if (state === 'clean' || state === 'dirty') return;
+  run.asking.report.warn(
+    `the stop check runs only on changes git lists, and git cannot list them in ${run.root}, so it runs nothing ` +
+      `there; ${gitFix(state)}.`,
+  );
+}
+
 /**
  * The stop check's command init records in the config (#38, ADR-0015), while the stop-check module is selected:
  * `--stop-check` sets the detected one; else, while the config has no `checks.stop`, an interactive run asks with the
  * exact command, defaulting to no, and records a no as `[]`, so it never asks again, and a scripted run records
- * nothing. Null when the user cancels the question.
+ * nothing. Turning it on where git cannot list the folder's changes warns. Null when the user cancels the question.
  */
 export async function stopCheckOptions(
   run: InitRun,
   settled: Settled,
   profile: StackProfile,
 ): Promise<ConfigAnswers['options'] | null> {
-  if (run.flags.stopCheck === true) return flagged(run, settled, profile);
+  if (run.flags.stopCheck === true) {
+    const options = flagged(run, settled, profile);
+    warnWithoutGit(run);
+    return options;
+  }
   const own = settled.next.config.options[MODULE] ?? {};
   const proposed = proposedStopCommand(profile, settled);
   if (!run.asking.interactive || !selected(settled) || Object.hasOwn(own, OPTION) || proposed === undefined) {
@@ -69,8 +85,9 @@ export async function stopCheckOptions(
   }
   const question = `Turn on the stop check? Before Claude stops, it runs ${quoted(proposed.join(' '))} when code changed.`;
   const yes = await run.asking.prompter.confirm(question, false);
-  if (yes === undefined) return null;
-  return { [MODULE]: { [OPTION]: yes ? proposed : [] } };
+  if (yes !== true) return yes === undefined ? null : { [MODULE]: { [OPTION]: [] } };
+  warnWithoutGit(run);
+  return { [MODULE]: { [OPTION]: proposed } };
 }
 
 /** The Next steps line while the stop check is on: the command it runs and where the config sets it. */

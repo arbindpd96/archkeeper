@@ -141,3 +141,44 @@ describe('init sets the stop check in a scripted run only with --stop-check (#38
     expect(result.stderr).toContain(`"checks.stop" in options.stop-check in ${CONFIG}`);
   });
 });
+
+describe('init says where git cannot list the changes the stop check runs on (#38)', () => {
+  const RUNS_NOTHING = 'the stop check runs only on changes git lists';
+
+  it.each([
+    ['not-a-repo', 'run git init and commit first'],
+    ['ignored', 'stop ignoring it and commit it first'],
+    ['unknown', 'check that git is installed and works here'],
+    ['filters', 'check the filter and remote entries in its .git/config'],
+  ] as const)(
+    'warns when --stop-check turns it on where git says %s, and records it all the same',
+    async (git, fix) => {
+      const { dir } = fixtureCopy('py-app');
+      const result = await runInit(dir, ['--yes', '--preset', 'full', '--stop-check'], { git });
+      expect(result.code).toBe(0);
+      expect(result.stderr).toContain(
+        `${RUNS_NOTHING}, and git cannot list them in ${dir}, so it runs nothing there; ${fix}.`,
+      );
+      expect(stopCheckOf(dir)).toEqual({ 'checks.stop': ['pytest'] });
+    },
+  );
+
+  it('warns after a yes in a folder that is no git repository, and not after a no', async () => {
+    const answers = (turnOn: boolean): boolean[] => [turnOn, true, true];
+    const yes = fixtureCopy('py-app').dir;
+    const no = fixtureCopy('py-app').dir;
+    const setup = { interactive: true, git: 'not-a-repo' } as const;
+    const said = await runInit(yes, [], { ...setup, answers: ['full', 'no', ...answers(true)] });
+    const quiet = await runInit(no, [], { ...setup, answers: ['full', 'no', ...answers(false)] });
+    expect([said.code, quiet.code]).toEqual([0, 0]);
+    expect(said.stderr).toContain(RUNS_NOTHING);
+    expect(quiet.stderr).not.toContain(RUNS_NOTHING);
+  });
+
+  it.each(['clean', 'dirty'] as const)('says nothing of it in a repository git calls %s', async (git) => {
+    const { dir } = fixtureCopy('py-app');
+    const result = await runInit(dir, ['--yes', '--preset', 'full', '--stop-check'], { git });
+    expect(result.code).toBe(0);
+    expect(result.stderr).not.toContain(RUNS_NOTHING);
+  });
+});
