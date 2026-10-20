@@ -69,7 +69,8 @@ function hint(check: Check, why: string): Answer {
 }
 
 // The run's own files, such as the caches tests write, join the change set it checked. A result that cannot be
-// recorded, or a run that does not finish in time, lets Claude stop with a note (ADR-0015).
+// recorded, or a run with no exit status, which ran out of time, printed over 16 MB or never started, lets Claude stop
+// with a note (ADR-0015).
 function ran(check: Check, tool: ProjectTool, args: readonly string[]): Answer {
   const run = runProjectTool(tool, args, {
     cwd: check.projectDir,
@@ -81,7 +82,9 @@ function ran(check: Check, tool: ProjectTool, args: readonly string[]): Answer {
   const after = record(check, run.status === 0 ? { green: fingerprint } : { blocked: fingerprint });
   if (after !== undefined || run.status === 0) return noAnswer(after);
   if (run.status !== null) return block(failure(check, run));
-  return noAnswer(`stop-check: ${named(check)} did not finish in ${String(check.seconds)} s`);
+  return noAnswer(
+    `stop-check: ${named(check)} did not finish in ${String(check.seconds)} s or could not start`,
+  );
 }
 
 // A config that cannot be read sets nothing, and a value of the wrong type counts as unset, as init and update report

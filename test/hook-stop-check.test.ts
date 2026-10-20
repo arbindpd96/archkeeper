@@ -15,11 +15,12 @@ const STATE = `${BRAND.stateDir}/local/stop-check.json`;
 const SOURCE = 'src/a.ts';
 const GIT_CANNOT_SAY = 'stop-check: git could not say what changed, so nothing ran';
 // A stand-in test runner, installed as a JS bin: it logs each run beside itself, fails with 60 coloured lines while
-// src/a.ts says broken, and sleeps while it says slow.
+// src/a.ts says broken, sleeps while it says slow, and prints 17 MB while it says loud.
 const RUNNER = `const fs = require('node:fs');
 fs.appendFileSync(__filename + '.log', JSON.stringify(process.argv.slice(2)) + '\\n');
 const source = fs.readFileSync('src/a.ts', 'utf8');
 if (source.includes('slow')) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 10000);
+if (source.includes('loud')) process.stdout.write('x'.repeat(17000000));
 if (source.includes('broken')) {
   for (let line = 1; line <= 60; line += 1) console.log('\\u001b[31mline ' + line + '\\u001b[0m');
   process.exit(1);
@@ -192,9 +193,17 @@ describe('stop-check runs once per change set (#38)', () => {
     const answer = stop(dir);
     expect(Date.now() - started).toBeLessThan(8000);
     expect(blockReason(answer)).toBeUndefined();
-    expect(noteOf(answer)).toBe('stop-check: "checker" did not finish in 1 s');
+    expect(noteOf(answer)).toBe('stop-check: "checker" did not finish in 1 s or could not start');
     expect(stop(dir)).toEqual({ kind: 'done' });
     expect(runs(dir)).toHaveLength(1);
+  });
+
+  it('notes a run stopped for printing over 16 MB with the same words, not as a timeout alone', () => {
+    const dir = project({ 'checks.stop': ['checker'] });
+    writeFiles(dir, { [SOURCE]: 'export const a = "loud";\n' });
+    const answer = stop(dir);
+    expect(blockReason(answer)).toBeUndefined();
+    expect(noteOf(answer)).toBe('stop-check: "checker" did not finish in 300 s or could not start');
   });
 });
 
