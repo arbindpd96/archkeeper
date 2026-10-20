@@ -190,6 +190,14 @@ describe('format-on-edit (#37)', () => {
     expect(messageOf(failed)).toContain('node scripts/check.mjs --strict:\n> a TODO without an issue');
   });
 
+  it('hints that a node script a command names is not found in the project', () => {
+    const dir = project({ commands: [['node', 'scripts/check.mjs']] });
+    writeFiles(dir, { 'src/a.ts': 'export {};\n' });
+    expect(messageOf(edit(dir, 'src/a.ts'))).toContain(
+      `"node scripts/check.mjs" from commands in ${BRAND.stateDir}/config.json: not found in the project`,
+    );
+  });
+
   it('skips a command whose runner may not run, with a hint, and runs nothing', () => {
     const dir = project({
       commands: [
