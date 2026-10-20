@@ -45,6 +45,10 @@ describe('init records the tools format-on-edit runs (#37)', () => {
     expect(result.stdout).toMatch(/^Modules: (?!.*format-on-edit).*$/m);
     expect(recordedIn(dir)).toBeUndefined();
     expect(readFileSync(path.join(dir, '.claude/settings.json'), 'utf8')).not.toContain('format-on-edit');
+    const json = JSON.parse((await runInit(dir, ['--json'])).stdout) as { readonly dropped: unknown };
+    expect(json.dropped).toEqual([
+      { id: 'format-on-edit', reason: 'needs prettier, biome or ruff, and none was detected' },
+    ]);
   });
 
   it('never changes a tool list the config sets, even to add the other one', async () => {
