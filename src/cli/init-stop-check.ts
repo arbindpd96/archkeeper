@@ -96,7 +96,7 @@ export async function stopCheckOptions(
   if (!run.asking.interactive || !selected(settled) || Object.hasOwn(own, OPTION) || proposed === undefined) {
     return undefined;
   }
-  const question = `Turn on the stop check? Before Claude stops, it runs ${quoted(proposed.join(' '))} when code changed.`;
+  const question = `Turn on the stop check? Before Claude stops, it runs ${quoted(proposed.join(' '))}, and so the code Claude wrote, without asking.`;
   const yes = await run.asking.prompter.confirm(question, false);
   if (yes !== true) return yes === undefined ? null : { [MODULE]: { [OPTION]: [] } };
   warnWithoutGit(run);
