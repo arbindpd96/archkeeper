@@ -52,7 +52,7 @@ export interface Job {
 
 /** What the runs on an edited file came to: what the checks report, the runs skipped and why, and notes for stderr. */
 export interface Results {
-  /** Each failing check's name line, then its output lines. */
+  /** Each failing check's name line, then its output lines, each quoted with `> `, or how it exited when it printed nothing. */
   readonly reports: string[];
   readonly skipped: { readonly job: Job; readonly why: string }[];
   readonly notes: string[];
@@ -114,7 +114,8 @@ function runJob(job: Job, { edited, projectDir, results }: Batch, remainingMs: n
   const output = toLf(`${run.stdout}\n${run.stderr}`)
     .replace(/^(?:[ \t]*\n)+/, '')
     .trimEnd();
-  results.reports.push(`${job.name}:`, ...(output === '' ? exited : output).split('\n'));
+  const printed = output === '' ? [exited] : output.split('\n').map((line) => `> ${line}`);
+  results.reports.push(`${job.name}:`, ...printed);
 }
 
 /** Runs the jobs one after another on the edited file's real path, all within one budget of `budgetMs`. */
