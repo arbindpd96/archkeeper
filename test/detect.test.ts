@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { projectView } from '../src/cli/project-view.js';
 import { BRAND } from '../src/core/brand.js';
 import { detectStack } from '../src/core/detect.js';
-import type { ProjectView, StackProfile } from '../src/core/stack-profile.js';
+import { type ProjectView, type StackProfile, stackSummary } from '../src/core/stack-profile.js';
 import { unsafeValue } from '../src/core/template.js';
 import { canSymlink, git, REPO_ROOT, tempDir, tempRepo, writeFiles } from './helpers.js';
 
@@ -164,5 +164,16 @@ describe('detectStack', () => {
     writeFiles(outside, { 'package.json': JSON.stringify({ scripts: { test: 'x' } }) });
     symlinkSync(path.join(outside, 'package.json'), path.join(dir, 'package.json'));
     expect(detectStack(projectView(realpathSync.native(dir))).stack).toEqual([]);
+  });
+});
+
+describe('stackSummary', () => {
+  it.each([
+    ['mixed', 'TypeScript and Python (npm, uv)'],
+    ['js-yarn', 'JavaScript (yarn)'],
+    ['py-requirements', 'Python (pip)'],
+    ['empty', ''],
+  ])('sums up the %s fixture as %j, as init and the architecture map print it', (name, summary) => {
+    expect(stackSummary(expectedOf(name))).toBe(summary);
   });
 });

@@ -105,6 +105,16 @@ export interface StackSignals {
   readonly warnings: readonly ProblemReport[];
 }
 
+/**
+ * The detected languages joined with "and", then their package managers in parentheses, as init's report and the
+ * architecture map print them, such as `TypeScript and Python (npm, uv)`; empty when no language was detected.
+ */
+export function stackSummary(profile: StackProfile): string {
+  const languages = profile.languages.map((language) => LANGUAGE_NAMES[language]).join(' and ');
+  const managers = [profile.packageManager, profile.pythonManager].filter((name) => name !== null);
+  return languages === '' || managers.length === 0 ? languages : `${languages} (${managers.join(', ')})`;
+}
+
 /** The values of a plain object, or undefined when `value` is not one: detection reads project files tolerantly. */
 export function recordOf(value: unknown): Readonly<Record<string, unknown>> | undefined {
   return isRecord(value) ? value : undefined;
