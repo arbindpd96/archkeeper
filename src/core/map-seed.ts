@@ -2,7 +2,7 @@ import { parse, TomlError } from 'smol-toml';
 import { BRAND, type Brand } from './brand.js';
 import { parseJson } from './json.js';
 import { findSecret } from './secrets.js';
-import { LANGUAGE_NAMES, type ProjectView, recordOf, type StackProfile } from './stack-profile.js';
+import { type ProjectView, recordOf, type StackProfile, stackSummary } from './stack-profile.js';
 import { type TemplateScope, unsafeValue } from './template.js';
 import { compareText, UNPRINTABLE } from './text.js';
 
@@ -42,12 +42,10 @@ interface EntryPoint {
 }
 
 function stackLine(profile: StackProfile): string {
-  const languages = profile.languages.map((language) => LANGUAGE_NAMES[language]).join(' and ');
-  if (languages === '') return 'not detected';
-  const managers = [profile.packageManager, profile.pythonManager].filter((name) => name !== null);
-  const using = managers.length === 0 ? '' : ` (${managers.join(', ')})`;
+  const summary = stackSummary(profile);
+  if (summary === '') return 'not detected';
   const frameworks = profile.frameworks.length === 0 ? '' : `; frameworks: ${profile.frameworks.join(', ')}`;
-  return `${languages}${using}${frameworks}`;
+  return `${summary}${frameworks}`;
 }
 
 // The names a line quotes, then the line as render checks it: no control character, block marker or refused @

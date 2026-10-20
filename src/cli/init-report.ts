@@ -4,7 +4,7 @@ import { lockFilePath } from '../core/lock.js';
 import type { OpKind } from '../core/plan-types.js';
 import type { PathSummary, PlanGroup, PlanRow } from '../core/plan-summary.js';
 import type { DroppedModule } from '../core/resolve.js';
-import { LANGUAGE_NAMES, type StackProfile } from '../core/stack-profile.js';
+import { type StackProfile, stackSummary } from '../core/stack-profile.js';
 import { escapeUnprintable } from '../core/text.js';
 import { baseFolder } from './blob-store.js';
 import { type CliOutput, type StyleFormat, styled } from './output.js';
@@ -67,11 +67,9 @@ export function droppedLines(dropped: readonly DroppedModule[]): string[] {
 
 /** The detected stack in a few lines, the first step of init (#27). */
 export function detectedLines(profile: StackProfile): string[] {
-  const languages = profile.languages.map((language) => LANGUAGE_NAMES[language]).join(' and ');
-  const managers = [profile.packageManager, profile.pythonManager].filter((name) => name !== null);
-  const found = languages === '' ? 'no TS/JS or Python project files' : languages;
-  const using = managers.length === 0 ? '' : ` (${managers.join(', ')})`;
-  return [`Detected: ${found}${using}`, ...toolLine(profile), ...extrasLine(profile)];
+  const summary = stackSummary(profile);
+  const found = summary === '' ? 'no TS/JS or Python project files' : summary;
+  return [`Detected: ${found}`, ...toolLine(profile), ...extrasLine(profile)];
 }
 
 const GROUP_STYLE: Readonly<Record<PlanGroup, StyleFormat>> = {
