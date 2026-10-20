@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
@@ -209,5 +209,23 @@ describe('the VHS pin', () => {
     expect(pinned).toBeDefined();
     expect(workflow).toContain(`version: v${pinned ?? ''}\n`);
     expect(workflow).toMatch(/uses: charmbracelet\/vhs-action@[\da-f]{40} # v/);
+  });
+});
+
+describe("the repository's tapes", () => {
+  const folder = path.join(REPO_ROOT, 'docs/media/tapes');
+  const tapes = readdirSync(folder).filter((name) => name.endsWith('.tape') && name !== '_settings.tape');
+
+  it.each(tapes)('%s never waits for text it typed, which the echoed prompt would show at once', (name) => {
+    const typed: string[] = [];
+    const early: string[] = [];
+    for (const line of readFileSync(path.join(folder, name), 'utf8').split('\n')) {
+      const text = /^Type(?:@\S+)? "(.*)"$/.exec(line)?.[1];
+      if (text !== undefined) typed.push(text);
+      const pattern = /^Wait\S* \/(.*)\/$/.exec(line)?.[1];
+      const matches = pattern !== undefined && typed.some((earlier) => new RegExp(pattern).test(earlier));
+      if (matches) early.push(pattern);
+    }
+    expect(early).toEqual([]);
   });
 });
