@@ -151,9 +151,12 @@ export function guardsLeftOut(config: ProjectConfig): string[] {
   return config.modules.remove.filter((id) => GUARD_MODULES.includes(id));
 }
 
-/** Tells whether the lock owns a hook the kit installed, which init keeps when its module is left out (M7 removes). */
-export function ownsHooks(lock: Lock | undefined, brand: Brand): boolean {
-  return [...(lock?.files.keys() ?? [])].some((file) => file.startsWith(`${brand.hookDir}/`));
+/**
+ * The files the lock owns in the kit's hook folder, such as its stop-check bundle, which init keeps, and which go on
+ * running, while their module is left out (M7 removes them).
+ */
+export function ownedHooks(lock: Lock | undefined, brand: Brand): string[] {
+  return [...(lock?.files.keys() ?? [])].filter((file) => file.startsWith(`${brand.hookDir}/`));
 }
 
 /** The warning for guard modules the config leaves out, saying that what init installed earlier stays in place. */

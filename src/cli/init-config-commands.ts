@@ -6,22 +6,26 @@ import type { Planned } from './init-run.js';
 
 const shown = (command: readonly string[]): string => quoted(command.join(' '));
 
-// The value the config on disk gives a selected module's option: this run's answers, such as a yes to the stop
-// check, are not on disk yet, and a module left out runs nothing.
-function onDisk(planned: Planned, module: string, option: string): unknown {
-  return planned.modules.includes(module) ? planned.existing?.config.options[module]?.[option] : undefined;
+// The value the config on disk gives an option of a module whose hook runs: one selected in this run, or one left out
+// whose bundle the previous lock still owns, since init removes nothing it installed. This run's answers, such as a
+// yes to the stop check, are not on disk yet.
+function onDisk(planned: Planned, module: string, option: string, brand: Brand): unknown {
+  const runs =
+    planned.modules.includes(module) || planned.hooksKept.includes(`${brand.hookDir}/${module}.mjs`);
+  return runs ? planned.existing?.config.options[module]?.[option] : undefined;
 }
 
 /**
- * Warnings for the commands the config already on disk has the selected hooks run without asking (#37, #38,
- * ADR-0015): the stop check's `checks.stop` before Claude stops, and format-on-edit's `commands` after each edit.
- * init records no `commands`, and a `checks.stop` this run sets is not on disk yet, so whoever wrote the config set
- * each of these, such as the author of a repository the user cloned.
+ * Warnings for the commands the config already on disk has the kit's hooks run without asking (#37, #38,
+ * ADR-0015): the stop check's `checks.stop` before Claude stops, and format-on-edit's `commands` after each edit,
+ * while the module is selected or the previous lock still owns its hook. init records no `commands`, and a
+ * `checks.stop` this run sets is not on disk yet, so whoever wrote the config set each of these, such as the author
+ * of a repository the user cloned.
  */
 export function configCommandWarnings(planned: Planned, brand: Brand): string[] {
   const config = configPath(brand);
-  const stop = onDisk(planned, 'stop-check', 'checks.stop');
-  const extra = onDisk(planned, 'format-on-edit', 'commands');
+  const stop = onDisk(planned, 'stop-check', 'checks.stop', brand);
+  const extra = onDisk(planned, 'format-on-edit', 'commands', brand);
   const commands = isCommandList(extra) ? extra : [];
   const warnings: string[] = [];
   if (isStringList(stop) && stop.length > 0) {
