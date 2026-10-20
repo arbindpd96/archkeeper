@@ -21,7 +21,7 @@ c6211ecb979f1bbd9de13b11dafc190def4d055ad47d7ffaff4df5086100a059  state        .
 fce4bb35997926a2d93b95e482b93cf28976f408278086e9133a050ab7bbdace  state        .acmekit/base/fce4bb35997926a2d93b95e482b93cf28976f408278086e9133a050ab7bbdace
 e1f5420f62581a115005194c039c668b4f651d5d3b203eb9f35c8e5c5a29eb9f  state        .acmekit/config.json
 cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b  state        .acmekit/local/.gitignore
-37d53f0e1f86df2a589f6a6ad400a79cd019f631e035626730ddb0169d313f9c  state        .acmekit/lock.json
+6cf7f908cb3d621b7b05978f07f64bebe40b1a15a0914793dce4a3a16ba9a694  state        .acmekit/lock.json
 9f26d35d9f3f9fb8eb08f2aca9d13eda706c0376bcad2fc62cb4b82cdff63d56  owned        .claude/hooks/acmekit/format-on-edit.mjs
 96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1  owned        .claude/hooks/acmekit/guard-bash.mjs
 343cfbecf0eab8a622de43d172727d19e0989861bf82146f941b310089e32703  owned        .claude/hooks/acmekit/guard-secrets.mjs
@@ -40,7 +40,7 @@ cd7366ce9cbf42d295cad1b0bfc1900a96028d33afe15008be380ab9bba0265c  blocks       .
 e9480a820aa7676e4ee9b1af60af6b9c9e891bfe47a51ae17c44f8106db31953  blocks       AGENTS.md
 031024b53fb74cc63dfb2b442b9bf02a31bb03886e654db37d0994f6ae28f0c0  blocks       CLAUDE.md
 352c829f9f658f90eef7a90183872c4f83e48f080bb6265fd34d0dd09a347d73  create-only  docs/adr/0000-template.md
-83c16b2a52602076fd49489f02d4bd3cd51985d05f2e22f6298d27509185dd70  create-only  docs/architecture.md
+8d8a4a01aacaf299ae212157caa10e5defd34baa1f4878e9c02cf7116672b130  create-only  docs/architecture.md
 7ca81795dcb726ba36742d50abdb88a74a63808bfad6885cfccf4d8bf0b464f2  create-only  docs/decisions.md
 4e63c485c075be179b03e75f99367ef85473980862ed524c8ddc8afc1d7b2d24  create-only  docs/features/_template/MEMORY.md
 b5c4383fbf153ea0d527315f74f02741cb70721db40c0edf85d6721855f3aee0  create-only  docs/glossary.md
