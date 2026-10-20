@@ -146,16 +146,27 @@ describe('init offers Superpowers and Spec Kit after the preset (#39, ADR-0008)'
     const { dir } = fixtureCopy('ts-app');
     expect((await runInit(dir, ['--yes', '--with', 'superpowers,speckit'])).code).toBe(0);
     const before = projectText(dir);
-    for (const args of [['--json'], ['--json', '--with', 'speckit,superpowers']]) {
-      const again = await runInit(dir, args);
+    const plain = await runInit(dir, ['--json']);
+    const chosen = await runInit(dir, ['--json', '--with', 'speckit,superpowers']);
+    for (const again of [plain, chosen]) {
       expect(again.code).toBe(0);
       expect(changesOf(again.stdout)).toEqual([]);
-      expect(JSON.parse(again.stdout) as Json).toMatchObject({
-        compose: { superpowers: true, specKit: true },
-        nextSteps: [],
-      });
+      expect((JSON.parse(again.stdout) as Json).compose).toEqual({ superpowers: true, specKit: true });
     }
+    expect((JSON.parse(plain.stdout) as Json).nextSteps).toEqual([]);
+    expect((JSON.parse(chosen.stdout) as Json).nextSteps).toEqual([SUPERPOWERS, SPEC_KIT, WARNING]);
     expect(projectText(dir)).toBe(before);
+  });
+
+  it('prints the commands --with asks for even when the run changes nothing', async () => {
+    const { dir } = fixtureCopy('ts-app');
+    expect((await runInit(dir, ['--yes', '--with', 'speckit'])).code).toBe(0);
+    const again = await runInit(dir, ['--yes', '--with', 'speckit']);
+    expect(again.code).toBe(0);
+    expect(again.stdout).toContain(
+      `\nNothing to change: the project already matches the plan.\nTo add what --with chose:\n  1. ${SPEC_KIT}\n  2. ${WARNING}\n`,
+    );
+    expect((await runInit(dir, ['--yes'])).stdout).not.toContain('To add what --with chose:');
   });
 
   it('lists the exact commands and the warning a yes prints under nextSteps in --json', async () => {
