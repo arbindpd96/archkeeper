@@ -144,6 +144,15 @@ describe('init with the architecture-map module (#36)', () => {
     expect(read(dir, MAP)).toBe(before);
   });
 
+  it('lists the files git tracks only for a preset that seeds the map', async () => {
+    const listings = { small: 0, medium: 0 };
+    for (const preset of ['small', 'medium'] as const) {
+      const setup = { onTracked: () => (listings[preset] += 1) };
+      expect((await runInit(fixtureCopy('ts-app').dir, ['--yes', '--preset', preset], setup)).code).toBe(0);
+    }
+    expect(listings).toEqual({ small: 0, medium: 1 });
+  });
+
   it('writes nothing of its own with the small preset', async () => {
     const { dir } = fixtureCopy('ts-app');
     expect((await runInit(dir, ['--yes', '--preset', 'small'])).code).toBe(0);

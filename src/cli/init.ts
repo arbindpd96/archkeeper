@@ -178,9 +178,9 @@ async function planInit(
   warnAll(run, settled.warnings);
   const kits = resolution.modules;
   warnAll(run, unknownOptOutReports(kits, options, run.brand));
-  const values = initValues(run, profile, stack);
-  const tree = treeToWrite(run, render(kits, { stack, options, tools, values }, run.brand));
   const modules = kits.map((kit) => kit.manifest.id);
+  const values = initValues(run, profile, stack, modules);
+  const tree = treeToWrite(run, render(kits, { stack, options, tools, values }, run.brand));
   const planWith = (entries: readonly ModuleOptOut[]): Plan =>
     planProject(run.rootReal, tree, {
       kit: run.kit,
