@@ -163,6 +163,15 @@ describe('programs by name (#38)', () => {
       expect(programTool(project(), name)).toHaveProperty('refused');
     },
   );
+
+  it.each(['tox', 'nox', 'pre-commit', 'make', 'Just.exe'])(
+    'refuses %s, a runner that runs recipes through a shell or installs packages, even on PATH',
+    (name) => {
+      const runner = program(tempDir(), name.replace(/\.exe$/i, '').toLowerCase());
+      stubEnv('PATH', path.dirname(runner));
+      expect(programTool(project(), name)).toEqual({ refused: `${name} is a shell, wrapper or runner` });
+    },
+  );
 });
 
 describe('commands from the config (#37)', () => {

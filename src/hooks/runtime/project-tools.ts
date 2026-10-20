@@ -11,13 +11,15 @@ const PACKAGE_OF: ReadonlyMap<string, string> = new Map([
   ['biome', '@biomejs/biome'],
   ['tsc', 'typescript'],
 ]);
-// Shells, wrappers and package runners run whatever follows them, through a shell or after installing it over the
-// network (ADR-0015, ADR-0018); npm runs scripts through a shell.
+// Shells, wrappers and runners run whatever follows them, through a shell or after installing it over the network
+// (ADR-0015, ADR-0018): npm runs scripts through a shell, as make and just run recipes, and tox, nox and pre-commit
+// install packages into environments of their own.
 const SHELLS = 'bash sh zsh dash ksh fish csh tcsh cmd powershell pwsh';
 const WRAPPERS = 'env xargs sudo doas nohup timeout nice exec';
 const RUNNERS =
   'npm npx pnpm yarn bun bunx deno corepack uv uvx pip pip3 pipx poetry pipenv pdm hatch rye conda';
-const REFUSED = new Set(`${SHELLS} ${WRAPPERS} ${RUNNERS}`.split(' '));
+const TASK_RUNNERS = 'tox nox pre-commit make just';
+const REFUSED = new Set(`${SHELLS} ${WRAPPERS} ${RUNNERS} ${TASK_RUNNERS}`.split(' '));
 
 /** A tool to run: a Node.js tool's JS entry file, which runs with `process.execPath`, or a program's absolute path. */
 export type ProjectTool = { readonly entry: string } | { readonly program: string };
@@ -108,13 +110,13 @@ function scriptCommand(projectDir: string, args: readonly string[]): CommandLook
 
 /**
  * A program by its bare name, run with no shell (ADR-0015): a JS bin from node_modules, else a program from `.venv`
- * or PATH. A path, an option, a `.cmd` or `.bat` shim, a shell, a wrapper and a package runner are refused, npm
- * included, since it runs scripts through a shell.
+ * or PATH. A path, an option, a `.cmd` or `.bat` shim, a shell, a wrapper, and a package or task runner such as tox
+ * or make are refused, npm included, since it runs scripts through a shell.
  */
 export function programTool(projectDir: string, name: string): ToolLookup {
   const bare = name.replace(/\.exe$/i, '');
   if (!PROGRAM_NAME.test(name) || SHIM.test(name)) return { refused: `${name} is not a program name` };
-  if (REFUSED.has(bare.toLowerCase())) return { refused: `${name} is a shell, wrapper or package runner` };
+  if (REFUSED.has(bare.toLowerCase())) return { refused: `${name} is a shell, wrapper or runner` };
   const node = nodeTool(projectDir, bare);
   const found = 'tool' in node ? node : pythonTool(projectDir, bare);
   return 'tool' in found ? found : { missing: 'node_modules, .venv or PATH' };
