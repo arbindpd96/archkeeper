@@ -101,7 +101,7 @@ function scriptCommand(projectDir: string, args: readonly string[]): CommandLook
   }
   const real = realOrUndefined(path.resolve(projectDir, script));
   const root = realOrUndefined(projectDir);
-  if (real === undefined) return { missing: script };
+  if (real === undefined) return { missing: 'the project' };
   if (root === undefined || !isInside(root, real) || !isRegularFile(real)) {
     return { refused: `${script} is not a file inside the project` };
   }
