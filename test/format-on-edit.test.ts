@@ -202,6 +202,17 @@ describe('format-on-edit (#37)', () => {
     expect(logged(prettier)).toEqual([]);
   });
 
+  it.each(['AGENTS.md', 'CLAUDE.md', 'docs/guide.mdx'])(
+    "runs no formatter on Markdown such as %s, so prettier never re-pads the kit's blocks there",
+    (file) => {
+      const dir = project({ formatters: ['prettier'], linters: ['eslint'] });
+      const prettier = nodeTool(dir, 'prettier', FORMAT);
+      writeFiles(dir, { [file]: '<!-- kit:begin rules -->\n| a | b |\n|---|---|\n<!-- kit:end rules -->\n' });
+      expect(edit(dir, file)).toEqual({ kind: 'done' });
+      expect(logged(prettier)).toEqual([]);
+    },
+  );
+
   it('does nothing for a file outside the project', () => {
     const dir = project({ formatters: ['prettier'] });
     const prettier = nodeTool(dir, 'prettier', FORMAT);
