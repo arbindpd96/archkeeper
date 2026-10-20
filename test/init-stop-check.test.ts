@@ -8,7 +8,7 @@ import { TEST_BRAND } from './kit-fixtures.js';
 
 const CONFIG = `${TEST_BRAND.stateDir}/config.json`;
 const question = (command: string): string =>
-  `Turn on the stop check? Before Claude stops, it runs "${command}" when code changed.`;
+  `Turn on the stop check? Before Claude stops, it runs "${command}", and so the code Claude wrote, without asking.`;
 const step = (command: string): string =>
   `The stop check runs "${command}" before Claude stops (checks.stop in ${CONFIG}).`;
 
