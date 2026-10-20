@@ -39,6 +39,11 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/** True when a parsed JSON value is an array whose every item is a string; an empty array counts. */
+export function isStringList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
 /** The text that starts a file with a byte-order mark. */
 export const BYTE_ORDER_MARK = String.fromCodePoint(0xfeff);
 
