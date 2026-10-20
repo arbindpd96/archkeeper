@@ -595,6 +595,7 @@ Sources: [src](https://code.claude.com/docs/en/mcp), [src](https://help.figma.co
   - The Claude integration names its skills `speckit-` plus the command, any `.` becoming `-`: `speckit-analyze`, `-checklist`, `-clarify`, `-constitution`, `-converge`, `-implement`, `-plan`, `-specify`, `-tasks` and `-taskstoissues`, invoked as `/speckit-<command>`. The references write them in dotted notation, `/speckit.<command>` [src](https://github.com/github/spec-kit/blob/v1.2.1/docs/reference/integrations.md).
   - They are model-invocable unless `--integration-options="--no-model-invocation"` makes the core ones user-only.
   - v1.2.2 came out at 14:48 UTC on 2026-10-19, after the check. Its release notes change neither `specify init` nor the skill names, and `modules/compose.json` keeps v1.2.1 as known good.
+  - **Pinned install, checked on 2026-10-20:** the v1.2.1 installation guide pins a PyPI install as `uv tool install specify-cli==X.Y.Z`, and PyPI serves `specify-cli` 1.2.1 (uploaded 2026-10-16), so `init` prints `uv tool install specify-cli==1.2.1` (ADR-0008) [src](https://github.com/github/spec-kit/blob/v1.2.1/docs/installation.md).
 
 **Composition rules for init:**
 - Both installs are opt-in. Ask for explicit consent, and show the exact command and the files it touches.

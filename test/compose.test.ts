@@ -82,13 +82,24 @@ describe('modules/compose.json (#39, ADR-0008)', () => {
     const { specKit } = catalog.compose;
     expect(specKit.knownGood).toEqual({ version: '1.2.1', released: '2026-10-16' });
     expect(specKit.commands).toEqual([
-      'uv tool install specify-cli',
+      'uv tool install specify-cli==1.2.1',
       'specify init --here --integration claude',
     ]);
     expect(specKit.warning).toMatch(
       /^Never pass --force to specify init without reading specify init --help/,
     );
     expect(specKit.skillPrefixes).toEqual(['speckit.', 'speckit-']);
+  });
+
+  it("pins every PyPI install it prints to the tool's known-good version, which ADR-0008 asks for", () => {
+    const tools = [catalog.compose.superpowers, catalog.compose.specKit];
+    const installs = tools.flatMap((tool) =>
+      tool.commands
+        .filter((line) => line.startsWith('uv tool install '))
+        .map((line) => ({ line, pinned: line.endsWith(`==${tool.knownGood.version}`) })),
+    );
+    expect(installs.length).toBeGreaterThan(0);
+    expect(installs.filter((install) => !install.pinned)).toEqual([]);
   });
 
   it('holds every kit skill apart from the Superpowers skill names and the speckit. and speckit- prefixes', () => {

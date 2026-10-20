@@ -26,7 +26,8 @@ const CONFIG = `${TEST_BRAND.stateDir}/config.json`;
 const QUESTION = 'Add Superpowers or Spec Kit? init only prints their install commands';
 const SUPERPOWERS =
   'Add Superpowers: claude plugin install superpowers@claude-plugins-official --scope project';
-const SPEC_KIT = 'Add Spec Kit: uv tool install specify-cli, then specify init --here --integration claude';
+const SPEC_KIT =
+  'Add Spec Kit: uv tool install specify-cli==1.2.1, then specify init --here --integration claude';
 const WARNING =
   'Never pass --force to specify init without reading specify init --help: it may replace your files.';
 // The compose tape's frame: 1100×560 in JetBrains Mono 16 holds 23 rows of 109 columns, and the shell's prompt

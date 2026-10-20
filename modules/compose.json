@@ -31,7 +31,7 @@
     "repository": "github/spec-kit",
     "description": "spec-driven development: a spec, a plan and tasks before the code",
     "knownGood": { "version": "1.2.1", "released": "2026-10-16" },
-    "commands": ["uv tool install specify-cli", "specify init --here --integration claude"],
+    "commands": ["uv tool install specify-cli==1.2.1", "specify init --here --integration claude"],
     "warning": "Never pass --force to specify init without reading specify init --help: it may replace your files.",
     "skills": [],
     "skillPrefixes": ["speckit.", "speckit-"]
