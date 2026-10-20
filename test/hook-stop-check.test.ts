@@ -1,4 +1,12 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, realpathSync, symlinkSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  symlinkSync,
+} from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
@@ -6,7 +14,7 @@ import type { Answer, Payload } from '../src/hooks/runtime/io.js';
 import { outcomeOf } from '../src/hooks/runtime/launch.js';
 import { stopCommand } from '../src/hooks/runtime/stop/runner.js';
 import { stopCheck } from '../src/hooks/runtime/stop/stop-check.js';
-import { canSymlink, commitFiles, git, tempDir, tempRepo, writeFiles } from './helpers.js';
+import { canSymlink, commitFiles, git, stubEnv, tempDir, tempRepo, writeFiles } from './helpers.js';
 import { blockReason } from './hook-helpers.js';
 
 const onWindows = process.platform === 'win32';
@@ -215,9 +223,15 @@ describe('stop-check runners (#38, ADR-0015)', () => {
       'package.json': JSON.stringify({ name: 'app', version: '1.0.0', scripts }),
       'mark.js': "require('node:fs').writeFileSync(process.argv[2], 'x');\n",
     });
+    // The real npm runs here: its user config and its cache, where it writes a log on every run, stay in temp folders.
+    const npm = tempDir();
+    writeFiles(npm, { npmrc: '' });
+    stubEnv('npm_config_userconfig', path.join(npm, 'npmrc'));
+    stubEnv('npm_config_cache', path.join(npm, 'cache'));
     expect(stop(dir)).toEqual({ kind: 'done' });
     expect(existsSync(path.join(dir, 'test-ran'))).toBe(true);
     expect(existsSync(path.join(dir, 'pretest-ran'))).toBe(false);
+    expect(readdirSync(path.join(npm, 'cache', '_logs'))).not.toEqual([]);
   });
 
   it.skipIf(onWindows)('runs a Python tool from the .venv as a real executable', () => {
