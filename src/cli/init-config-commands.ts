@@ -23,16 +23,18 @@ export function configCommandWarnings(planned: Planned, brand: Brand): string[] 
   const stop = onDisk(planned, 'stop-check', 'checks.stop');
   const extra = onDisk(planned, 'format-on-edit', 'commands');
   const commands = isCommandList(extra) ? extra : [];
-  return [
-    ...(isStringList(stop) && stop.length > 0
-      ? [`checks.stop in ${config} runs ${shown(stop)} before Claude stops, without asking`]
-      : []),
-    ...(commands.length > 0
-      ? [
-          `commands in ${config} run ${commands.map(shown).join(', ')} after each edit Claude makes, without asking`,
-        ]
-      : []),
-  ];
+  const warnings: string[] = [];
+  if (isStringList(stop) && stop.length > 0) {
+    warnings.push(
+      `checks.stop in ${config} runs ${shown(stop)} before Claude stops, without asking; remove it unless you trust whoever wrote it`,
+    );
+  }
+  if (commands.length > 0) {
+    warnings.push(
+      `commands in ${config} run ${commands.map(shown).join(', ')} after each edit Claude makes, without asking; remove them unless you trust whoever wrote them`,
+    );
+  }
+  return warnings;
 }
 
 /**

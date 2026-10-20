@@ -9,7 +9,7 @@ import { TEST_BRAND } from './kit-fixtures.js';
 const CONFIG = `${TEST_BRAND.stateDir}/config.json`;
 const QUESTION = 'Continue, letting the hooks run these commands?';
 const PAYLOAD = { 'stop-check': { 'checks.stop': ['node', '-e', 'x'] } };
-const STOP_WARNING = `checks.stop in ${CONFIG} runs "node -e x" before Claude stops, without asking`;
+const STOP_WARNING = `checks.stop in ${CONFIG} runs "node -e x" before Claude stops, without asking; remove it unless you trust whoever wrote it`;
 
 /** ts-app with a config whose options name commands for the hooks, as a cloned repository may ship one. */
 function clonedWith(preset: string, options: object): string {
@@ -32,7 +32,7 @@ describe('init names the commands a config has the hooks run (#37, #38, ADR-0015
     ];
     const result = await runInit(clonedWith('medium', { 'format-on-edit': { commands } }), ['--yes']);
     expect(result.stderr).toContain(
-      `commands in ${CONFIG} run "node scripts/check.mjs", "mypy --strict" after each edit Claude makes, without asking`,
+      `commands in ${CONFIG} run "node scripts/check.mjs", "mypy --strict" after each edit Claude makes, without asking; remove them unless you trust whoever wrote them`,
     );
   });
 
