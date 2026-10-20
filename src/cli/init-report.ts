@@ -196,6 +196,11 @@ export function nextSteps(files: readonly string[], more: readonly string[] = []
   ];
 }
 
+/** Steps as init prints them: numbered from 1, indented and escaped. */
+export function numberedSteps(steps: readonly string[]): string[] {
+  return steps.map((step, index) => `  ${String(index + 1)}. ${escapeUnprintable(step)}`);
+}
+
 /** init's Next steps once it has applied its plan: any sidecars to review, then {@link nextSteps}, numbered. */
 export function nextStepLines(
   sidecars: readonly string[],
@@ -204,8 +209,6 @@ export function nextStepLines(
   more: readonly string[] = [],
 ): string[] {
   const review = sidecars.length === 0 ? [] : ['  Review the sidecars the kit wrote beside your files:'];
-  const numbered = nextSteps(files, more).map(
-    (step, index) => `  ${String(index + 1)}. ${escapeUnprintable(step)}`,
-  );
+  const numbered = numberedSteps(nextSteps(files, more));
   return ['Next steps:', ...review, ...sidecarLines(sidecars, brand), ...numbered];
 }
