@@ -5,6 +5,7 @@ import {
   readdirSync,
   readFileSync,
   realpathSync,
+  renameSync,
   symlinkSync,
 } from 'node:fs';
 import path from 'node:path';
@@ -290,15 +291,19 @@ describe('the commands checks.stop may name (#38, ADR-0015)', () => {
 });
 
 describe.skipIf(!canSymlink())('stop-check state safety (ADR-0015)', () => {
-  it('never blocks, noting why, when it cannot record the result', () => {
-    const dir = project({ 'checks.stop': ['checker'] });
+  it('never blocks, noting why with forward slashes, when it cannot record the result', () => {
+    // A backslash in a folder name stands in for a Windows path's separators on every OS.
+    const moved = path.join(tempDir(), 'back\\slash');
+    mkdirSync(path.dirname(moved), { recursive: true });
+    renameSync(project({ 'checks.stop': ['checker'] }), moved);
+    const dir = realpathSync.native(moved);
     const outside = tempDir();
     mkdirSync(path.join(dir, BRAND.stateDir), { recursive: true });
     symlinkSync(outside, path.join(dir, BRAND.stateDir, 'local'));
     writeFiles(dir, { [SOURCE]: 'export const a = "broken";\n' });
     const answer = stop(dir);
     expect(blockReason(answer)).toBeUndefined();
-    expect(noteOf(answer)).toMatch(/^stop-check: .*is a symlink$/);
+    expect(noteOf(answer)).toMatch(/^stop-check: \S*\/back\/slash\/\S*local is a symlink$/);
     expect(existsSync(path.join(outside, 'stop-check.json'))).toBe(false);
   });
 });
