@@ -116,6 +116,8 @@ export interface InitSetup {
   readonly git?: GitState;
   /** The files git tracks, or null for no list; by default every file in the project when init lists them. */
   readonly tracked?: readonly string[] | null;
+  /** Runs each time init lists the files git tracks, so a test can count the listings. */
+  readonly onTracked?: () => void;
   readonly catalog?: Catalog;
   /** Runs before each answer is given, such as an edit made while init waits. */
   readonly whileAsking?: (question: string) => void;
@@ -184,7 +186,10 @@ export async function runInit(
       written.transcript += `[? ${question}]\n`;
     }),
     gitState: () => setup.git ?? 'clean',
-    trackedFiles: (root) => (setup.tracked === null ? undefined : (setup.tracked ?? filesUnder(root))),
+    trackedFiles: (root) => {
+      setup.onTracked?.();
+      return setup.tracked === null ? undefined : (setup.tracked ?? filesUnder(root));
+    },
   };
   const code = await main(['init', '--cwd', dir, ...args], context);
   return { code, ...written, asked, defaults };
