@@ -13,6 +13,16 @@ import { canSymlink, stubEnv, tempDir, writeFiles } from './helpers.js';
 
 const onWindows = process.platform === 'win32';
 const ECHO = 'process.stdout.write(JSON.stringify(process.argv.slice(2)));\n';
+// Every name project-tools refuses, held here word by word, so a word dropped from its lists fails a test: shells,
+// wrappers, package runners and task runners (ADR-0015, ADR-0018).
+const REFUSED_NAMES = [
+  ...'sh bash zsh dash ksh fish csh tcsh cmd powershell pwsh'.split(' '),
+  ...'env xargs sudo doas nohup timeout nice exec'.split(' '),
+  ...'npm npx pnpm yarn bun bunx deno corepack uv uvx pip pip3 pipx poetry pipenv pdm hatch rye conda'.split(
+    ' ',
+  ),
+  ...'tox nox pre-commit make just'.split(' '),
+];
 
 /** A project folder whose path holds a space, real so that paths compare as the lookups give them. */
 function project(): string {
@@ -170,6 +180,26 @@ describe('programs by name (#38)', () => {
       const runner = program(tempDir(), name.replace(/\.exe$/i, '').toLowerCase());
       stubEnv('PATH', path.dirname(runner));
       expect(programTool(project(), name)).toEqual({ refused: `${name} is a shell, wrapper or runner` });
+    },
+  );
+});
+
+describe('the names project-tools refuses (ADR-0015)', () => {
+  it.each(REFUSED_NAMES)(
+    'refuses %s in any case and with .exe, even with a program of that name on PATH',
+    (name) => {
+      const dir = project();
+      const folder = tempDir();
+      const file = onWindows ? `${name}.exe` : name;
+      writeFiles(folder, { [file]: '#!/bin/sh\n' });
+      chmodSync(path.join(folder, file), 0o755);
+      stubEnv('PATH', folder);
+      const capital = `${name.charAt(0).toUpperCase()}${name.slice(1)}`;
+      for (const given of [name, capital, `${name}.exe`, `${name.toUpperCase()}.EXE`]) {
+        const refused = { refused: `${given} is a shell, wrapper or runner` };
+        expect(programTool(dir, given)).toEqual(refused);
+        expect(commandTool(dir, [given, '--version'])).toEqual(refused);
+      }
     },
   );
 });
