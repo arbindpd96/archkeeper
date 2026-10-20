@@ -137,7 +137,10 @@ function repositorySourceFiles() {
   return repositoryFiles(process.cwd(), nextStep).filter((file) => SOURCE_FILE.test(file));
 }
 
-/** Resolves the files to check: CLI arguments, or every source file in the repository. */
+/**
+ * Resolves the files to check: the JS and TS sources among the CLI arguments, since a hook may pass any edited file,
+ * or every source file in the repository.
+ */
 function targetFiles(args) {
   const files = args.length > 0 ? args : repositorySourceFiles();
   return files
@@ -145,7 +148,9 @@ function targetFiles(args) {
       const relative = path.relative(process.cwd(), path.resolve(file)).replaceAll('\\', '/');
       return relative.startsWith('../') ? path.resolve(file) : relative;
     })
-    .filter((file) => (path.isAbsolute(file) || !EXCLUDED.test(file)) && existsSync(file));
+    .filter(
+      (file) => SOURCE_FILE.test(file) && (path.isAbsolute(file) || !EXCLUDED.test(file)) && existsSync(file),
+    );
 }
 
 if (!ts) {

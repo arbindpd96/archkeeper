@@ -85,4 +85,11 @@ describe('check-comments', () => {
   it('checks plain JavaScript modules too', () => {
     expect(check('export const a = 1;\n// return a;\n', '.mjs').status).toBe(1);
   });
+
+  it.each(['.yml', '.md', '.json'])(
+    'skips a %s file it is given, which is no JS or TS source, as format-on-edit may pass one',
+    (extension) => {
+      expect(check('// const b = 2;\nkey: 1\n', extension)).toMatchObject({ status: 0, stderr: '' });
+    },
+  );
 });
