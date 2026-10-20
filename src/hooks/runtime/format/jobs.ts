@@ -17,7 +17,9 @@ interface ToolSpec {
 }
 
 // Formatters change the file in place and their output is dropped; eslint reports errors and fixes nothing, and ruff
-// fixes what it fixes safely, then reports the rest. Formatters come first, prettier before biome.
+// fixes what it fixes safely, then reports the rest. Formatters come first, prettier before biome. eslint's --quiet
+// also drops the warning for an ignored file, which then exits 0 under flat config and eslintrc alike; eslintrc
+// refuses --no-warn-ignored.
 const TOOLS: readonly ToolSpec[] = [
   {
     list: 'formatters',
@@ -28,7 +30,7 @@ const TOOLS: readonly ToolSpec[] = [
   },
   { list: 'formatters', name: 'biome', node: true, takes: `${SCRIPTS} ${DATA}`, args: 'format --write' },
   { list: 'formatters', name: 'ruff', node: false, takes: '.py .pyi', args: 'format --force-exclude' },
-  { list: 'linters', name: 'eslint', node: true, takes: SCRIPTS, args: '--quiet --no-warn-ignored' },
+  { list: 'linters', name: 'eslint', node: true, takes: SCRIPTS, args: '--quiet' },
   { list: 'linters', name: 'ruff', node: false, takes: '.py .pyi', args: 'check --fix --force-exclude' },
 ];
 
