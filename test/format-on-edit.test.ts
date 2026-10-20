@@ -1,4 +1,12 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, realpathSync, symlinkSync } from 'node:fs';
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  realpathSync,
+  symlinkSync,
+} from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
@@ -133,6 +141,37 @@ describe('format-on-edit (#37)', () => {
     );
     writeFiles(dir, { 'app.py': 'x = 1\n' });
     expect(messageOf(edit(dir, 'app.py'))).toContain('ruff:\napp.py:1:1: F841 unused');
+  });
+
+  it('notes a formatter that fails and a linter that crashes on stderr alone, keeping both from Claude', () => {
+    const dir = project({ formatters: ['prettier'], linters: ['eslint'] });
+    nodeTool(dir, 'prettier', "console.error('[error] SyntaxError');\nprocess.exit(1);");
+    nodeTool(dir, 'eslint', "console.error('Oops! Something went wrong!');\nprocess.exit(2);", {
+      eslint: './bin/tool.js',
+    });
+    writeFiles(dir, { 'src/a.ts': 'export {};\n' });
+    const note = 'format-on-edit: prettier exited 1; eslint exited 2';
+    const answer = edit(dir, 'src/a.ts');
+    expect(answer).toEqual({ kind: 'done', note });
+    const written = { stdout: '', stderr: '' };
+    const code = respond(answer, {
+      stdout: (text) => (written.stdout += text),
+      stderr: (text) => (written.stderr += text),
+    });
+    expect([code, written.stdout, written.stderr]).toEqual([0, '', `${note}\n`]);
+  });
+
+  it.skipIf(!canSymlink())('skips a hint it cannot record, with a note, and writes nothing elsewhere', () => {
+    const dir = project({ formatters: ['prettier'] });
+    const outside = tempDir();
+    symlinkSync(outside, path.join(dir, BRAND.stateDir, 'local'));
+    writeFiles(dir, { 'src/a.ts': 'export {};\n' });
+    const answer = edit(dir, 'src/a.ts');
+    expect(answer).toEqual({
+      kind: 'done',
+      note: expect.stringMatching(/^format-on-edit: skipped a hint: .*\/local is a symlink$/) as string,
+    });
+    expect(readdirSync(outside)).toEqual([]);
   });
 
   it('skips a recorded tool that is not installed, saying so once in a systemMessage', () => {
