@@ -8,7 +8,17 @@ import { TEST_BRAND } from './kit-fixtures.js';
 
 const CONFIG = `${TEST_BRAND.stateDir}/config.json`;
 const question = (command: string): string =>
-  `Turn on the stop check? Before Claude stops, it runs "${command}", and so the code Claude wrote, without asking.`;
+  `Turn on the stop check? Before Claude stops, it runs "${command}", and so the code Claude wrote, without asking. The command must exit on its own, with no watch mode.`;
+const NO_TEST_COMMAND =
+  '--stop-check: found no test command: no package.json test script that exits on its own, and no pytest';
+
+/** A project whose package.json has this test script, and prettier, so medium and full have format-on-edit. */
+function withTestScript(test: string): string {
+  const dir = tempDir();
+  const manifest = { scripts: { test }, devDependencies: { prettier: '^3.0.0' } };
+  writeFiles(dir, { 'package.json': JSON.stringify(manifest) });
+  return dir;
+}
 const step = (command: string): string =>
   `The stop check runs "${command}" before Claude stops (checks.stop in ${CONFIG}).`;
 
@@ -74,6 +84,29 @@ describe('init asks to turn on the stop check in full (#38, ADR-0015)', () => {
     writeFiles(dir, { 'package.json': JSON.stringify({ devDependencies: { prettier: '^3.0.0' } }) });
     const result = await runInit(dir, [], { interactive: true, answers: ['full', 'no', true] });
     expect(result.asked.slice(2)).toEqual(['Apply this plan?']);
+  });
+
+  it.each(['react-scripts test', 'ng test', 'jest --watch'])(
+    'asks nothing where the test script, %j, starts a watcher that never exits',
+    async (script) => {
+      const result = await runInit(withTestScript(script), [], {
+        interactive: true,
+        answers: ['full', 'no', true],
+      });
+      expect(result.asked.slice(2)).toEqual(['Apply this plan?']);
+    },
+  );
+
+  it('proposes pytest on a mixed project whose npm test script starts a watcher', async () => {
+    const { dir } = fixtureCopy('mixed');
+    const manifest = JSON.parse(readFileSync(path.join(dir, 'package.json'), 'utf8')) as {
+      scripts: Record<string, string>;
+    };
+    const scripts = { ...manifest.scripts, test: 'jest --watchAll' };
+    writeFiles(dir, { 'package.json': JSON.stringify({ ...manifest, scripts }) });
+    const result = await runInit(dir, [], { interactive: true, answers: ['full', 'no', true, true] });
+    expect(result.asked[2]).toBe(question('pytest'));
+    expect(stopCheckOf(dir)).toEqual({ 'checks.stop': ['pytest'] });
   });
 
   it('writes nothing when the question is cancelled', async () => {
@@ -144,8 +177,19 @@ describe('init sets the stop check in a scripted run only with --stop-check (#38
     writeFiles(dir, { 'package.json': JSON.stringify({ devDependencies: { prettier: '^3.0.0' } }) });
     const result = await runInit(dir, ['--yes', '--preset', 'full', '--stop-check']);
     expect(result.code).toBe(1);
-    expect(result.stderr).toContain('--stop-check: found no test command');
+    expect(result.stderr).toContain(NO_TEST_COMMAND);
     expect(result.stderr).toContain(`"checks.stop" in options.stop-check in ${CONFIG}`);
+  });
+
+  it('refuses the flag where the only test script starts a watcher', async () => {
+    const result = await runInit(withTestScript('react-scripts test'), [
+      '--yes',
+      '--preset',
+      'full',
+      '--stop-check',
+    ]);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain(NO_TEST_COMMAND);
   });
 });
 

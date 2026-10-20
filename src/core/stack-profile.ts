@@ -62,6 +62,8 @@ export interface DetectedCommand {
   readonly stack: Stack;
   readonly purpose: CommandPurpose;
   readonly command: string;
+  /** Set when its script starts a watcher, such as `jest --watch`, which never exits on its own. */
+  readonly watches?: true;
 }
 
 /** The Python project manager whose `run` prefixes Python commands; `pip` runs them bare. */
