@@ -1,5 +1,5 @@
 import { BRAND } from '../../../core/brand.js';
-import { isRecord } from '../../../core/text.js';
+import { isRecord, isStringList } from '../../../core/text.js';
 import { projectStatus, type StatusEntry } from '../git-status.js';
 import { readState, type StateWrite, writeState } from '../state.js';
 
@@ -45,8 +45,6 @@ export function saveSnapshot(projectDir: string, snapshot: Snapshot): StateWrite
 
 const isTime = (value: unknown): value is string =>
   typeof value === 'string' && !Number.isNaN(Date.parse(value));
-const isLines = (value: unknown): value is string[] =>
-  Array.isArray(value) && value.every((item) => typeof item === 'string');
 const isCount = (value: unknown): value is number =>
   typeof value === 'number' && Number.isInteger(value) && value >= 0;
 
@@ -54,7 +52,7 @@ function snapshotOf(value: unknown): Snapshot | undefined {
   if (!isRecord(value)) return undefined;
   const { savedAt, branch, status, more } = value;
   const branchOk = branch === null || typeof branch === 'string';
-  const statusOk = status === null || isLines(status);
+  const statusOk = status === null || isStringList(status);
   return isTime(savedAt) && branchOk && statusOk && isCount(more)
     ? { savedAt, branch, status, more }
     : undefined;

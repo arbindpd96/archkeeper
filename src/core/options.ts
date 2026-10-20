@@ -5,6 +5,7 @@ import { ConfigError, type ProblemReport } from './errors.js';
 import { jsonPath } from './issues.js';
 import type { Catalog } from './loader.js';
 import type { ModuleManifest, OptionSpec } from './manifest-schema.js';
+import { isStringList } from './text.js';
 
 /** One module's option values, defaults included. */
 export type ModuleOptions = Readonly<Record<string, OptionValue>>;
@@ -20,10 +21,6 @@ export function optionDefaults(manifest: ModuleManifest): ModuleOptions {
 /** A module's values from `options`, or the defaults its manifest declares when `options` is not given. */
 export function moduleOptions(options: ResolvedOptions | undefined, manifest: ModuleManifest): ModuleOptions {
   return options?.get(manifest.id) ?? optionDefaults(manifest);
-}
-
-function isStringList(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
 // A command is an argument array that names its program first, so an empty one names nothing to run.
