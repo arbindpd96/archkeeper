@@ -79,11 +79,13 @@ describe('init asks to turn on the stop check in full (#38, ADR-0015)', () => {
     expect(result.asked[2]).toBe('Apply this plan?');
   });
 
-  it('asks nothing where it detects no test command', async () => {
+  it('asks nothing where it detects no test command, and offers no --stop-check under Next steps', async () => {
     const dir = tempDir();
     writeFiles(dir, { 'package.json': JSON.stringify({ devDependencies: { prettier: '^3.0.0' } }) });
     const result = await runInit(dir, [], { interactive: true, answers: ['full', 'no', true] });
     expect(result.asked.slice(2)).toEqual(['Apply this plan?']);
+    expect(result.stdout).toContain(`\n  3. The stop check is off: set checks.stop in ${CONFIG}.\n`);
+    expect(result.stdout).not.toContain('--stop-check');
   });
 
   it.each(['react-scripts test', 'ng test', 'jest --watch'])(
@@ -94,6 +96,7 @@ describe('init asks to turn on the stop check in full (#38, ADR-0015)', () => {
         answers: ['full', 'no', true],
       });
       expect(result.asked.slice(2)).toEqual(['Apply this plan?']);
+      expect(result.stdout).toContain(`The stop check is off: set checks.stop in ${CONFIG}.\n`);
     },
   );
 
