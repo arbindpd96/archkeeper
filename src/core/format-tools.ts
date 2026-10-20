@@ -16,27 +16,33 @@ export const TOOL_STACK: Readonly<Record<Tool, Stack>> = {
   pytest: 'python',
 };
 
-/** The tools format-on-edit runs, as init records them, and every detected tool of the stacks in effect. */
+/** The tools format-on-edit runs, as init records them. */
 export interface FormatTools {
   /** prettier, else biome, for TS/JS; ruff for Python unless black formats it. */
   readonly formatters: readonly Tool[];
   /** eslint for TS/JS and ruff for Python. */
   readonly linters: readonly Tool[];
-  /** Every tool detection found for the stacks in effect, which a module's `when.tools` reads. */
-  readonly detected: readonly Tool[];
 }
 
 const isTool = (name: string): name is Tool => Object.hasOwn(TOOL_STACK, name);
+
+/**
+ * Every tool detection found for the stacks in effect, by job and then in each job's order, which a module's
+ * `when.tools`, format-on-edit's tools and the stop check's proposal read. Pure.
+ */
+export function detectedTools(profile: StackProfile, stack: readonly Stack[]): Tool[] {
+  const { formatters, linters, typeCheckers, testRunners } = profile.tools;
+  return [...new Set([...formatters, ...linters, ...typeCheckers, ...testRunners])]
+    .filter(isTool)
+    .filter((tool) => stack.includes(TOOL_STACK[tool]));
+}
 
 /**
  * The tools format-on-edit runs for a project (#37), from its detected tools and the stacks in effect: prettier,
  * else biome, and eslint for TS/JS; ruff for Python, as its formatter only when black is not there. Pure.
  */
 export function formatTools(profile: StackProfile, stack: readonly Stack[]): FormatTools {
-  const { formatters, linters, typeCheckers, testRunners } = profile.tools;
-  const detected = [...new Set([...formatters, ...linters, ...typeCheckers, ...testRunners])]
-    .filter(isTool)
-    .filter((tool) => stack.includes(TOOL_STACK[tool]));
+  const detected = detectedTools(profile, stack);
   const has = (tool: Tool): boolean => detected.includes(tool);
   const scriptFormatter = (['prettier', 'biome'] as const).find(has);
   return {
@@ -45,6 +51,5 @@ export function formatTools(profile: StackProfile, stack: readonly Stack[]): For
       ...(has('ruff') && !has('black') ? (['ruff'] as const) : []),
     ],
     linters: (['eslint', 'ruff'] as const).filter(has),
-    detected,
   };
 }
