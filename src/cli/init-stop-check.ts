@@ -1,6 +1,7 @@
 import type { Brand } from '../core/brand.js';
 import { configPath } from '../core/config.js';
 import { UsageError } from '../core/errors.js';
+import { detectedTools } from '../core/format-tools.js';
 import type { StackProfile } from '../core/stack-profile.js';
 import { isStringList, quoted } from '../core/text.js';
 import { gitFix } from './init-answers.js';
@@ -20,7 +21,10 @@ const selected = (settled: Settled): boolean =>
  * until its timeout; else `pytest` where detection found it. TS/JS comes first in a mixed project, and only a stack
  * in effect counts.
  */
-export function proposedStopCommand(profile: StackProfile, settled: Settled): string[] | undefined {
+export function proposedStopCommand(
+  profile: StackProfile,
+  settled: Pick<Settled, 'stack' | 'tools'>,
+): string[] | undefined {
   const testScript = profile.commands.some(
     (command) => command.stack === 'ts' && command.purpose === 'test' && command.watches !== true,
   );
@@ -106,6 +110,14 @@ export async function stopCheckOptions(
   return { [MODULE]: { [OPTION]: proposed } };
 }
 
+// The step for a check with no command offers --stop-check only where init finds one for the flag to set.
+function offStep(planned: Planned, where: string): string {
+  const tools = detectedTools(planned.profile, planned.stack);
+  const proposed = proposedStopCommand(planned.profile, { stack: planned.stack, tools });
+  const flag = proposed === undefined ? '' : ', or run init with --stop-check';
+  return `The stop check is off: set ${where}${flag}.`;
+}
+
 /**
  * The Next steps line while the stop-check module is in: the command it runs and where the config sets it, or, while
  * the config sets no `checks.stop`, that it runs nothing until one is set; none after a no, recorded as `[]`.
@@ -114,7 +126,7 @@ export function stopCheckSteps(planned: Planned, brand: Brand): string[] {
   if (!planned.modules.includes(MODULE)) return [];
   const command = planned.next.config.options[MODULE]?.[OPTION];
   const where = `${OPTION} in ${configPath(brand)}`;
-  if (command === undefined) return [`The stop check is off: set ${where}, or run init with --stop-check.`];
+  if (command === undefined) return [offStep(planned, where)];
   if (!isStringList(command) || command.length === 0) return [];
   return [`The stop check runs ${quoted(command.join(' '))} before Claude stops (${where}).`];
 }
