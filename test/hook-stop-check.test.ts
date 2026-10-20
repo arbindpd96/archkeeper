@@ -13,6 +13,7 @@ const onWindows = process.platform === 'win32';
 const CONFIG = `${BRAND.stateDir}/config.json`;
 const STATE = `${BRAND.stateDir}/local/stop-check.json`;
 const SOURCE = 'src/a.ts';
+const GIT_CANNOT_SAY = 'stop-check: git could not say what changed, so nothing ran';
 // A stand-in test runner, installed as a JS bin: it logs each run beside itself, fails with 60 coloured lines while
 // src/a.ts says broken, and sleeps while it says slow.
 const RUNNER = `const fs = require('node:fs');
@@ -82,7 +83,7 @@ describe('stop-check runs nothing it should not (#38, ADR-0015)', () => {
     expect(existsSync(path.join(dir, STATE))).toBe(false);
   });
 
-  it('runs nothing on a tree that matches HEAD', () => {
+  it('runs nothing, and says nothing, on a tree that matches HEAD', () => {
     const dir = project({ 'checks.stop': ['checker'] });
     expect(stop(dir)).toEqual({ kind: 'done' });
     expect(runs(dir)).toEqual([]);
@@ -100,22 +101,22 @@ describe('stop-check runs nothing it should not (#38, ADR-0015)', () => {
     expect(runs(dir)).toEqual([]);
   });
 
-  it('lets Claude stop, running nothing, outside a git repository', () => {
+  it('lets Claude stop, running nothing, outside a git repository, noting that git could not say', () => {
     const dir = tempDir();
     writeFiles(dir, {
       [CONFIG]: JSON.stringify({ options: { 'stop-check': { 'checks.stop': ['checker'] } } }),
     });
     writeFiles(dir, { [SOURCE]: 'x\n', 'node_modules/checker/package.json': '{"bin":"./bin/check.js"}' });
     writeFiles(dir, { 'node_modules/checker/bin/check.js': RUNNER });
-    expect(stop(dir)).toEqual({ kind: 'done' });
+    expect(stop(dir)).toEqual({ kind: 'done', note: GIT_CANNOT_SAY });
     expect(runs(dir)).toEqual([]);
   });
 
-  it("fails open, running nothing, where the repository's own config sets a filter program", () => {
+  it("fails open, running nothing, with the note, where the repository's own config sets a filter program", () => {
     const dir = project({ 'checks.stop': ['checker'] });
     git(dir, 'config', 'filter.x.clean', 'node -e 1');
     writeFiles(dir, { [SOURCE]: 'export const a = 2;\n' });
-    expect(stop(dir)).toEqual({ kind: 'done' });
+    expect(stop(dir)).toEqual({ kind: 'done', note: GIT_CANNOT_SAY });
     expect(runs(dir)).toEqual([]);
   });
 });

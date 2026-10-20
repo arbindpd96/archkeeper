@@ -2,7 +2,13 @@ import { BRAND } from '../../../core/brand.js';
 import { escapeUnprintable, isRecord, quoted } from '../../../core/text.js';
 import { type Answer, block, type HookInput, noAnswer, stopHookActive, systemMessage } from '../io.js';
 import type { HookContext, HookModule } from '../launch.js';
-import { configFile, numberOption, readModuleOptions, stringListOption } from '../options.js';
+import {
+  configFile,
+  type ModuleOptions,
+  numberOption,
+  readModuleOptions,
+  stringListOption,
+} from '../options.js';
 import { type ProjectTool, runProjectTool } from '../project-tools.js';
 import { readState, writeState } from '../state.js';
 import type { ToolRun } from '../tools.js';
@@ -78,9 +84,10 @@ function ran(check: Check, tool: ProjectTool, args: readonly string[]): Answer {
   return noAnswer(`stop-check: ${named(check)} did not finish in ${String(check.seconds)} s`);
 }
 
-// A value of the wrong type counts as unset, as init and update report it. The settings give the hook 600 seconds,
-// so the command gets at most 590 and the hook still answers in time.
-function settingsOf(values: Readonly<Record<string, unknown>>): Pick<Check, 'command' | 'seconds'> {
+// A config that cannot be read sets nothing, and a value of the wrong type counts as unset, as init and update report
+// it. The settings give the hook 600 seconds, so the command gets at most 590 and the hook still answers in time.
+function settingsOf(read: ModuleOptions): Pick<Check, 'command' | 'seconds'> {
+  const values = 'values' in read ? read.values : {};
   const seconds = numberOption(values, 'checks.stopTimeout', 300) ?? 300;
   return {
     command: stringListOption(values, 'checks.stop') ?? [],
@@ -91,9 +98,9 @@ function settingsOf(values: Readonly<Record<string, unknown>>): Pick<Check, 'com
 function answer(input: HookInput, { projectDir }: HookContext): Answer {
   if (input.problem !== undefined) return noAnswer(`stop-check: ${input.problem}`);
   if (stopHookActive(input.payload)) return noAnswer();
-  const read = readModuleOptions(projectDir, 'stop-check');
-  const { command, seconds } = settingsOf('values' in read ? read.values : {});
+  const { command, seconds } = settingsOf(readModuleOptions(projectDir, 'stop-check'));
   const fingerprint = command.length === 0 ? undefined : changeFingerprint(projectDir, command);
+  if (fingerprint === null) return noAnswer('stop-check: git could not say what changed, so nothing ran');
   if (fingerprint === undefined) return noAnswer();
   const check = { projectDir, command, seconds, fingerprint, state: stateOf(projectDir) };
   if (fingerprint === check.state.green || fingerprint === check.state.blocked) return noAnswer();
@@ -106,7 +113,8 @@ function answer(input: HookInput, { projectDir }: HookContext): Answer {
  * stop-check (#38): before Claude stops, runs the command `checks.stop` names, with no shell, only when work files
  * differ from HEAD and that change set has neither passed nor blocked before, and blocks once per change set with the
  * last lines of a failure. It runs nothing while the option is unset or the config cannot be read, returns at once
- * while a Stop hook already keeps Claude working, and lets Claude stop whenever it cannot tell (ADR-0015).
+ * while a Stop hook already keeps Claude working, and lets Claude stop whenever it cannot tell (ADR-0015), with a
+ * note when git cannot say what changed.
  */
 export const stopCheck: HookModule = {
   answer,
