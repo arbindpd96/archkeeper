@@ -16,7 +16,8 @@ export interface EditedFile {
 
 const SKIPPED = ['node_modules', '.venv', '.git', BRAND.stateDir.toLowerCase()];
 
-function isRegularFile(file: string): boolean {
+// Not project-tools' isRegularFile, which follows a link: format-on-edit never acts on a symlink.
+function isRegularNonLink(file: string): boolean {
   try {
     return lstatSync(file).isFile();
   } catch {
@@ -35,7 +36,7 @@ export function editedFile(payload: Payload, projectDir: string): EditedFile | u
   const absolute = path.resolve(projectDir, stringField(payload, 'cwd') ?? '', given);
   const root = realOrUndefined(projectDir);
   const real = realOrUndefined(absolute);
-  if (root === undefined || real === undefined || !isInside(root, real) || !isRegularFile(absolute)) {
+  if (root === undefined || real === undefined || !isInside(root, real) || !isRegularNonLink(absolute)) {
     return undefined;
   }
   const relative = path.relative(root, real);
