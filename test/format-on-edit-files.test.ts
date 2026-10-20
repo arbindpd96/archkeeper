@@ -70,6 +70,34 @@ describe('the files format-on-edit acts on (#37)', () => {
     expect(logged(prettier)).toEqual([]);
   });
 
+  it.skipIf(!canSymlink())(
+    'does nothing for a regular file reached through a folder link out of the project, into node_modules or .git',
+    () => {
+      const dir = project({ formatters: ['prettier'] });
+      const prettier = nodeTool(dir, 'prettier', FORMAT);
+      const outside = tempDir();
+      writeFiles(outside, { 'a.ts': 'export {};\n' });
+      writeFiles(dir, {
+        'src/own.ts': 'export {};\n',
+        'node_modules/x/a.ts': 'export {};\n',
+        '.git/x/a.ts': 'export {};\n',
+      });
+      const links = {
+        out: outside,
+        deps: path.join(dir, 'node_modules', 'x'),
+        vcs: path.join(dir, '.git', 'x'),
+      };
+      for (const [name, target] of Object.entries(links)) {
+        symlinkSync(target, path.join(dir, 'src', name), 'dir');
+      }
+      const edits = Object.keys(links).map((name) => edit(dir, `src/${name}/a.ts`));
+      expect(edits).toEqual([{ kind: 'done' }, { kind: 'done' }, { kind: 'done' }]);
+      expect(logged(prettier)).toEqual([]);
+      expect(edit(dir, 'src/own.ts')).toEqual({ kind: 'done' });
+      expect(logged(prettier).map((args) => args.at(-1))).toEqual([path.join(dir, 'src', 'own.ts')]);
+    },
+  );
+
   it('gives a file named like a shell command to the tool as one argument, its exact name', () => {
     const dir = project({ formatters: ['prettier'] });
     const prettier = nodeTool(dir, 'prettier', FORMAT);

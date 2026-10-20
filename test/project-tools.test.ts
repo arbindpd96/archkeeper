@@ -92,6 +92,17 @@ describe('Node.js tools from node_modules (ADR-0015)', () => {
   });
 
   it.skipIf(!canSymlink())(
+    "counts a package as missing when its bin links out of the package's own folder, even into the project",
+    () => {
+      const dir = project();
+      writeFiles(dir, { 'evil.js': ECHO, 'node_modules/prettier/package.json': '{"bin":"./bin/tool.js"}' });
+      mkdirSync(path.join(dir, 'node_modules', 'prettier', 'bin'));
+      symlinkSync(path.join(dir, 'evil.js'), path.join(dir, 'node_modules', 'prettier', 'bin', 'tool.js'));
+      expect(nodeTool(dir, 'prettier')).toEqual({ missing: 'node_modules/prettier' });
+    },
+  );
+
+  it.skipIf(!canSymlink())(
     'follows a package folder linked elsewhere, as pnpm links it, to its own bin',
     () => {
       const dir = project();
@@ -224,6 +235,20 @@ describe('commands from the config (#37)', () => {
     expect(commandTool(dir, ['mypy', '--strict'])).toEqual({ tool: { program: mypy }, args: ['--strict'] });
     expect(commandTool(dir, ['nope'])).toEqual({ missing: 'node_modules, .venv or PATH' });
   });
+
+  it.skipIf(!canSymlink())(
+    'refuses node with a project script that links to a file outside the project',
+    () => {
+      const dir = project();
+      const outside = tempDir();
+      writeFiles(outside, { 'check.mjs': ECHO });
+      mkdirSync(path.join(dir, 'scripts'));
+      symlinkSync(path.join(outside, 'check.mjs'), path.join(dir, 'scripts', 'check.mjs'));
+      expect(commandTool(dir, ['node', 'scripts/check.mjs'])).toEqual({
+        refused: 'scripts/check.mjs is not a file inside the project',
+      });
+    },
+  );
 
   it.each<[string, readonly string[]]>([
     ['npm, which runs scripts through a shell', ['npm', 'run', 'lint']],
