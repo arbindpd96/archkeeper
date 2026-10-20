@@ -11,7 +11,6 @@ export function compareText(left: string, right: string): number {
 export const UNPRINTABLE = String.raw`\p{Cc}\u2028\u2029\u200E\u200F\u202A-\u202E\u2066-\u2069`;
 
 const UNPRINTABLE_CHARACTER = new RegExp(`[${UNPRINTABLE}]`, 'gu');
-const UNPRINTABLE_BUT_LINES = new RegExp(`(?![\\n\\t])[${UNPRINTABLE}]`, 'gu');
 
 const unicodeEscape = (character: string): string =>
   `\\u${character.charCodeAt(0).toString(16).padStart(4, '0')}`;
@@ -23,7 +22,8 @@ export function escapeUnprintable(text: string): string {
 
 /** {@link escapeUnprintable} for text of many lines: line feeds and tabs stay, every other such character is escaped. */
 export function escapeUnprintableKeepingLines(text: string): string {
-  return text.replace(UNPRINTABLE_BUT_LINES, unicodeEscape);
+  // Built here, not at load, so a hook bundle that never calls this carries no pattern; V8 caches it by its source.
+  return text.replace(new RegExp(`(?![\\n\\t])[${UNPRINTABLE}]`, 'gu'), unicodeEscape);
 }
 
 /**
