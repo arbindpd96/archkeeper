@@ -4,14 +4,19 @@ import { escapeUnprintable } from '../core/text.js';
 import { unifiedDiff } from '../core/unified-diff.js';
 import type { ApplyResult } from './apply.js';
 import { composeSteps } from './init-compose.js';
-import { diffLines, nextStepLines, sidecarLines } from './init-report.js';
+import { diffLines, nextStepLines, nextSteps, sidecarLines } from './init-report.js';
 import { type InitRun, type Planned, textAt } from './init-run.js';
 import { stopCheckSteps } from './init-stop-check.js';
 import { install } from './install.js';
 
+// The steps after the usual ones: the stop check's, then each chosen tool's install commands and warning.
+function moreSteps(run: InitRun, planned: Planned): string[] {
+  return [...stopCheckSteps(planned, run.brand), ...composeSteps(planned, run.session.catalog.compose)];
+}
+
 /**
  * Prints the run as one JSON line for --json: the answers, the modules and those left out with why, the detected
- * stack, the plan and what applying did.
+ * stack, the plan, what applying did and the next steps it printed, which are none when it changed nothing.
  */
 function printJson(run: InitRun, planned: Planned, applied: ApplyResult | null, exitCode: number): void {
   if (!run.json) return;
@@ -29,6 +34,7 @@ function printJson(run: InitRun, planned: Planned, applied: ApplyResult | null, 
     config: { path: configPath(run.brand), changed: planned.next.changed },
     sidecars: pendingSidecars(planned.plan, run.brand),
     applied,
+    nextSteps: applied?.changed === true ? nextSteps([...planned.tree.keys()], moreSteps(run, planned)) : [],
     exitCode,
   };
   run.session.context.output.stdout(`${escapeUnprintable(JSON.stringify(value))}\n`);
@@ -64,11 +70,8 @@ export function applyPlanned(run: InitRun, planned: Planned): number {
     const backup = applied.backup === undefined ? '' : ` A backup of what changed is in ${applied.backup}.`;
     say(escapeUnprintable(`Done.${backup}`));
     say();
-    const more = [
-      ...stopCheckSteps(planned, run.brand),
-      ...composeSteps(planned, run.session.catalog.compose),
-    ];
-    for (const line of nextStepLines(sidecars, [...planned.tree.keys()], run.brand, more)) say(line);
+    const files = [...planned.tree.keys()];
+    for (const line of nextStepLines(sidecars, files, run.brand, moreSteps(run, planned))) say(line);
   } else if (sidecars.length > 0) {
     say('Nothing to change, but sidecars still wait for review:');
     for (const line of sidecarLines(sidecars, run.brand)) say(line);
