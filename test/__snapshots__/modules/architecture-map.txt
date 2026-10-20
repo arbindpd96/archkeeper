@@ -66,7 +66,7 @@ What exists in this project and where: check it before creating anything, and ru
 
 ## Overview
 
-<!-- Describe in a few lines what the project does and how its main parts fit together. Claude sees this section when a session starts, so keep it short. -->
+<!-- Describe in a few lines what the project does and how its main parts fit together. Claude sees this section when a session with an active feature starts, so keep it short. -->
 
 - Stack: TypeScript (npm)
 
@@ -157,7 +157,7 @@ What exists in this project and where: check it before creating anything, and ru
 
 ## Overview
 
-<!-- Describe in a few lines what the project does and how its main parts fit together. Claude sees this section when a session starts, so keep it short. -->
+<!-- Describe in a few lines what the project does and how its main parts fit together. Claude sees this section when a session with an active feature starts, so keep it short. -->
 
 - Stack: Python (pip)
 
