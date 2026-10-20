@@ -32,8 +32,8 @@ function npmCommand(projectDir: string, args: readonly string[]): CommandLookup 
 /**
  * The program `checks.stop` names and its arguments, run with no shell (ADR-0015, #38): npm only as `npm test` or
  * `npm run <script>`, through npm's own JS entry with `--ignore-scripts` before the rest; else a JS bin from
- * node_modules or a program from `.venv` or PATH, never a shell, wrapper or package runner. npm install, exec and
- * ci are refused with every other npm command.
+ * node_modules or a program from `.venv` or PATH, never a shell, wrapper, package or task runner. npm install,
+ * exec and ci are refused with every other npm command.
  */
 export function stopCommand(projectDir: string, argv: readonly string[]): CommandLookup {
   const [first = '', ...rest] = argv;

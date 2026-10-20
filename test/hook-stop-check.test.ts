@@ -221,8 +221,9 @@ describe('stop-check runners (#38, ADR-0015)', () => {
   });
 
   it.each([
-    [['uv', 'run', 'pytest'], 'uv is a shell, wrapper or package runner'],
-    [['bash', '-c', 'npm test'], 'bash is a shell, wrapper or package runner'],
+    [['uv', 'run', 'pytest'], 'uv is a shell, wrapper or runner'],
+    [['bash', '-c', 'npm test'], 'bash is a shell, wrapper or runner'],
+    [['make', 'test'], 'make is a shell, wrapper or runner'],
     [['npm', 'install'], 'npm runs only as npm test or npm run <script>, its options after --'],
     [['no-such-runner'], 'not found in node_modules, .venv or PATH'],
   ])('skips %j with a single hint for the user', (command, why) => {

@@ -254,7 +254,7 @@ describe('format-on-edit (#37)', () => {
     writeFiles(dir, { 'src/a.ts': 'export {};\n' });
     const message = messageOf(edit(dir, 'src/a.ts'));
     expect(message).toContain('"npm run lint" from commands');
-    expect(message).toContain('npm is a shell, wrapper or package runner');
+    expect(message).toContain('npm is a shell, wrapper or runner');
     expect(message).toContain('"bash -c touch ran" from commands');
     expect(existsSync(path.join(dir, 'ran'))).toBe(false);
   });
