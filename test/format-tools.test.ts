@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { formatTools, TOOL_STACK } from '../src/core/format-tools.js';
+import { detectedTools, formatTools, TOOL_STACK } from '../src/core/format-tools.js';
 import type { Stack } from '../src/core/schema-parts.js';
 import { type StackProfile, TOOLS, type ToolsByJob } from '../src/core/stack-profile.js';
 import { REPO_ROOT } from './helpers.js';
@@ -56,22 +56,33 @@ describe('formatTools (#37)', () => {
     expect(formatTools(profile, stack)).toMatchObject(recorded);
   });
 
-  it('counts only the tools of the stacks in effect, in TOOL_JOBS order', () => {
+  it('counts only the tools of the stacks in effect', () => {
     const mixed = profileOf('mixed', { formatters: ['prettier', 'ruff'], linters: ['eslint', 'ruff'] });
     expect(formatTools(mixed, ['ts', 'python'])).toEqual({
       formatters: ['prettier', 'ruff'],
       linters: ['eslint', 'ruff'],
-      detected: ['prettier', 'ruff', 'eslint', 'tsc', 'vitest', 'pytest'],
     });
-    expect(formatTools(mixed, ['python'])).toEqual({
-      formatters: ['ruff'],
-      linters: ['ruff'],
-      detected: ['ruff', 'pytest'],
-    });
-    expect(formatTools(mixed, [])).toEqual({ formatters: [], linters: [], detected: [] });
+    expect(formatTools(mixed, ['python'])).toEqual({ formatters: ['ruff'], linters: ['ruff'] });
+    expect(formatTools(mixed, [])).toEqual({ formatters: [], linters: [] });
   });
 
   it('gives every tool detection knows a stack', () => {
     expect(Object.keys(TOOL_STACK).sort()).toEqual([...TOOLS].sort());
+  });
+});
+
+describe('detectedTools (#37)', () => {
+  it('lists every detected tool of the stacks in effect once, by job', () => {
+    const mixed = profileOf('mixed', { formatters: ['prettier', 'ruff'], linters: ['eslint', 'ruff'] });
+    expect(detectedTools(mixed, ['ts', 'python'])).toEqual([
+      'prettier',
+      'ruff',
+      'eslint',
+      'tsc',
+      'vitest',
+      'pytest',
+    ]);
+    expect(detectedTools(mixed, ['python'])).toEqual(['ruff', 'pytest']);
+    expect(detectedTools(mixed, [])).toEqual([]);
   });
 });

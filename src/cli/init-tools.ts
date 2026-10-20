@@ -1,5 +1,5 @@
 import type { ProblemReport } from '../core/errors.js';
-import { formatTools } from '../core/format-tools.js';
+import { detectedTools, formatTools } from '../core/format-tools.js';
 import { resolveOptions, type ResolvedOptions } from '../core/options.js';
 import { type Resolution, resolveModules } from '../core/resolve.js';
 import type { Stack } from '../core/schema-parts.js';
@@ -32,7 +32,7 @@ function settle(
   const { catalog } = run.session;
   const next = nextConfig(existing, answers, run.kit.version, run.brand);
   const stack = next.config.stack ?? profile.stack;
-  const tools = formatTools(profile, stack).detected;
+  const tools = detectedTools(profile, stack);
   const { options, warnings } = resolveOptions(next.config, catalog, run.brand);
   const { add, remove } = next.config.modules;
   const request = { preset: answers.preset, stack, add, remove, options, tools };
