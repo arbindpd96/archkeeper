@@ -2,7 +2,7 @@ import type { Brand } from '../core/brand.js';
 import { configPath } from '../core/config.js';
 import { UsageError } from '../core/errors.js';
 import type { StackProfile } from '../core/stack-profile.js';
-import { quoted } from '../core/text.js';
+import { isStringList, quoted } from '../core/text.js';
 import { gitFix } from './init-answers.js';
 import type { ConfigAnswers } from './init-config.js';
 import type { InitRun, Planned } from './init-run.js';
@@ -29,6 +29,16 @@ function refuseFlag(problem: string, hint: string): never {
   throw new UsageError({ file: '--stop-check', location: '', problem, hint });
 }
 
+// A command the config already runs is the config's, so --stop-check keeps it, and says so where it is not the one
+// init detected.
+function warnKept(run: InitRun, kept: readonly string[], detected: readonly string[] | undefined): void {
+  if (detected === undefined || JSON.stringify(kept) === JSON.stringify(detected)) return;
+  const [from, not] = [quoted(kept.join(' ')), quoted(detected.join(' '))];
+  run.asking.report.warn(
+    `--stop-check keeps ${from} from ${OPTION} in ${configPath(run.brand)}, not the detected ${not}`,
+  );
+}
+
 // --stop-check turns the check on with the detected command, an earlier no included, and keeps a command the config
 // already runs.
 function flagged(run: InitRun, settled: Settled, profile: StackProfile): ConfigAnswers['options'] {
@@ -40,8 +50,11 @@ function flagged(run: InitRun, settled: Settled, profile: StackProfile): ConfigA
     );
   }
   const current = settled.next.config.options[MODULE]?.[OPTION];
-  if (Array.isArray(current) && current.length > 0) return undefined;
   const proposed = proposedStopCommand(profile, settled);
+  if (isStringList(current) && current.length > 0) {
+    warnKept(run, current, proposed);
+    return undefined;
+  }
   if (proposed === undefined) {
     refuseFlag(
       'found no test command: no package.json test script and no pytest',

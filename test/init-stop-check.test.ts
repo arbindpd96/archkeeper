@@ -115,11 +115,15 @@ describe('init sets the stop check in a scripted run only with --stop-check (#38
     expect(stopCheckOf(dir)).toEqual({ 'checks.stop': ['npm', 'run', 'test'] });
   });
 
-  it('keeps a command the config already runs', async () => {
+  it('keeps a command the config already runs, saying it is not the detected one', async () => {
     const { dir } = fixtureCopy('ts-app');
     writeConfig(dir, ['vitest', 'run']);
-    expect((await runInit(dir, ['--yes', '--stop-check'])).code).toBe(0);
+    const result = await runInit(dir, ['--yes', '--stop-check']);
+    expect(result.code).toBe(0);
     expect(stopCheckOf(dir)).toEqual({ 'checks.stop': ['vitest', 'run'] });
+    expect(result.stderr).toContain(
+      `--stop-check keeps "vitest run" from checks.stop in ${CONFIG}, not the detected "npm run test"`,
+    );
   });
 
   it('refuses the flag with a preset that has no stop check, naming where its command lives', async () => {
