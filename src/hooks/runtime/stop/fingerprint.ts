@@ -24,14 +24,16 @@ function contentOf(projectDir: string, file: string): string {
 
 /**
  * The change set a stop check runs on (#38): sha256 of HEAD, the command, and each work file that differs from HEAD,
- * untracked ones included, in path order with its content's hash. Undefined when no work file differs, or when git
- * cannot say: no git, no repository, or a repository whose own config sets a filter program or a promisor remote.
+ * untracked ones included, in path order with its content's hash. Undefined when no work file differs, and null when
+ * git cannot say: no git, no repository, its calls ran out of time, or a repository whose own config sets a filter
+ * program or a promisor remote.
  */
-export function changeFingerprint(projectDir: string, command: readonly string[]): string | undefined {
+export function changeFingerprint(projectDir: string, command: readonly string[]): string | null | undefined {
   const status = projectStatus(projectDir, true);
-  const files = (status?.entries ?? []).map((entry) => entry.path).filter(isWorkFile);
+  if (status === undefined) return null;
+  const files = status.entries.map((entry) => entry.path).filter(isWorkFile);
   if (files.length === 0) return undefined;
   // The default sort orders by UTF-16 code units, the same on every OS and locale, as compareText does.
   const parts = files.sort().map((file) => `${file}\0${contentOf(projectDir, file)}`);
-  return sha256(`${status?.head ?? ''}\0${JSON.stringify(command)}\0${parts.join('\0')}`);
+  return sha256(`${status.head ?? ''}\0${JSON.stringify(command)}\0${parts.join('\0')}`);
 }
