@@ -183,9 +183,20 @@ export function sidecarLines(sidecars: readonly string[], brand: Brand): string[
 const NEW_FEATURE_SKILL = '.claude/skills/new-feature/SKILL.md';
 
 /**
- * What to do once init has applied its plan (#27): review any sidecar, restart Claude Code, start a feature when one
- * of the `files` the modules write is the /new-feature skill, then any `more` steps, such as the stop check's.
+ * The steps to take once init has applied its plan (#27): restart Claude Code, start a feature when one of the
+ * `files` the modules write is the /new-feature skill, then any `more`, such as the stop check's and compose's.
  */
+export function nextSteps(files: readonly string[], more: readonly string[] = []): string[] {
+  return [
+    'Restart Claude Code so it loads the new instructions, settings and hooks.',
+    ...(files.includes(NEW_FEATURE_SKILL)
+      ? ['In Claude Code, run /new-feature <name> to start your first feature.']
+      : []),
+    ...more,
+  ];
+}
+
+/** init's Next steps once it has applied its plan: any sidecars to review, then {@link nextSteps}, numbered. */
 export function nextStepLines(
   sidecars: readonly string[],
   files: readonly string[],
@@ -193,13 +204,8 @@ export function nextStepLines(
   more: readonly string[] = [],
 ): string[] {
   const review = sidecars.length === 0 ? [] : ['  Review the sidecars the kit wrote beside your files:'];
-  const steps = [
-    'Restart Claude Code so it loads the new instructions, settings and hooks.',
-    ...(files.includes(NEW_FEATURE_SKILL)
-      ? ['In Claude Code, run /new-feature <name> to start your first feature.']
-      : []),
-    ...more,
-  ];
-  const numbered = steps.map((step, index) => `  ${String(index + 1)}. ${escapeUnprintable(step)}`);
+  const numbered = nextSteps(files, more).map(
+    (step, index) => `  ${String(index + 1)}. ${escapeUnprintable(step)}`,
+  );
   return ['Next steps:', ...review, ...sidecarLines(sidecars, brand), ...numbered];
 }

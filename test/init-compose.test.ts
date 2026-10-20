@@ -37,6 +37,7 @@ const SCREEN = { rows: 22, columns: 109 };
 interface Json {
   readonly compose: unknown;
   readonly plan: readonly { readonly ops: readonly { readonly kind: string }[] }[];
+  readonly nextSteps: readonly string[];
 }
 
 function configOf(dir: string): Record<string, unknown> {
@@ -149,9 +150,18 @@ describe('init offers Superpowers and Spec Kit after the preset (#39, ADR-0008)'
       const again = await runInit(dir, args);
       expect(again.code).toBe(0);
       expect(changesOf(again.stdout)).toEqual([]);
-      expect((JSON.parse(again.stdout) as Json).compose).toEqual({ superpowers: true, specKit: true });
+      expect(JSON.parse(again.stdout) as Json).toMatchObject({
+        compose: { superpowers: true, specKit: true },
+        nextSteps: [],
+      });
     }
     expect(projectText(dir)).toBe(before);
+  });
+
+  it('lists the exact commands and the warning a yes prints under nextSteps in --json', async () => {
+    const result = await runInit(fixtureCopy('ts-app').dir, ['--json', '--yes', '--with', 'speckit']);
+    expect(result.code).toBe(0);
+    expect((JSON.parse(result.stdout) as Json).nextSteps.slice(-2)).toEqual([SPEC_KIT, WARNING]);
   });
 
   it('writes nothing when the select is cancelled', async () => {
