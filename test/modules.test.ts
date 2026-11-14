@@ -41,7 +41,10 @@ describe('the v0.1 modules', () => {
     (preset) => {
       const resolution = resolveModules({ preset, stack: ['ts'], tools: ['eslint', 'vitest'] }, catalog);
       expect(resolution.dropped).toEqual([
-        { id: 'format-on-edit', reason: 'needs prettier, biome or ruff, and none was detected' },
+        {
+          id: 'format-on-edit',
+          reason: 'needs prettier, biome or ruff, and none was detected for the ts stack',
+        },
       ]);
     },
   );

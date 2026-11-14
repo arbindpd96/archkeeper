@@ -7,7 +7,8 @@ import { runInit } from './init-helpers.js';
 import { TEST_BRAND } from './kit-fixtures.js';
 
 const CONFIG = `${TEST_BRAND.stateDir}/config.json`;
-const LEFT_OUT = 'Left out: format-on-edit (needs prettier, biome or ruff, and none was detected)';
+const LEFT_OUT =
+  'Left out: format-on-edit (needs prettier, biome or ruff, and none was detected for the ts stack)';
 
 interface Summary {
   readonly plan: readonly { readonly ops: readonly { readonly kind: string }[] }[];
@@ -47,9 +48,31 @@ describe('init records the tools format-on-edit runs (#37)', () => {
     expect(readFileSync(path.join(dir, '.claude/settings.json'), 'utf8')).not.toContain('format-on-edit');
     const json = JSON.parse((await runInit(dir, ['--json'])).stdout) as { readonly dropped: unknown };
     expect(json.dropped).toEqual([
-      { id: 'format-on-edit', reason: 'needs prettier, biome or ruff, and none was detected' },
+      {
+        id: 'format-on-edit',
+        reason: 'needs prettier, biome or ruff, and none was detected for the ts stack',
+      },
     ]);
   });
+
+  it.each([
+    ['python', 'none was detected for the python stack'],
+    ['none', 'the project stack is none'],
+  ])(
+    'names the stack in effect when --stack %s leaves out the one prettier was found for',
+    async (stack, why) => {
+      const dir = tempDir();
+      writeFiles(dir, {
+        'package.json': JSON.stringify({ devDependencies: { prettier: '^3.0.0' } }),
+        'pyproject.toml': '[project]\nname = "app"\n',
+      });
+      const result = await runInit(dir, ['--yes', '--stack', stack]);
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain(
+        `\nLeft out: format-on-edit (needs prettier, biome or ruff, and ${why})\n`,
+      );
+    },
+  );
 
   it('never changes a tool list the config sets, even to add the other one', async () => {
     const { dir } = fixtureCopy('ts-app');
