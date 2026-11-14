@@ -12,14 +12,16 @@ const PACKAGE_OF: ReadonlyMap<string, string> = new Map([
   ['tsc', 'typescript'],
 ]);
 // Shells, wrappers and runners run whatever follows them, through a shell or after installing it over the network
-// (ADR-0015, ADR-0018): npm runs scripts through a shell, as make and just run recipes, and tox, nox and pre-commit
-// install packages into environments of their own.
+// (ADR-0015, ADR-0018): npm runs scripts through a shell, as make and just run recipes; tox, nox and pre-commit
+// install packages into environments of their own; mamba and micromamba stand in for conda, and pixi run installs or
+// updates the project's environment before its task, as uv run does.
 const SHELLS = 'bash sh zsh dash ksh fish csh tcsh cmd powershell pwsh';
 const WRAPPERS = 'env xargs sudo doas nohup timeout nice exec';
 const RUNNERS =
-  'npm npx pnpm yarn bun bunx deno corepack uv uvx pip pip3 pipx poetry pipenv pdm hatch rye conda';
+  'npm npx pnpm yarn bun bunx deno corepack uv uvx pip pip3 pipx poetry pipenv pdm hatch rye pixi';
+const CONDA = 'conda mamba micromamba';
 const TASK_RUNNERS = 'tox nox pre-commit make just';
-const REFUSED = new Set(`${SHELLS} ${WRAPPERS} ${RUNNERS} ${TASK_RUNNERS}`.split(' '));
+const REFUSED = new Set(`${SHELLS} ${WRAPPERS} ${RUNNERS} ${CONDA} ${TASK_RUNNERS}`.split(' '));
 
 /** A tool to run: a Node.js tool's JS entry file, which runs with `process.execPath`, or a program's absolute path. */
 export type ProjectTool = { readonly entry: string } | { readonly program: string };
