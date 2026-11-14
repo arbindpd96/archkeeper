@@ -154,7 +154,7 @@ The full preset can run your tests before Claude says a task is done. The check 
 }
 ```
 
-Trust these commands as you trust your `package.json` scripts: the hooks run them as written, and the programs they refuse, such as shells and package runners, only catch mistakes. When the config `init` reads already names such commands, as a cloned repository's may, `init` lists them under the plan and, on a terminal, asks before it applies, as it does when git tracks files in `node_modules` or `.venv`, where the hooks would find the repository's own copies of the tools rather than yours.
+Trust these commands as you trust your `package.json` scripts: the hooks run them as written, and the programs they refuse, such as shells and package runners, only catch mistakes. When the config `init` reads already names such commands, as a cloned repository's may, `init` lists them under the plan and, on a terminal, asks before it applies, as it does when git tracks files in `node_modules` or `.venv`, where the hooks would find the repository's own copies of the tools rather than yours, and when either folder exists where git cannot say, as in a copy downloaded without `.git`. That check sees only what git tracks, so an archive whose own `.git` leaves a planted `.venv` untracked and ignored gets no warning.
 
 ## Works with Superpowers and Spec Kit
 
