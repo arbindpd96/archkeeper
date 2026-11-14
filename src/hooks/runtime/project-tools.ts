@@ -12,13 +12,14 @@ const PACKAGE_OF: ReadonlyMap<string, string> = new Map([
   ['tsc', 'typescript'],
 ]);
 // Shells, wrappers and runners run whatever follows them, through a shell or after installing it over the network
-// (ADR-0015, ADR-0018): npm runs scripts through a shell, as make and just run recipes; tox, nox and pre-commit
+// (ADR-0015, ADR-0018): npm runs scripts through a shell, as make and just run recipes; pnpx is pnpm dlx, which fetches
+// a package and runs it, and yarnpkg is yarn by another name, both put on PATH by corepack; tox, nox and pre-commit
 // install packages into environments of their own; mamba and micromamba stand in for conda, and pixi run installs or
 // updates the project's environment before its task, as uv run does.
 const SHELLS = 'bash sh zsh dash ksh fish csh tcsh cmd powershell pwsh';
 const WRAPPERS = 'env xargs sudo doas nohup timeout nice exec';
 const RUNNERS =
-  'npm npx pnpm yarn bun bunx deno corepack uv uvx pip pip3 pipx poetry pipenv pdm hatch rye pixi';
+  'npm npx pnpm pnpx yarn yarnpkg bun bunx deno corepack uv uvx pip pip3 pipx poetry pipenv pdm hatch rye pixi';
 const CONDA = 'conda mamba micromamba';
 const TASK_RUNNERS = 'tox nox pre-commit make just';
 const REFUSED = new Set(`${SHELLS} ${WRAPPERS} ${RUNNERS} ${CONDA} ${TASK_RUNNERS}`.split(' '));
