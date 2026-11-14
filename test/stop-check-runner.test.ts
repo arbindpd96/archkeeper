@@ -1,6 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { chmodSync, mkdirSync, realpathSync, symlinkSync } from 'node:fs';
+import path from 'node:path';
+import { describe, expect, it, vi } from 'vitest';
 import { stopCommand } from '../src/hooks/runtime/stop/runner.js';
-import { tempDir } from './helpers.js';
+import { tempDir, writeFiles } from './helpers.js';
 
 describe('the commands checks.stop may name (#38, ADR-0015)', () => {
   it('runs npm through its own JS entry with --ignore-scripts first, never after --', () => {
@@ -10,6 +12,25 @@ describe('the commands checks.stop may name (#38, ADR-0015)', () => {
       args: ['--ignore-scripts', '--no-update-notifier', 'run', 'test', '--', '--watch=false'],
     });
   });
+
+  it.skipIf(process.platform === 'win32')(
+    'takes npm on PATH only where it links to npm-cli.js in an npm package, not any file of that name',
+    () => {
+      const dir = tempDir();
+      writeFiles(dir, { 'elsewhere/npm-cli.js': '' });
+      const planted = path.join(dir, 'elsewhere', 'npm-cli.js');
+      chmodSync(planted, 0o755);
+      mkdirSync(path.join(dir, 'bin'));
+      symlinkSync(planted, path.join(dir, 'bin', 'npm'));
+      vi.stubEnv('PATH', path.join(dir, 'bin'));
+      try {
+        const found = stopCommand(tempDir(), ['npm', 'test']);
+        expect(found).not.toMatchObject({ tool: { entry: realpathSync.native(planted) } });
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    },
+  );
 
   it.each<[string, readonly string[]]>([
     ['npm install', ['npm', 'install']],
