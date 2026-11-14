@@ -1,6 +1,8 @@
 import { realpathSync } from 'node:fs';
 import path from 'node:path';
 import { parseJson } from '../core/json.js';
+import { SETTINGS_FILE } from '../core/manifest-schema.js';
+import { LOCAL_SETTINGS_FILE } from '../core/targets.js';
 import { isRecord } from '../core/text.js';
 import { readFileBytes } from './project-files.js';
 
@@ -26,9 +28,9 @@ function sandboxSetting(file: string): boolean | undefined {
  */
 export function sandboxSettings(rootReal: string, home: string): string | undefined {
   const files: readonly (readonly [shown: string, file: string])[] = [
-    ['.claude/settings.local.json', path.join(rootReal, '.claude', 'settings.local.json')],
-    ['.claude/settings.json', path.join(rootReal, '.claude', 'settings.json')],
-    ['~/.claude/settings.json', path.join(home, '.claude', 'settings.json')],
+    [LOCAL_SETTINGS_FILE, path.join(rootReal, LOCAL_SETTINGS_FILE)],
+    [SETTINGS_FILE, path.join(rootReal, SETTINGS_FILE)],
+    [`~/${SETTINGS_FILE}`, path.join(home, SETTINGS_FILE)],
   ];
   for (const [shown, file] of files) {
     const enabled = sandboxSetting(file);
