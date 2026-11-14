@@ -32,7 +32,7 @@
     "description": "spec-driven development: a spec, a plan and tasks before the code",
     "knownGood": { "version": "1.2.1", "released": "2026-10-16" },
     "commands": ["uv tool install specify-cli==1.2.1", "specify init --here --integration claude"],
-    "warning": "Never pass --force to specify init without reading specify init --help: it may replace your files.",
+    "warning": "Commit first: specify init --here may replace files. Read specify init --help before passing --force.",
     "skills": [],
     "skillPrefixes": ["speckit.", "speckit-"]
   }

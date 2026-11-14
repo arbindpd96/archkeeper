@@ -85,8 +85,8 @@ describe('modules/compose.json (#39, ADR-0008)', () => {
       'uv tool install specify-cli==1.2.1',
       'specify init --here --integration claude',
     ]);
-    expect(specKit.warning).toMatch(
-      /^Never pass --force to specify init without reading specify init --help/,
+    expect(specKit.warning).toBe(
+      'Commit first: specify init --here may replace files. Read specify init --help before passing --force.',
     );
     expect(specKit.skillPrefixes).toEqual(['speckit.', 'speckit-']);
   });
