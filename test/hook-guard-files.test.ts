@@ -1,7 +1,9 @@
+import { symlinkSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
 import { guardSecrets } from '../src/hooks/runtime/secrets/guard.js';
-import { tempDir } from './helpers.js';
+import { canSymlink, tempDir, writeFiles } from './helpers.js';
 import { bashContext, bashVerdict, hookAnswer, PROJECT } from './hook-helpers.js';
 
 const HOOKS = BRAND.hookDir;
@@ -168,4 +170,50 @@ describe('guard-secrets on writes that change the guards themselves', () => {
       expect(write(file).outcome).toBe('allow');
     },
   );
+});
+
+describe('guard-secrets on writes to the tools format-on-edit and the stop check run (#37, #38)', () => {
+  const TOOL_FOLDER = 'is in a folder the format-on-edit and stop-check hooks run tools from';
+  const write = (projectDir: string, file_path: string): { outcome: string; reason: string } =>
+    hookAnswer(
+      guardSecrets,
+      { tool_name: 'Write', tool_input: { file_path, content: 'module.exports = 1;\n' } },
+      { projectDir },
+    );
+
+  it.each(['node_modules/prettier/bin/prettier.cjs', 'Node_Modules/.bin/eslint'])(
+    'asks before writing %s, in the project root node_modules',
+    (file) => {
+      const { outcome, reason } = write(tempDir(), file);
+      expect(outcome).toBe('ask');
+      expect(reason).toContain(`: ${file} ${TOOL_FOLDER}. Confirm with the user before changing it.`);
+    },
+  );
+
+  it.each(['.venv/bin/ruff', '.VENV/Scripts/pytest.exe'])(
+    'asks before writing %s, in the project root .venv',
+    (file) => {
+      const { outcome, reason } = write(tempDir(), file);
+      expect(outcome).toBe('ask');
+      expect(reason).toContain(TOOL_FOLDER);
+    },
+  );
+
+  it.skipIf(!canSymlink())('asks before a write through a link whose real path is in node_modules', () => {
+    const dir = tempDir();
+    writeFiles(dir, { 'node_modules/pkg/index.js': 'module.exports = 0;\n' });
+    symlinkSync(path.join(dir, 'node_modules', 'pkg'), path.join(dir, 'vendor'), 'dir');
+    const { outcome, reason } = write(dir, 'vendor/index.js');
+    expect(outcome).toBe('ask');
+    expect(reason).toContain(TOOL_FOLDER);
+  });
+
+  it.each([
+    'src/node_modules.ts',
+    'packages/app/node_modules/x/index.js',
+    'venv/bin/ruff',
+    '.venv-old/bin/ruff',
+  ])('allows writing %s, which no hook takes a tool from', (file) => {
+    expect(write(tempDir(), file).outcome).toBe('allow');
+  });
 });
