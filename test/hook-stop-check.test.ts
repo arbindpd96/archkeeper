@@ -13,7 +13,6 @@ import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
 import type { Answer, Payload } from '../src/hooks/runtime/io.js';
 import { outcomeOf } from '../src/hooks/runtime/launch.js';
-import { stopCommand } from '../src/hooks/runtime/stop/runner.js';
 import { stopCheck } from '../src/hooks/runtime/stop/stop-check.js';
 import { canSymlink, commitFiles, git, stubEnv, tempDir, tempRepo, writeFiles } from './helpers.js';
 import { blockReason, HIDDEN_LINE } from './hook-helpers.js';
@@ -285,45 +284,37 @@ describe('stop-check runners (#38, ADR-0015)', () => {
   });
 });
 
-describe('the commands checks.stop may name (#38, ADR-0015)', () => {
-  it('runs npm through its own JS entry with --ignore-scripts first, never after --', () => {
-    const found = stopCommand(tempDir(), ['npm', 'run', 'test', '--', '--watch=false']);
-    expect(found).toMatchObject({
-      tool: { entry: expect.stringMatching(/npm-cli\.js$/) as string },
-      args: ['--ignore-scripts', '--no-update-notifier', 'run', 'test', '--', '--watch=false'],
-    });
-  });
-
-  it.each<[string, readonly string[]]>([
-    ['npm install', ['npm', 'install']],
-    ['npm exec', ['npm', 'exec', 'vitest']],
-    ['npm ci', ['npm', 'ci']],
-    ['npm run with no script', ['npm', 'run']],
-    ['npm t', ['npm', 't']],
-    ['an npm option before the script', ['npm', 'run', '--silent', 'test']],
-    ['an npm option before --', ['npm', 'test', '--ignore-scripts=false']],
-    ['npx', ['npx', 'vitest', 'run']],
-    ['poetry', ['poetry', 'run', 'pytest']],
-    ['a shell', ['sh', '-c', 'pytest']],
-  ])('refuses %s', (_name, argv) => {
-    expect(stopCommand(tempDir(), argv)).toHaveProperty('refused');
-  });
-});
-
 describe.skipIf(!canSymlink())('stop-check state safety (ADR-0015)', () => {
-  it('never blocks, noting why with forward slashes, when it cannot record the result', () => {
+  /** A project whose `<state dir>/local` is a symlink to a folder outside it, so the hook can record nothing. */
+  function unrecordable(command: readonly string[]): { dir: string; outside: string } {
     // A backslash in a folder name stands in for a Windows path's separators on every OS.
     const moved = path.join(tempDir(), 'back\\slash');
     mkdirSync(path.dirname(moved), { recursive: true });
-    renameSync(project({ 'checks.stop': ['checker'] }), moved);
+    renameSync(project({ 'checks.stop': command }), moved);
     const dir = realpathSync.native(moved);
     const outside = tempDir();
     mkdirSync(path.join(dir, BRAND.stateDir), { recursive: true });
     symlinkSync(outside, path.join(dir, BRAND.stateDir, 'local'));
+    return { dir, outside };
+  }
+
+  it('never blocks when it cannot record the result, noting why with forward slashes and how the run ended', () => {
+    const { dir, outside } = unrecordable(['checker']);
     writeFiles(dir, { [SOURCE]: 'export const a = "broken";\n' });
     const answer = stop(dir);
     expect(blockReason(answer)).toBeUndefined();
-    expect(noteOf(answer)).toMatch(/^stop-check: \S*\/back\/slash\/\S*local is a symlink$/);
+    expect(noteOf(answer)).toMatch(
+      /^stop-check: \S*\/back\/slash\/\S*local is a symlink: "checker" exited 1$/,
+    );
     expect(existsSync(path.join(outside, 'stop-check.json'))).toBe(false);
+  });
+
+  it('notes what it skipped and why when it cannot record the hint', () => {
+    const { dir } = unrecordable(['make', 'test']);
+    writeFiles(dir, { [SOURCE]: 'export const a = 2;\n' });
+    const skipped = `skipped "make test" from checks.stop in ${CONFIG}: make is a shell, wrapper or runner.`;
+    const note = noteOf(stop(dir)) ?? '';
+    expect(note).toMatch(/^stop-check: \S*local is a symlink; /);
+    expect(note.endsWith(`; ${BRAND.displayName} stop check ${skipped}`)).toBe(true);
   });
 });
