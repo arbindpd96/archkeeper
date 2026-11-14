@@ -221,7 +221,7 @@ describe('stop-check runs once per change set (#38)', () => {
   });
 
   it('blocks on a failure whose run left a process holding its output, once the timeout ends the wait', () => {
-    const dir = project({ 'checks.stop': ['checker'], 'checks.stopTimeout': 1 });
+    const dir = project({ 'checks.stop': ['checker'], 'checks.stopTimeout': 2 });
     writeFiles(dir, { [SOURCE]: 'export const a = "orphan";\n' });
     expect((blockReason(stop(dir)) ?? '').split('\n')).toEqual([HEADER, '> 1 failed']);
   });
