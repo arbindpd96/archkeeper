@@ -163,6 +163,16 @@ describe('format-on-edit (#37)', () => {
     expect(readdirSync(outside)).toEqual([]);
   });
 
+  it.skipIf(!canSymlink())('keeps the note of a formatter that failed beside a hint it cannot record', () => {
+    const dir = project({ formatters: ['prettier'], linters: ['eslint'] });
+    nodeTool(dir, 'prettier', "console.error('[error] SyntaxError');\nprocess.exit(1);");
+    symlinkSync(tempDir(), path.join(dir, BRAND.stateDir, 'local'));
+    writeFiles(dir, { 'src/a.ts': 'export {};\n' });
+    const skipped =
+      /^format-on-edit: prettier exited 1; format-on-edit: skipped a hint: .*\/local is a symlink$/;
+    expect(edit(dir, 'src/a.ts')).toEqual({ kind: 'done', note: expect.stringMatching(skipped) as string });
+  });
+
   it('skips a recorded tool that is not installed, saying so once in a systemMessage', () => {
     const dir = project({ formatters: ['prettier'], linters: ['eslint'] });
     writeFiles(dir, { 'src/a.ts': 'export {};\n' });
