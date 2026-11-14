@@ -2,7 +2,7 @@ import type { Brand } from '../core/brand.js';
 import { configPath } from '../core/config.js';
 import { UsageError } from '../core/errors.js';
 import { detectedTools } from '../core/format-tools.js';
-import type { Stack } from '../core/schema-parts.js';
+import { type Stack, STACKS } from '../core/schema-parts.js';
 import type { StackProfile } from '../core/stack-profile.js';
 import { isStringList, quoted } from '../core/text.js';
 import { gitFix } from './init-answers.js';
@@ -12,6 +12,8 @@ import type { Settled } from './init-tools.js';
 
 const MODULE = 'stop-check';
 const OPTION = 'checks.stop';
+
+const optionPlace = (brand: Brand): string => `${OPTION} under options.${MODULE} in ${configPath(brand)}`;
 
 function exitingTestScript(profile: StackProfile): boolean {
   return profile.commands.some(
@@ -53,11 +55,12 @@ function refuseWithoutCommand(profile: StackProfile, stack: readonly Stack[], wh
   const leftOut = leftOutCommands(profile, stack);
   if (leftOut.length > 0) {
     const commands = leftOut.map(([command]) => quoted(command)).join(' and ');
-    const owners = leftOut.map(([, owner]) => owner).join(' and ');
+    const owners = leftOut.map(([, owner]) => owner);
     const [is, stacks] = leftOut.length === 1 ? ['is', 'stack'] : ['are', 'stacks'];
+    const flag = STACKS.filter((name) => stack.includes(name) || owners.includes(name)).join(',');
     refuseFlag(
-      `found no test command: the detected ${commands} ${is} for the ${owners} ${stacks}, which --stack or the config's stack leaves out`,
-      `pass --stack ts,python, or set "${OPTION}" in ${where}`,
+      `found no test command: the detected ${commands} ${is} for the ${owners.join(' and ')} ${stacks}, which --stack or the config's stack leaves out`,
+      `pass --stack ${flag}, or set ${where}`,
     );
   }
   if (profile.pnp === true && exitingTestScript(profile)) {
@@ -68,7 +71,7 @@ function refuseWithoutCommand(profile: StackProfile, stack: readonly Stack[], wh
   }
   refuseFlag(
     'found no test command: no package.json test script that exits on its own, and no pytest',
-    `set "${OPTION}" in ${where} to yours, such as ["vitest", "run"]`,
+    `set ${where} to yours, such as ["vitest", "run"]`,
   );
 }
 
@@ -85,7 +88,7 @@ function warnKept(run: InitRun, kept: readonly string[], detected: readonly stri
 // --stop-check turns the check on with the detected command, an earlier no included, and keeps a command the config
 // already runs.
 function flagged(run: InitRun, settled: Settled, profile: StackProfile): ConfigAnswers['options'] {
-  const where = `options.${MODULE} in ${configPath(run.brand)}`;
+  const where = optionPlace(run.brand);
   if (!isSelected(settled, MODULE)) {
     refuseFlag(
       'needs the stop-check module, which only the full preset has',
@@ -164,7 +167,7 @@ function offStep(planned: Planned, where: string): string {
 export function stopCheckSteps(planned: Planned, brand: Brand): string[] {
   const selected = planned.modules.includes(MODULE);
   const command = planned.next.config.options[MODULE]?.[OPTION];
-  const where = `${OPTION} under options.${MODULE} in ${configPath(brand)}`;
+  const where = optionPlace(brand);
   if (!hookRuns(planned, MODULE, brand)) return [];
   if (selected && command === undefined) return [offStep(planned, where)];
   if (!isStringList(command) || command.length === 0) return [];
