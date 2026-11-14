@@ -29,7 +29,7 @@ const SUPERPOWERS =
 const SPEC_KIT =
   'Add Spec Kit: uv tool install specify-cli==1.2.1, then specify init --here --integration claude';
 const WARNING =
-  'Never pass --force to specify init without reading specify init --help: it may replace your files.';
+  'Commit first: specify init --here may replace files. Read specify init --help before passing --force.';
 // The compose tape's frame: 1100×560 in JetBrains Mono 16 holds 23 rows of 109 columns, and the shell's prompt
 // takes the row after init's output.
 const SCREEN = { rows: 22, columns: 109 };
@@ -100,7 +100,7 @@ describe('init offers Superpowers and Spec Kit after the preset (#39, ADR-0008)'
     const result = await runInit(dir, ['--yes', '--with', names]);
     expect(result.code).toBe(0);
     expect(configOf(dir).compose).toEqual(compose);
-    const printed = result.stdout.split('\n').filter((line) => / {2}\d\. Add |Never pass/.test(line));
+    const printed = result.stdout.split('\n').filter((line) => / {2}\d\. (?:Add |Commit first)/.test(line));
     expect(printed.map((line) => line.replace(/^ {2}\d\. /, ''))).toEqual(steps);
   });
 
