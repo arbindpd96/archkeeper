@@ -31,16 +31,25 @@ export function gitState(root: string): GitState {
   return ignored === 1 ? 'clean' : 'unknown';
 }
 
+// `--stage` prints `<mode> <object> <stage>\t<path>`; a gitlink, mode 160000, is a submodule, which is a folder.
+function stagedPath(entry: string): string {
+  const file = entry.slice(entry.indexOf('\t') + 1);
+  return entry.startsWith('160000 ') ? `${file}/` : file;
+}
+
 /**
- * The files git tracks in `root`, relative to it, which seed the architecture map (#36): `git ls-files -z -- .`
- * through the same hardened runner, reading only the index, so it runs no filter program and fetches nothing, and
- * no name is quoted or split. Undefined when git is missing, the folder is in no repository, git fails or takes
- * over 5 seconds, or the list is over 32 MiB.
+ * The files git tracks in `root`, relative to it, which seed the architecture map (#36): `git ls-files -z --stage
+ * -- .` through the same hardened runner, reading only the index, so it runs no filter program and fetches nothing,
+ * and no name is quoted or split; a submodule ends with `/`, so the map lists it as the folder it is. Undefined when
+ * git is missing, the folder is in no repository, git fails or takes over 5 seconds, or the list is over 32 MiB.
  */
 export function trackedFiles(root: string): string[] | undefined {
-  const listed = gitRunner(root, LIST_BUDGET_MS, LIST_MAX_BYTES)?.(['ls-files', '-z', '--', '.']);
+  const listed = gitRunner(root, LIST_BUDGET_MS, LIST_MAX_BYTES)?.(['ls-files', '-z', '--stage', '--', '.']);
   if (listed?.status !== 0) return undefined;
-  return listed.stdout.split('\0').filter((file) => file !== '');
+  return listed.stdout
+    .split('\0')
+    .filter((entry) => entry !== '')
+    .map(stagedPath);
 }
 
 /**

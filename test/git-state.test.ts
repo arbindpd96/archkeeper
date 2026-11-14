@@ -142,6 +142,15 @@ describe('trackedFiles (#36)', () => {
     expect(trackedFiles(tempRepo())).toEqual([]);
   });
 
+  it('lists a submodule, which git tracks as one gitlink entry, as a folder', () => {
+    const repo = tempRepo({ 'README.md': '' });
+    const commit = '0123456789abcdef0123456789abcdef01234567';
+    for (const name of ['shared', 'libs/vendored-sdk']) {
+      git(repo, 'update-index', '--add', '--cacheinfo', `160000,${commit},${name}`);
+    }
+    expect(trackedFiles(repo)?.sort(compareText)).toEqual(['README.md', 'libs/vendored-sdk/', 'shared/']);
+  });
+
   it('gives no list outside a repository or when no PATH folder holds git', () => {
     expect(trackedFiles(tempDir())).toBeUndefined();
     const repo = tempRepo({ 'README.md': '' });
