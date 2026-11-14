@@ -22,7 +22,7 @@ export type HookOutput = Readonly<Record<string, unknown>>;
  * with a message on stderr, which Claude Code shows Claude. It never prints JSON and exits 2 (ADR-0015).
  */
 export type Answer =
-  | { readonly kind: 'done'; readonly output?: HookOutput; readonly note?: string }
+  | { readonly kind: 'done'; readonly output?: HookOutput; readonly note?: string | undefined }
   | { readonly kind: 'refuse'; readonly message: string };
 
 /** Where a hook writes its answer. */
@@ -71,7 +71,7 @@ export function stopHookActive(payload: Payload): boolean {
 
 /** An answer with nothing to say: exit 0 and no output, which lets a tool call go on. */
 export function noAnswer(note?: string): Extract<Answer, { readonly kind: 'done' }> {
-  return note === undefined ? { kind: 'done' } : { kind: 'done', note };
+  return { kind: 'done', note };
 }
 
 /** The answer with a one-line note for stderr added; a refusal already says everything on stderr. */

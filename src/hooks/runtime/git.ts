@@ -48,12 +48,7 @@ export function gitRunner(root: string, budgetMs?: number, maxBuffer?: number): 
   return (args) => {
     const timeoutMs = deadline === undefined ? undefined : deadline - Date.now();
     if (timeoutMs !== undefined && timeoutMs <= 0) return OUT_OF_TIME;
-    return runProgram(git, [...SAFE, ...args], {
-      cwd: root,
-      env,
-      ...(timeoutMs === undefined ? {} : { timeoutMs }),
-      ...(maxBuffer === undefined ? {} : { maxBuffer }),
-    });
+    return runProgram(git, [...SAFE, ...args], { cwd: root, env, timeoutMs, maxBuffer });
   };
 }
 
