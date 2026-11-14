@@ -1,4 +1,12 @@
-import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, symlinkSync } from 'node:fs';
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  symlinkSync,
+} from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BRAND } from '../src/core/brand.js';
@@ -69,6 +77,27 @@ describe('format-on-edit (#37)', () => {
       ['check', '--fix', '--force-exclude', pyi],
     ]);
   });
+
+  it.skipIf(!onWindows)(
+    'runs .venv\\Scripts\\ruff.exe with its arguments intact and sends what it leaves',
+    () => {
+      const dir = project({ formatters: ['ruff'], linters: ['ruff'] });
+      mkdirSync(path.join(dir, '.venv', 'Scripts'), { recursive: true });
+      copyFileSync(process.execPath, path.join(dir, '.venv', 'Scripts', 'ruff.exe'));
+      // ruff.exe is this Node.js, so `ruff.exe format …` and `ruff.exe check …` run these scripts from the hook's cwd.
+      writeFiles(dir, {
+        format: standIn(''),
+        check: standIn("console.log('app.py:1:1: F841 unused');\nprocess.exit(1);"),
+        'app.py': 'x = 1\n',
+      });
+      const answer = edit(dir, 'app.py');
+      expect(answer.kind).toBe('refuse');
+      expect(messageOf(answer)).toContain('ruff:\n> app.py:1:1: F841 unused');
+      const file = path.join(dir, 'app.py');
+      expect(logged(path.join(dir, 'format.log'))).toEqual([['--force-exclude', file]]);
+      expect(logged(path.join(dir, 'check.log'))).toEqual([['--fix', '--force-exclude', file]]);
+    },
+  );
 
   it('sends what eslint leaves to Claude with exit 2 and stderr alone, quoted, escaped and cut to 40 lines', () => {
     const dir = project({ linters: ['eslint'] });
