@@ -4,7 +4,7 @@ import { configPath } from '../core/config.js';
 import { isCommandList, isStringList, quoted } from '../core/text.js';
 import type { Asking } from './init-answers.js';
 import { hookRuns, type InitRun, type Planned, type ShippedFolders } from './init-run.js';
-import { sandboxSettings } from './init-sandbox.js';
+import { sandboxSettingsFile } from './init-sandbox.js';
 import { lstatOrUndefined } from './project-files.js';
 
 const TOOL_FOLDERS = ['node_modules', '.venv'];
@@ -42,13 +42,13 @@ function shippedToolFolders(run: InitRun): ShippedFolders {
  * runs tools (#37, #38): the folders `node_modules` and `.venv` that may hold tools the user never installed, and the
  * settings file that turns on Claude Code's sandbox, which hooks run outside of. Neither while no hook runs tools.
  */
-export function toolRisks(run: InitRun, planned: ToolPlan): Pick<Planned, 'shipped' | 'sandbox'> {
+export function toolRisks(run: InitRun, planned: ToolPlan): Pick<Planned, 'shipped' | 'sandboxOnIn'> {
   if (toolHooks(planned, run.brand).length === 0) {
-    return { shipped: { folders: [], tracked: true }, sandbox: undefined };
+    return { shipped: { folders: [], tracked: true }, sandboxOnIn: undefined };
   }
   return {
     shipped: shippedToolFolders(run),
-    sandbox: sandboxSettings(run.rootReal, run.session.context.home),
+    sandboxOnIn: sandboxSettingsFile(run.rootReal, run.session.context.home),
   };
 }
 
@@ -73,13 +73,13 @@ function sandboxWarning(settings: string, hooks: readonly string[]): string {
 // The warnings about the tools the hooks would run: those a repository ships, and, while the sandbox is on, whatever a
 // sandboxed command writes.
 function toolWarnings(planned: Planned, brand: Brand): string[] {
-  const { shipped, sandbox } = planned;
-  if (shipped.folders.length === 0 && sandbox === undefined) return [];
+  const { shipped, sandboxOnIn } = planned;
+  if (shipped.folders.length === 0 && sandboxOnIn === undefined) return [];
   const hooks = toolHooks(planned, brand);
   if (hooks.length === 0) return [];
   return [
     ...(shipped.folders.length > 0 ? [shippedWarning(shipped, hooks)] : []),
-    ...(sandbox === undefined ? [] : [sandboxWarning(sandbox, hooks)]),
+    ...(sandboxOnIn === undefined ? [] : [sandboxWarning(sandboxOnIn, hooks)]),
   ];
 }
 
