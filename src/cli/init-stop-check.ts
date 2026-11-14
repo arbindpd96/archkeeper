@@ -12,25 +12,44 @@ import type { Settled } from './init-tools.js';
 const MODULE = 'stop-check';
 const OPTION = 'checks.stop';
 
+function exitingTestScript(profile: StackProfile): boolean {
+  return profile.commands.some(
+    (command) => command.stack === 'ts' && command.purpose === 'test' && command.watches !== true,
+  );
+}
+
 /**
  * The test command init proposes for the stop check (#38): the package.json `test` script through npm, whatever the
  * package manager, since npm ships with Node.js, unless the script starts a watcher, which would hold every stop
- * until its timeout; else `pytest` where detection found it. TS/JS comes first in a mixed project, and only a stack
+ * until its timeout, or Yarn Plug'n'Play installs the packages, which leaves no `node_modules/.bin` for npm to run the
+ * script's tools from; else `pytest` where detection found it. TS/JS comes first in a mixed project, and only a stack
  * in effect counts.
  */
 export function proposedStopCommand(
   profile: StackProfile,
   settled: Pick<Settled, 'stack' | 'tools'>,
 ): string[] | undefined {
-  const testScript = profile.commands.some(
-    (command) => command.stack === 'ts' && command.purpose === 'test' && command.watches !== true,
-  );
-  if (testScript && settled.stack.includes('ts')) return ['npm', 'run', 'test'];
+  const npmRuns = profile.pnp !== true && exitingTestScript(profile);
+  if (npmRuns && settled.stack.includes('ts')) return ['npm', 'run', 'test'];
   return settled.tools.includes('pytest') ? ['pytest'] : undefined;
 }
 
 function refuseFlag(problem: string, hint: string): never {
   throw new UsageError({ file: '--stop-check', location: '', problem, hint });
+}
+
+// Under Yarn Plug'n'Play, the test script is there but npm finds none of the tools it runs.
+function refuseWithoutCommand(profile: StackProfile, where: string): never {
+  if (profile.pnp === true && exitingTestScript(profile)) {
+    refuseFlag(
+      "found no test command: Yarn Plug'n'Play installs no node_modules for npm to run the test script from, and no pytest",
+      'set nodeLinker: node-modules in .yarnrc.yml and run yarn install, then run init with --stop-check again',
+    );
+  }
+  refuseFlag(
+    'found no test command: no package.json test script that exits on its own, and no pytest',
+    `set "${OPTION}" in ${where} to yours, such as ["vitest", "run"]`,
+  );
 }
 
 // A command the config already runs is the config's, so --stop-check keeps it, and says so where it is not the one
@@ -59,12 +78,7 @@ function flagged(run: InitRun, settled: Settled, profile: StackProfile): ConfigA
     warnKept(run, current, proposed);
     return undefined;
   }
-  if (proposed === undefined) {
-    refuseFlag(
-      'found no test command: no package.json test script that exits on its own, and no pytest',
-      `set "${OPTION}" in ${where} to yours, such as ["vitest", "run"]`,
-    );
-  }
+  if (proposed === undefined) refuseWithoutCommand(profile, where);
   return { [MODULE]: { [OPTION]: proposed } };
 }
 
