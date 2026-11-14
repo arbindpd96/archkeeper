@@ -17,7 +17,8 @@ interface ToolSpec {
 }
 
 // Formatters change the file in place and their output is dropped; eslint reports errors and fixes nothing, and ruff
-// fixes what it fixes safely, then reports the rest. Formatters come first, prettier before biome. eslint's --quiet
+// applies only its safe fixes, even where the project's config sets unsafe-fixes, which could change what code does or
+// delete it, then reports the rest. Formatters come first, prettier before biome. eslint's --quiet
 // also drops the warning for an ignored file, which then exits 0 under flat config and eslintrc alike; eslintrc
 // refuses --no-warn-ignored. biome exits 1 on a file its config or a VCS ignore file leaves out, "No files were
 // processed", unless told not to. prettier takes no Markdown: it would re-pad the kit's blocks in AGENTS.md and
@@ -39,7 +40,13 @@ const TOOLS: readonly ToolSpec[] = [
   },
   { list: 'formatters', name: 'ruff', node: false, takes: '.py .pyi', args: 'format --force-exclude' },
   { list: 'linters', name: 'eslint', node: true, takes: SCRIPTS, args: '--quiet' },
-  { list: 'linters', name: 'ruff', node: false, takes: '.py .pyi', args: 'check --fix --force-exclude' },
+  {
+    list: 'linters',
+    name: 'ruff',
+    node: false,
+    takes: '.py .pyi',
+    args: 'check --fix --no-unsafe-fixes --force-exclude',
+  },
 ];
 
 /** What the config asks format-on-edit to run: its `formatters`, `linters` and extra `commands`. */
@@ -108,8 +115,10 @@ function runJob(job: Job, { edited, projectDir, results }: Batch, remainingMs: n
     results.skipped.push({ job, why: 'missing' in found ? `not found in ${found.missing}` : found.refused });
     return;
   }
-  const options = { cwd: projectDir, timeoutMs: remainingMs };
-  const run = runProjectTool(found.tool, [...found.args, edited.file], options);
+  const run = runProjectTool(found.tool, [...found.args, edited.file], {
+    cwd: projectDir,
+    timeoutMs: remainingMs,
+  });
   if (run.status === 0) return;
   const exited =
     run.status === null ? `${job.name} did not finish` : `${job.name} exited ${String(run.status)}`;

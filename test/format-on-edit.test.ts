@@ -66,20 +66,23 @@ describe('format-on-edit (#37)', () => {
     ]);
   });
 
-  it.skipIf(onWindows)('runs ruff format, then ruff check --fix, on .py and .pyi files', () => {
-    const dir = project({ formatters: ['ruff'], linters: ['ruff'] });
-    const log = ruff(dir, '');
-    writeFiles(dir, { 'src/app.py': 'x = 1\n', 'src/app.pyi': 'x: int\n' });
-    expect(edit(dir, 'src/app.py')).toEqual({ kind: 'done' });
-    expect(edit(dir, 'src/app.pyi')).toEqual({ kind: 'done' });
-    const [py, pyi] = ['app.py', 'app.pyi'].map((name) => path.join(dir, 'src', name));
-    expect(logged(log)).toEqual([
-      ['format', '--force-exclude', py],
-      ['check', '--fix', '--force-exclude', py],
-      ['format', '--force-exclude', pyi],
-      ['check', '--fix', '--force-exclude', pyi],
-    ]);
-  });
+  it.skipIf(onWindows)(
+    'runs ruff format, then ruff check --fix with no unsafe fixes, on .py and .pyi files',
+    () => {
+      const dir = project({ formatters: ['ruff'], linters: ['ruff'] });
+      const log = ruff(dir, '');
+      writeFiles(dir, { 'src/app.py': 'x = 1\n', 'src/app.pyi': 'x: int\n' });
+      expect(edit(dir, 'src/app.py')).toEqual({ kind: 'done' });
+      expect(edit(dir, 'src/app.pyi')).toEqual({ kind: 'done' });
+      const [py, pyi] = ['app.py', 'app.pyi'].map((name) => path.join(dir, 'src', name));
+      expect(logged(log)).toEqual([
+        ['format', '--force-exclude', py],
+        ['check', '--fix', '--no-unsafe-fixes', '--force-exclude', py],
+        ['format', '--force-exclude', pyi],
+        ['check', '--fix', '--no-unsafe-fixes', '--force-exclude', pyi],
+      ]);
+    },
+  );
 
   it.skipIf(!onWindows)(
     'runs .venv\\Scripts\\ruff.exe with its arguments intact and sends what it leaves',
@@ -98,7 +101,9 @@ describe('format-on-edit (#37)', () => {
       expect(messageOf(answer)).toContain('ruff:\n> app.py:1:1: F841 unused');
       const file = path.join(dir, 'app.py');
       expect(logged(path.join(dir, 'format.log'))).toEqual([['--force-exclude', file]]);
-      expect(logged(path.join(dir, 'check.log'))).toEqual([['--fix', '--force-exclude', file]]);
+      expect(logged(path.join(dir, 'check.log'))).toEqual([
+        ['--fix', '--no-unsafe-fixes', '--force-exclude', file],
+      ]);
     },
   );
 
