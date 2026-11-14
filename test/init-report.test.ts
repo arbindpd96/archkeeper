@@ -111,11 +111,14 @@ describe('stateLines', () => {
 describe('droppedLines', () => {
   it('names each module the resolver left out with its reason, escaped', () => {
     const dropped = [
-      { id: 'format-on-edit', reason: 'needs prettier, biome or ruff, and none was detected' },
+      {
+        id: 'format-on-edit',
+        reason: 'needs prettier, biome or ruff, and none was detected for the ts stack',
+      },
       { id: 'odd', reason: `needs ${RLO}x` },
     ];
     expect(droppedLines(dropped)).toEqual([
-      'Left out: format-on-edit (needs prettier, biome or ruff, and none was detected)',
+      'Left out: format-on-edit (needs prettier, biome or ruff, and none was detected for the ts stack)',
       'Left out: odd (needs \\u202ex)',
     ]);
   });
