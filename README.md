@@ -158,7 +158,7 @@ Trust these commands as you trust your `package.json` scripts: the hooks run the
 
 ## Works with Superpowers and Spec Kit
 
-`init` offers [Superpowers](https://github.com/obra/superpowers), a Claude Code plugin of planning, TDD and code review skills, and [Spec Kit](https://github.com/github/spec-kit), for spec-driven development. Right after the preset it asks whether you want either or both, defaulting to no; `--with superpowers,speckit` answers in a scripted run. A yes is recorded in `.archkeeper/config.json`, and `init` prints the exact install commands, Spec Kit's pinned to the version we checked, with a warning about its `--force`. Nothing is installed or downloaded, and none of archkeeper's skills shares a name with theirs.
+`init` offers [Superpowers](https://github.com/obra/superpowers), a Claude Code plugin of planning, TDD and code review skills, and [Spec Kit](https://github.com/github/spec-kit), for spec-driven development. Right after the preset it asks whether you want either or both, defaulting to no; `--with superpowers,speckit` answers in a scripted run. A yes is recorded in `.archkeeper/config.json`, and `init` prints the exact install commands, Spec Kit's pinned to the version we checked, with a warning to commit first, since `specify init` may replace files. Nothing is installed or downloaded, and none of archkeeper's skills shares a name with theirs.
 
 ## Pick a preset
 
