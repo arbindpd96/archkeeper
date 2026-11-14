@@ -7,7 +7,10 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 /** An npm `.cmd` or `.bat` shim, which needs a shell on Windows (ADR-0015). */
 export const SHIM = /\.(?:cmd|bat)$/i;
 
-/** What a program printed and how it ended; `status` is null when it could not start or was killed. */
+/**
+ * What a program printed and how it ended: `status` is its exit code, even when it exited before its deadline ended the
+ * wait, and null when it could not start, was killed, or printed past `maxBuffer`, which cuts its output.
+ */
 export interface ToolRun {
   readonly status: number | null;
   readonly stdout: string;
@@ -35,7 +38,9 @@ function isProgram(file: string): boolean {
 
 /**
  * Runs a program by its absolute path with an argument array, never through a shell, and never an npm `.cmd` or
- * `.bat` shim, which needs one on Windows (ADR-0015). Throws for a relative path or a shim.
+ * `.bat` shim, which needs one on Windows (ADR-0015). At its deadline the program is killed with SIGKILL, so one that
+ * ignores SIGTERM cannot keep the hook past it, though it gets no chance to clean up. Throws for a relative path or a
+ * shim.
  */
 export function runProgram(file: string, args: readonly string[], options: ToolOptions): ToolRun {
   if (!path.isAbsolute(file) || SHIM.test(file)) {
@@ -46,12 +51,15 @@ export function runProgram(file: string, args: readonly string[], options: ToolO
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
     timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    killSignal: 'SIGKILL',
     windowsHide: true,
     env: options.env ?? { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
     ...(options.maxBuffer === undefined ? {} : { maxBuffer: options.maxBuffer }),
   });
-  const status = run.error === undefined ? run.status : null;
-  return { status, stdout: run.stdout, stderr: run.stderr };
+  // spawnSync waits for the output pipes to close, so a process the program left holding them, such as a server a test
+  // started, makes it wait out the deadline after the program exited; that exit status still counts.
+  const cut = (run.error as NodeJS.ErrnoException | undefined)?.code === 'ENOBUFS';
+  return { status: cut ? null : run.status, stdout: run.stdout, stderr: run.stderr };
 }
 
 /** Runs a Node.js tool's JS entry file with the Node.js that runs this hook, never with npx (ADR-0015). */
