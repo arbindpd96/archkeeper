@@ -76,7 +76,7 @@ export interface Planned {
    * The settings file that turns on Claude Code's sandbox, as init names it, while format-on-edit or the stop check runs
    * project tools, which hooks run outside the sandbox with the user's full access; undefined otherwise.
    */
-  readonly sandbox: string | undefined;
+  readonly sandboxOnIn: string | undefined;
 }
 
 /** Whether the resolver keeps a module, so this init installs it. */

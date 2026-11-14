@@ -26,7 +26,7 @@ function sandboxSetting(file: string): boolean | undefined {
  * of `.claude/settings.local.json`, `.claude/settings.json` and `~/.claude/settings.json`, the first that sets
  * `sandbox.enabled` decides, in Claude Code's order of precedence. Managed settings and `--settings` are not read.
  */
-export function sandboxSettings(rootReal: string, home: string): string | undefined {
+export function sandboxSettingsFile(rootReal: string, home: string): string | undefined {
   const files: readonly (readonly [shown: string, file: string])[] = [
     [LOCAL_SETTINGS_FILE, path.join(rootReal, LOCAL_SETTINGS_FILE)],
     [SETTINGS_FILE, path.join(rootReal, SETTINGS_FILE)],
