@@ -18,15 +18,15 @@ export interface ToolRun {
   readonly stderr: string;
 }
 
-/** Where and how long a program runs, and how much it may print. */
+/** Where and how long a program runs, and how much it may print; a field left undefined takes its default. */
 export interface ToolOptions {
   readonly cwd: string;
   /** How long it may run, in milliseconds: 10,000 by default, a literal since each hook bundle counts its bytes. */
-  readonly timeoutMs?: number;
+  readonly timeoutMs?: number | undefined;
   /** Its environment; by default this process's with colour off (`FORCE_COLOR=0`, `NO_COLOR=1`), as a hook reads it. */
-  readonly env?: NodeJS.ProcessEnv;
+  readonly env?: NodeJS.ProcessEnv | undefined;
   /** The most bytes stdout or stderr may hold; past it the program is stopped and its status is null. 1 MiB by default. */
-  readonly maxBuffer?: number;
+  readonly maxBuffer?: number | undefined;
 }
 
 function isProgram(file: string): boolean {
@@ -56,7 +56,7 @@ export function runProgram(file: string, args: readonly string[], options: ToolO
     killSignal: 'SIGKILL',
     windowsHide: true,
     env: options.env ?? { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
-    ...(options.maxBuffer === undefined ? {} : { maxBuffer: options.maxBuffer }),
+    maxBuffer: options.maxBuffer ?? 1_048_576,
   });
   // spawnSync waits for the output pipes to close, so a process the program left holding them, such as a server a test
   // started, makes it wait out the deadline after the program exited; that exit status still counts.
