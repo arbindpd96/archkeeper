@@ -3,16 +3,18 @@ import { type CommandLookup, isRegularFile, programTool } from '../project-tools
 import { realOrUndefined } from '../project.js';
 import { findProgram } from '../tools.js';
 
-// Node.js installs npm beside itself, in node_modules on Windows and in ../lib/node_modules elsewhere; Homebrew keeps
-// it apart and links npm on PATH to its npm-cli.js. Without npm on PATH, '' has no real path and adds no candidate.
+const NPM_CLI = 'node_modules/npm/bin/npm-cli.js';
+
+// Node.js installs npm beside itself, in node_modules on Windows and in ../lib/node_modules elsewhere; Homebrew links
+// npm on PATH to its own, which counts only as npm's own entry. Without npm on PATH, '' adds no candidate.
 function npmCli(projectDir: string): string | undefined {
   const folder = path.dirname(process.execPath);
   const linked = realOrUndefined(findProgram('npm', projectDir) ?? '') ?? '';
   return [
-    path.join(folder, 'node_modules/npm/bin/npm-cli.js'),
-    path.join(folder, '../lib/node_modules/npm/bin/npm-cli.js'),
-    linked,
-  ].find((file) => file.endsWith('npm-cli.js') && isRegularFile(file));
+    path.join(folder, NPM_CLI),
+    path.join(folder, '../lib', NPM_CLI),
+    linked.endsWith(`/${NPM_CLI}`) ? linked : '',
+  ].find(isRegularFile);
 }
 
 // npm runs only the script it is asked for: no pre- or post-script (ADR-0015), and no check of the registry for a
