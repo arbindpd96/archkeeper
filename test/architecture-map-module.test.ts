@@ -3,7 +3,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseBlocks } from '../src/core/blocks-file.js';
 import { fixtureCopy, writeFiles } from './helpers.js';
-import { moduleContent, moduleEntries, renderedKit, runInit } from './init-helpers.js';
+import { type InitSetup, moduleContent, moduleEntries, renderedKit, runInit } from './init-helpers.js';
 import { TEST_BRAND } from './kit-fixtures.js';
 import { frontmatterOf, skillProblems } from './static-rules.js';
 
@@ -144,13 +144,16 @@ describe('init with the architecture-map module (#36)', () => {
     expect(read(dir, MAP)).toBe(before);
   });
 
-  it('lists the files git tracks only for a preset that seeds the map', async () => {
-    const listings = { small: 0, medium: 0 };
-    for (const preset of ['small', 'medium'] as const) {
-      const setup = { onTracked: () => (listings[preset] += 1) };
-      expect((await runInit(fixtureCopy('ts-app').dir, ['--yes', '--preset', preset], setup)).code).toBe(0);
-    }
-    expect(listings).toEqual({ small: 0, medium: 1 });
+  it('lists the files git tracks only for a preset that seeds the map, and not once the map exists', async () => {
+    const listings = { small: 0, medium: 0, again: 0 };
+    const counted = (run: keyof typeof listings): InitSetup => ({ onTracked: () => (listings[run] += 1) });
+    const { dir } = fixtureCopy('ts-app');
+    expect(
+      (await runInit(fixtureCopy('ts-app').dir, ['--yes', '--preset', 'small'], counted('small'))).code,
+    ).toBe(0);
+    expect((await runInit(dir, ['--yes', '--preset', 'medium'], counted('medium'))).code).toBe(0);
+    expect((await runInit(dir, ['--yes'], counted('again'))).code).toBe(0);
+    expect(listings).toEqual({ small: 0, medium: 1, again: 0 });
   });
 
   it('writes nothing of its own with the small preset', async () => {
