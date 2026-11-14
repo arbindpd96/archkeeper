@@ -8,7 +8,9 @@ export const SHIM = /\.(?:cmd|bat)$/i;
 
 /**
  * What a program printed and how it ended: `status` is its exit code, even when it exited before its deadline ended the
- * wait, and null when it could not start, was killed, or printed past `maxBuffer`, which cuts its output.
+ * wait, and null when it could not start, was killed, or printed past `maxBuffer`, which cuts its output. A program
+ * that could not start leaves `stdout` and `stderr` undefined at run time, as spawnSync does, so read them only after
+ * `status`, or by truth.
  */
 export interface ToolRun {
   readonly status: number | null;
