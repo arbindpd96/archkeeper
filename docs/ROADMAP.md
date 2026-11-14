@@ -253,9 +253,9 @@ The first contact with existing user files loses nothing.
 - All three presets exist.
 - `init` offers the tools we compose with.
 
-- [x] feat(modules): architecture-map module and update-map skill (the module stays internal until map.gif)
-- [x] feat(hooks): format-on-edit PostToolUse hook using local tools only (stays internal until format.gif)
-- [x] feat(modules): full preset with an optional shell-free stop check (stays internal until stop-check.gif)
+- [x] feat(modules): architecture-map module and update-map skill (the module stays `internal` until the maintainer records the live `map.gif`, which goes under the README Architecture map section)
+- [x] feat(hooks): format-on-edit PostToolUse hook using local tools only (the module stays `internal` until the maintainer records the live `format.gif`, under Format on edit; this repo's `scripts/check-comments.mjs` command lands with M8's dogfooding, #45)
+- [x] feat(modules): full preset with an optional shell-free stop check (the stop-check module stays `internal` until the maintainer records the live `stop-check.gif`, under Tests before done)
 - [x] feat(cli): init offers Superpowers and Spec Kit (print-only in v0.1)
 
 **M7: Lifecycle: update, uninstall, doctor v0, e2e, live acceptance.** Users can take fixes safely, diagnose problems in the install and in their own memory files, and leave cleanly. This is proven on the real tarball, across two kit versions and three OSes, and in a real Claude Code session.
