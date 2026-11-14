@@ -90,8 +90,11 @@ describe('resolveModules', () => {
     const resolution = resolveModules(request, catalog);
     expect(resolution.modules.map((kit) => kit.manifest.id)).toEqual(['base']);
     expect(resolution.dropped).toEqual([
-      { id: 'formatting', reason: 'needs prettier, biome or ruff, and none was detected' },
-      { id: 'typing', reason: 'needs mypy, which was not detected' },
+      {
+        id: 'formatting',
+        reason: 'needs prettier, biome or ruff, and none was detected for the ts and python stacks',
+      },
+      { id: 'typing', reason: 'needs mypy, which was not detected for the ts and python stacks' },
     ]);
     expect(resolveModules({ ...request, tools: ['ruff'] }, catalog).dropped.map(({ id }) => id)).toEqual([
       'typing',
