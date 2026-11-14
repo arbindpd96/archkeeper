@@ -192,6 +192,32 @@ describe('init sets the stop check in a scripted run only with --stop-check (#38
     expect(result.stderr).toContain(`"checks.stop" in options.stop-check in ${CONFIG}`);
   });
 
+  it.each([
+    [
+      'ts',
+      '"pytest" is for the python stack',
+      { 'pyproject.toml': '[project]\nname = "app"\n\n[dependency-groups]\ndev = ["pytest>=8.3"]\n' },
+    ],
+    ['python', '"npm run test" is for the ts stack', { 'package.json': '{"scripts":{"test":"vitest run"}}' }],
+  ])(
+    'refuses the flag with --stack %s, naming the stack it left out with the test command',
+    async (stack, found, files) => {
+      const dir = tempDir();
+      writeFiles(dir, {
+        'package.json': JSON.stringify({ devDependencies: { prettier: '^3.0.0' } }),
+        ...files,
+      });
+      const result = await runInit(dir, ['--yes', '--preset', 'full', '--stop-check', '--stack', stack]);
+      expect(result.code).toBe(1);
+      expect(result.stderr).toContain(
+        `--stop-check: found no test command: the detected ${found}, which --stack or the config's stack leaves out`,
+      );
+      expect(result.stderr).toContain(
+        `pass --stack ts,python, or set "checks.stop" in options.stop-check in ${CONFIG}`,
+      );
+    },
+  );
+
   it("refuses the flag in a Yarn Plug'n'Play project, naming the linker that lets npm run the test script", async () => {
     const { dir } = fixtureCopy('ts-app');
     writeFiles(dir, { '.pnp.cjs': '' });
