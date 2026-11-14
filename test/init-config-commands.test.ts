@@ -145,6 +145,7 @@ describe('init names the commands a config has the hooks run (#37, #38, ADR-0015
 
 describe("init warns while Claude Code's sandbox is on, since hooks run outside it (#37, #38)", () => {
   const SANDBOX_ON = JSON.stringify({ sandbox: { enabled: true } });
+  const SANDBOX_OFF = JSON.stringify({ sandbox: { enabled: false } });
   const sandboxWarning = (settings: string, runs: string): string =>
     `Claude Code's sandbox is on in ${settings}, but hooks run outside it with your full access, so ${runs} would run, unsandboxed, what a sandboxed command writes in this project, such as a tool config, a package in node_modules or a test;`;
 
@@ -169,8 +170,34 @@ describe("init warns while Claude Code's sandbox is on, since hooks run outside 
       `${sandboxWarning('~/.claude/settings.json', 'format-on-edit')} leave it out with --modules -format-on-edit unless you accept that`,
     );
     const { dir } = fixtureCopy('py-app');
-    writeFiles(dir, { '.claude/settings.json': JSON.stringify({ sandbox: { enabled: false } }) });
+    writeFiles(dir, { '.claude/settings.json': SANDBOX_OFF });
     expect((await runInit(dir, ['--yes'], { home })).stderr).not.toContain('sandbox');
+  });
+
+  it("lets the project's local settings turn off a sandbox its shared settings turn on", async () => {
+    const { dir } = fixtureCopy('py-app');
+    writeFiles(dir, { '.claude/settings.json': SANDBOX_ON, '.claude/settings.local.json': SANDBOX_OFF });
+    const result = await runInit(dir, ['--yes']);
+    expect(result.code).toBe(0);
+    expect(result.stderr).not.toContain('sandbox');
+  });
+
+  it("lets the project's settings turn on a sandbox the user's settings turn off", async () => {
+    const home = tempDir();
+    writeFiles(home, { '.claude/settings.json': SANDBOX_OFF });
+    const { dir } = fixtureCopy('py-app');
+    writeFiles(dir, { '.claude/settings.json': SANDBOX_ON });
+    const result = await runInit(dir, ['--yes'], { home });
+    expect(result.stderr).toContain(sandboxWarning('.claude/settings.json', 'format-on-edit'));
+  });
+
+  it("counts a settings file it cannot parse as unset, so the user's settings decide", async () => {
+    const home = tempDir();
+    writeFiles(home, { '.claude/settings.json': SANDBOX_ON });
+    const { dir } = fixtureCopy('py-app');
+    writeFiles(dir, { '.claude/settings.local.json': '{ "sandbox": { "enabled": false ' });
+    const result = await runInit(dir, ['--yes'], { home });
+    expect(result.stderr).toContain(sandboxWarning('~/.claude/settings.json', 'format-on-edit'));
   });
 
   it('names no flag for a hook the lock keeps for a module already left out, which the flag cannot remove', async () => {
