@@ -72,6 +72,12 @@ describe('the map layout (#36)', () => {
     expect(layoutOf(tracked)).toEqual(rows('Zeta/', 'docs/', 'src/', 'src/a/', 'src/cli/'));
   });
 
+  it('lists a submodule, which the tracked list ends with a slash, as a folder at either depth', () => {
+    expect(layoutOf(['shared/', 'libs/vendored-sdk/', 'README.md'])).toEqual(
+      rows('libs/', 'shared/', 'libs/vendored-sdk/'),
+    );
+  });
+
   it('sorts by UTF-16 code units, the same on every OS and locale', () => {
     const tracked = ['b/x', 'a-b/x', 'a/x', 'B/x', '.github/x', 'é/x', 'a/b-c/x', 'a/b/x'];
     expect(layoutOf(tracked)).toEqual(rows('.github/', 'B/', 'a-b/', 'a/', 'b/', 'é/', 'a/b-c/', 'a/b/'));
