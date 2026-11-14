@@ -2,6 +2,7 @@ import { existsSync, readFileSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseBlocks } from '../src/core/blocks-file.js';
+import { LEFT_OUT_FOLDERS } from '../src/core/map-seed.js';
 import { fixtureCopy, writeFiles } from './helpers.js';
 import { type InitSetup, moduleContent, moduleEntries, renderedKit, runInit } from './init-helpers.js';
 import { TEST_BRAND } from './kit-fixtures.js';
@@ -67,16 +68,36 @@ describe('the architecture-map module (#36)', () => {
       'the first 400 paths are enough',
       'look for them with Glob too',
       'In **Layout**, add a row for each new folder',
+      `Leave out \`${TEST_BRAND.stateDir}/\` and dependency, build and cache folders, at either level`,
+      'as the seeded map does, and keep the table to 40 rows, the last saying how many more folders there are',
       'Fill in each empty Purpose cell',
       'In **Entry points**',
+      'keeping the list to 20 lines, the last saying how many more there are',
       'Keep **Overview** to a few lines',
       'Never write between the two marker lines under **Index**',
       'Keep the text the user wrote',
       'If it is missing, create it',
+      'which holds only the two marker lines',
       'Report what changed as a short list',
     ]) {
       expect(skill).toContain(step);
     }
+  });
+
+  it('leaves out of the Layout exactly the folders the seed leaves out', () => {
+    const skill = moduleContent(TREE, 'architecture-map', SKILL);
+    const layout = skill.split('\n').find((line) => line.startsWith('3. ')) ?? '';
+    const named = [...layout.matchAll(/`([^`/]+)\/`/g)].map(([, name]) => name);
+    expect(named).toHaveLength(LEFT_OUT_FOLDERS.size + 1);
+    expect(new Set(named)).toEqual(new Set([TEST_BRAND.stateDir, ...LEFT_OUT_FOLDERS]));
+  });
+
+  it("names the Index's marker lines as the seeded map writes them, for a map it creates", () => {
+    const skill = moduleContent(TREE, 'architecture-map', SKILL);
+    const map = moduleContent(TREE, 'architecture-map', MAP);
+    const markers = map.split('\n').filter((line) => line.startsWith(`<!-- ${TEST_BRAND.markerPrefix}:`));
+    expect(markers).toHaveLength(2);
+    for (const marker of markers) expect(skill).toContain(`\`${marker}\``);
   });
 
   it('tells agents to check the map before creating anything and to update it afterwards', () => {

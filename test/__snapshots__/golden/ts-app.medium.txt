@@ -10,8 +10,8 @@
 78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7  state        .acmekit/base/78aa3291b646c9377145ceeffa2db3e32dd432c8d1b69ba7ec8d5b95083270d7
 863aa344b1d719be44b9cd1b056ad390825da91cb77f8de1f652bfacd66fc7f3  state        .acmekit/base/863aa344b1d719be44b9cd1b056ad390825da91cb77f8de1f652bfacd66fc7f3
 86a04404b65e2118b5761b0faa92c54dfa99dd7b654e263dda73fe5b6287d4cc  state        .acmekit/base/86a04404b65e2118b5761b0faa92c54dfa99dd7b654e263dda73fe5b6287d4cc
+943ab638c867a7d998b0a0c8b2ce6b27f1ead4c80f4480af3ac72b6aedc41e17  state        .acmekit/base/943ab638c867a7d998b0a0c8b2ce6b27f1ead4c80f4480af3ac72b6aedc41e17
 96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1  state        .acmekit/base/96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1
-99408194f38bd7f9ad964927448b4e8e872b4bbca7f405c7e85b2e99ebbe22e6  state        .acmekit/base/99408194f38bd7f9ad964927448b4e8e872b4bbca7f405c7e85b2e99ebbe22e6
 9f26d35d9f3f9fb8eb08f2aca9d13eda706c0376bcad2fc62cb4b82cdff63d56  state        .acmekit/base/9f26d35d9f3f9fb8eb08f2aca9d13eda706c0376bcad2fc62cb4b82cdff63d56
 afd2a94d066fc1670fbeffc984dd72d35f0e58006dc803678a5b0cf76f2fcd2e  state        .acmekit/base/afd2a94d066fc1670fbeffc984dd72d35f0e58006dc803678a5b0cf76f2fcd2e
 beab0e8a02e38248bf3c8a2eea8dbbd29b4a2575038107b24811cd42fde5a4af  state        .acmekit/base/beab0e8a02e38248bf3c8a2eea8dbbd29b4a2575038107b24811cd42fde5a4af
@@ -20,7 +20,7 @@ c36b483b6893c8446c7149f858e2de81c843421eb167d7927eee2dd5717442c7  state        .
 fce4bb35997926a2d93b95e482b93cf28976f408278086e9133a050ab7bbdace  state        .acmekit/base/fce4bb35997926a2d93b95e482b93cf28976f408278086e9133a050ab7bbdace
 3a54c2f8ba3064f20de7ea095cfa1bf8354258b5999d81ec6091b3e811d67e98  state        .acmekit/config.json
 cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b  state        .acmekit/local/.gitignore
-3d90c21fedc5726a2135d12338cb0f4655d8a0f5da679efaa64026fad7f21130  state        .acmekit/lock.json
+e95a3d62f7a806b01859df1394a1dfc7e21013a3dbd0b0aefae51ce3e0b827f8  state        .acmekit/lock.json
 9f26d35d9f3f9fb8eb08f2aca9d13eda706c0376bcad2fc62cb4b82cdff63d56  owned        .claude/hooks/acmekit/format-on-edit.mjs
 96504a525dd2b0b6c9b96b246230b3612da40695535c634b20dc30f79c5f45f1  owned        .claude/hooks/acmekit/guard-bash.mjs
 343cfbecf0eab8a622de43d172727d19e0989861bf82146f941b310089e32703  owned        .claude/hooks/acmekit/guard-secrets.mjs
@@ -31,7 +31,7 @@ afd2a94d066fc1670fbeffc984dd72d35f0e58006dc803678a5b0cf76f2fcd2e  owned        .
 00c9f709e7abb10a8407b03b3f0ee00a06c669e92c08d92745837deb9acd847c  owned        .claude/skills/adr/SKILL.md
 528a7a9997d6681bc8f1a39466802519d29f1f0b202742d4b3320659a84a78d0  owned        .claude/skills/handoff/SKILL.md
 fce4bb35997926a2d93b95e482b93cf28976f408278086e9133a050ab7bbdace  owned        .claude/skills/new-feature/SKILL.md
-99408194f38bd7f9ad964927448b4e8e872b4bbca7f405c7e85b2e99ebbe22e6  owned        .claude/skills/update-map/SKILL.md
+943ab638c867a7d998b0a0c8b2ce6b27f1ead4c80f4480af3ac72b6aedc41e17  owned        .claude/skills/update-map/SKILL.md
 86a04404b65e2118b5761b0faa92c54dfa99dd7b654e263dda73fe5b6287d4cc  owned        .claude/skills/why/SKILL.md
 cd7366ce9cbf42d295cad1b0bfc1900a96028d33afe15008be380ab9bba0265c  blocks       .gitattributes
 491e2e47d3979f026ba67314885071414ac11c06d84e74857f6ba84cc6c98f0b  blocks       .gitignore
