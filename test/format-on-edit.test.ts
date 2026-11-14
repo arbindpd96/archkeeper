@@ -182,6 +182,21 @@ describe('format-on-edit (#37)', () => {
     expect([code, written.stdout, written.stderr]).toEqual([0, '', `${note}\n`]);
   });
 
+  it('sends the notes beside the lint errors it reports, on one quoted line that is not for Claude to fix', () => {
+    const dir = project({ formatters: ['prettier'], linters: ['eslint'] });
+    nodeTool(dir, 'prettier', "console.error('[error] Invalid configuration');\nprocess.exit(2);");
+    nodeTool(dir, 'eslint', "console.log('  1:7  error  x is unused');\nprocess.exit(1);", {
+      eslint: './bin/tool.js',
+    });
+    writeFiles(dir, { 'src/a.ts': 'export {};\n' });
+    expect(messageOf(edit(dir, 'src/a.ts')).split('\n')).toEqual([
+      header('src/a.ts'),
+      'Not for you to fix: "prettier exited 2"',
+      'eslint:',
+      '>   1:7  error  x is unused',
+    ]);
+  });
+
   it.skipIf(!canSymlink())('skips a hint it cannot record, with a note, and writes nothing elsewhere', () => {
     const dir = project({ formatters: ['prettier'] });
     const outside = tempDir();
