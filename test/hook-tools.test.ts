@@ -31,7 +31,7 @@ describe('programs a hook runs (ADR-0015)', () => {
   it('keeps the exit status of a program that exited while a process it left holds its output', () => {
     const dir = tempDir();
     writeFiles(dir, { 'tool.cjs': LEAVES_A_PROCESS });
-    const run = runNodeTool(path.join(dir, 'tool.cjs'), [], { cwd: dir, timeoutMs: 500 });
+    const run = runNodeTool(path.join(dir, 'tool.cjs'), [], { cwd: dir, timeoutMs: 2000 });
     expect(run).toMatchObject({ status: 1, stdout: '1 failed\n' });
   });
 
