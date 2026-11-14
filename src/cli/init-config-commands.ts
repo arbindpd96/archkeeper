@@ -14,14 +14,17 @@ type ToolPlan = Pick<Planned, 'modules' | 'hooksKept' | 'next'>;
 
 const shown = (command: readonly string[]): string => quoted(command.join(' '));
 
-// The hooks that run project tools once init is done: format-on-edit, and the stop check while checks.stop names a
-// command, this run's answer included.
+const hookNames = (hooks: readonly string[]): string =>
+  hooks.map((id) => (id === 'stop-check' ? 'the stop check' : id)).join(' and ');
+
+// The modules whose hooks run project tools once init is done: format-on-edit, and the stop check while checks.stop
+// names a command, this run's answer included.
 function toolHooks(planned: ToolPlan, brand: Brand): string[] {
   const stop = planned.next.config.options['stop-check']?.['checks.stop'];
   const stops = hookRuns(planned, 'stop-check', brand) && isStringList(stop) && stop.length > 0;
   return [
     ...(hookRuns(planned, 'format-on-edit', brand) ? ['format-on-edit'] : []),
-    ...(stops ? ['the stop check'] : []),
+    ...(stops ? ['stop-check'] : []),
   ];
 }
 
@@ -55,7 +58,7 @@ export function toolRisks(run: InitRun, planned: ToolPlan): Pick<Planned, 'shipp
 // Who put the tools there: the repository, where git tracks them, or anyone, where git cannot say.
 function shippedWarning({ folders, tracked }: ShippedFolders, hooks: readonly string[]): string {
   const named = folders.map((folder) => `${folder}/`).join(' and ');
-  const runs = hooks.join(' and ');
+  const runs = hookNames(hooks);
   if (tracked) {
     return `git tracks files in ${named}, so ${runs} would run tools this repository ships rather than ones you installed, without asking; delete those files and install your own unless you trust whoever committed them`;
   }
@@ -63,11 +66,17 @@ function shippedWarning({ folders, tracked }: ShippedFolders, hooks: readonly st
   return `git cannot say whether you installed the tools in ${named}, so ${runs} would run whatever is there, without asking; delete ${them} and install your own unless you trust where this project came from`;
 }
 
+// A hook the previous lock keeps for a module already left out runs until update removes it, so it gets no flag.
+function leaveOut(hooks: readonly string[], modules: readonly string[]): string {
+  const flags = hooks.filter((id) => modules.includes(id)).map((id) => `-${id}`);
+  return flags.length === 0 ? '' : ` with --modules ${flags.join(',')}`;
+}
+
 // Claude Code's sandbox wraps shell commands only, and runs command hooks with the user's full access, so what a
 // sandboxed command writes for a hook to run, such as a tool's config or a test, leaves the sandbox at the next edit.
-function sandboxWarning(settings: string, hooks: readonly string[]): string {
+function sandboxWarning(settings: string, hooks: readonly string[], modules: readonly string[]): string {
   const them = hooks.length === 1 ? 'it' : 'them';
-  return `Claude Code's sandbox is on in ${settings}, but hooks run outside it with your full access, so ${hooks.join(' and ')} would run, unsandboxed, what a sandboxed command writes in this project, such as a tool config, a package in node_modules or a test; leave ${them} out unless you accept that`;
+  return `Claude Code's sandbox is on in ${settings}, but hooks run outside it with your full access, so ${hookNames(hooks)} would run, unsandboxed, what a sandboxed command writes in this project, such as a tool config, a package in node_modules or a test; leave ${them} out${leaveOut(hooks, modules)} unless you accept that`;
 }
 
 // The warnings about the tools the hooks would run: those a repository ships, and, while the sandbox is on, whatever a
@@ -79,7 +88,7 @@ function toolWarnings(planned: Planned, brand: Brand): string[] {
   if (hooks.length === 0) return [];
   return [
     ...(shipped.folders.length > 0 ? [shippedWarning(shipped, hooks)] : []),
-    ...(sandboxOnIn === undefined ? [] : [sandboxWarning(sandboxOnIn, hooks)]),
+    ...(sandboxOnIn === undefined ? [] : [sandboxWarning(sandboxOnIn, hooks, planned.modules)]),
   ];
 }
 
