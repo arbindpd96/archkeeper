@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { accessSync, constants, statSync } from 'node:fs';
+import { constants as osConstants } from 'node:os';
 import path from 'node:path';
 import { isInside, realOrUndefined } from './project.js';
 
@@ -8,9 +9,9 @@ export const SHIM = /\.(?:cmd|bat)$/i;
 
 /**
  * What a program printed and how it ended: `status` is its exit code, even when it exited before its deadline ended the
- * wait, and null when it could not start, was killed, or printed past `maxBuffer`, which cuts its output. A program
- * that could not start leaves `stdout` and `stderr` undefined at run time, as spawnSync does, so read them only after
- * `status`, or by truth.
+ * wait, 128 plus the signal's number when a signal ended it on its own, and null when it could not start, was killed
+ * at its deadline, or printed past `maxBuffer`, which cuts its output. A program that could not start leaves `stdout`
+ * and `stderr` undefined at run time, as spawnSync does, so read them only after `status`, or by truth.
  */
 export interface ToolRun {
   readonly status: number | null;
@@ -59,9 +60,15 @@ export function runProgram(file: string, args: readonly string[], options: ToolO
     maxBuffer: options.maxBuffer ?? 1_048_576,
   });
   // spawnSync waits for the output pipes to close, so a process the program left holding them, such as a server a test
-  // started, makes it wait out the deadline after the program exited; that exit status still counts.
+  // started, makes it wait out the deadline after the program exited; that exit status still counts. A signal with no
+  // error ended the program on its own, such as a crash's SIGSEGV, so it exits as a shell reports it, 128 plus the
+  // signal's number, while the deadline's kill, a failed start and output past maxBuffer leave null.
   const cut = (run.error as NodeJS.ErrnoException | undefined)?.code === 'ENOBUFS';
-  return { status: cut ? null : run.status, stdout: run.stdout, stderr: run.stderr };
+  return {
+    status: cut ? null : !run.error && run.signal ? 128 + osConstants.signals[run.signal] : run.status,
+    stdout: run.stdout,
+    stderr: run.stderr,
+  };
 }
 
 /** Runs a Node.js tool's JS entry file with the Node.js that runs this hook, never with npx (ADR-0015). */
