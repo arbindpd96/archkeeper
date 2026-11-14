@@ -18,6 +18,7 @@ export interface ToolRun {
 export interface ToolOptions {
   readonly cwd: string;
   readonly timeoutMs?: number;
+  /** Its environment; by default this process's with colour off (`FORCE_COLOR=0`, `NO_COLOR=1`), as a hook reads it. */
   readonly env?: NodeJS.ProcessEnv;
   /** The most bytes stdout or stderr may hold; past it the program is stopped and its status is null. 1 MiB by default. */
   readonly maxBuffer?: number;
@@ -46,7 +47,7 @@ export function runProgram(file: string, args: readonly string[], options: ToolO
     stdio: ['ignore', 'pipe', 'pipe'],
     timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     windowsHide: true,
-    ...(options.env === undefined ? {} : { env: options.env }),
+    env: options.env ?? { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
     ...(options.maxBuffer === undefined ? {} : { maxBuffer: options.maxBuffer }),
   });
   const status = run.error === undefined ? run.status : null;
