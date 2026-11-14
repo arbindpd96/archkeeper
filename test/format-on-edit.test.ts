@@ -61,7 +61,9 @@ describe('format-on-edit (#37)', () => {
     const biome = nodeTool(dir, '@biomejs/biome', FORMAT, { biome: './bin/tool.js' });
     writeFiles(dir, { 'a.json': '{}\n' });
     expect(edit(dir, path.join(dir, 'a.json'))).toEqual({ kind: 'done' });
-    expect(logged(biome)).toEqual([['format', '--write', path.join(dir, 'a.json')]]);
+    expect(logged(biome)).toEqual([
+      ['format', '--write', '--no-errors-on-unmatched', path.join(dir, 'a.json')],
+    ]);
   });
 
   it.skipIf(onWindows)('runs ruff format, then ruff check --fix, on .py and .pyi files', () => {

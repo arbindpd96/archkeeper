@@ -19,8 +19,9 @@ interface ToolSpec {
 // Formatters change the file in place and their output is dropped; eslint reports errors and fixes nothing, and ruff
 // fixes what it fixes safely, then reports the rest. Formatters come first, prettier before biome. eslint's --quiet
 // also drops the warning for an ignored file, which then exits 0 under flat config and eslintrc alike; eslintrc
-// refuses --no-warn-ignored. prettier takes no Markdown: it would re-pad the kit's blocks in AGENTS.md and CLAUDE.md,
-// which would then no longer match the lock and read as the user's edits.
+// refuses --no-warn-ignored. biome exits 1 on a file its config or a VCS ignore file leaves out, "No files were
+// processed", unless told not to. prettier takes no Markdown: it would re-pad the kit's blocks in AGENTS.md and
+// CLAUDE.md, which would then no longer match the lock and read as the user's edits.
 const TOOLS: readonly ToolSpec[] = [
   {
     list: 'formatters',
@@ -29,7 +30,13 @@ const TOOLS: readonly ToolSpec[] = [
     takes: `${SCRIPTS} ${DATA} .json5 .scss .less .html .vue .yaml .yml`,
     args: '--write --ignore-unknown --log-level warn',
   },
-  { list: 'formatters', name: 'biome', node: true, takes: `${SCRIPTS} ${DATA}`, args: 'format --write' },
+  {
+    list: 'formatters',
+    name: 'biome',
+    node: true,
+    takes: `${SCRIPTS} ${DATA}`,
+    args: 'format --write --no-errors-on-unmatched',
+  },
   { list: 'formatters', name: 'ruff', node: false, takes: '.py .pyi', args: 'format --force-exclude' },
   { list: 'linters', name: 'eslint', node: true, takes: SCRIPTS, args: '--quiet' },
   { list: 'linters', name: 'ruff', node: false, takes: '.py .pyi', args: 'check --fix --force-exclude' },
