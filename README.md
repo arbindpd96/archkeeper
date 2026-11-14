@@ -171,8 +171,8 @@ Trust these commands as you trust your `package.json` scripts: the hooks run the
 | Feature memory: `/new-feature`, `/handoff`           |      ✓      |     ✓     |      ✓      |
 | Decision records: `/why`, `/adr`                     |             |     ✓     |      ✓      |
 | Architecture map: `/update-map`                      |             |     ✓     |      ✓      |
-| Format and lint every edited file                    |             |     ✓     |      ✓      |
-| Run the tests before Claude calls a task done        |             |           |      ✓      |
+| Format and lint edits where a formatter is found     |             |     ✓     |      ✓      |
+| Opt-in test run before Claude calls a task done      |             |           |      ✓      |
 | Loaded into every session, at most                   | 1.5k tokens | 3k tokens | 4.5k tokens |
 
 Choose one with `--preset small|medium|full`, or add and remove single parts with `--modules +knowledge,-format-on-edit`.
