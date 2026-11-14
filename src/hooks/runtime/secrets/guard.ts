@@ -6,7 +6,7 @@ import { isEnvFileName } from '../env-files.js';
 import { guardFileMatch } from '../guard-files.js';
 import { type Answer, type HookInput, noAnswer, permission, stringField } from '../io.js';
 import type { HookContext, HookModule, Sample } from '../launch.js';
-import { isInside, slashed } from '../project.js';
+import { isInside, realOrUndefined, slashed } from '../project.js';
 import { editedText, type Edit, editsOf, writtenText } from './edits.js';
 import { locate, type Location, MAX_CHECKED_SIZE, readTarget } from './target.js';
 
@@ -80,6 +80,38 @@ const envName = (location: Location): string | undefined =>
 const isGuardFile = (location: Location): boolean =>
   namesOf(location).some((name) => guardFileMatch(slashed(name).toLowerCase().split('/')) === 'inside');
 
+// The folders at the project root that format-on-edit and the stop check take the tools they run from (#37, #38).
+const TOOL_FOLDERS = ['node_modules', '.venv'];
+
+// Whether a write lands in one of them, by its path under the project or its real path under the project's, compared
+// in lower case, since a case-insensitive file system finds Node_Modules as node_modules.
+function inToolFolder(location: Location, projectDir: string): boolean {
+  const real = 'real' in location ? location.real : null;
+  const names: [root: string | undefined, name: string | null][] = [
+    [projectDir, location.file],
+    [realOrUndefined(projectDir), real],
+  ];
+  return names.some(([root, name]) => {
+    if (root === undefined || name === null) return false;
+    const first = slashed(path.relative(root, name)).toLowerCase().split('/')[0] ?? '';
+    return TOOL_FOLDERS.includes(first);
+  });
+}
+
+// Asks before a write to the files that keep the guards running, or to the tools the hooks run, which a changed copy
+// would replace at Claude's next edit or stop.
+function judgeHookFiles(location: Location, file: string, projectDir: string): Answer | null {
+  if (isGuardFile(location)) {
+    return ask(
+      `${file} keeps the guards running or holds their options. Confirm with the user before changing it.`,
+    );
+  }
+  if (!inToolFolder(location, projectDir)) return null;
+  return ask(
+    `${file} is in a folder the format-on-edit and stop-check hooks run tools from. Confirm with the user before changing it.`,
+  );
+}
+
 function judgeWrite(
   toolInput: Readonly<Record<string, unknown>>,
   location: Location,
@@ -118,11 +150,7 @@ function judge(input: HookInput, context: HookContext): Answer | null {
     return ask(`${escapeUnprintable(name)} holds secrets. Confirm with the user before editing it.`);
   }
   const file = shown(location.file, context.projectDir);
-  const verdict = judgeWrite(toolInput, location, file);
-  if (verdict !== null || !isGuardFile(location)) return verdict;
-  return ask(
-    `${file} keeps the guards running or holds their options. Confirm with the user before changing it.`,
-  );
+  return judgeWrite(toolInput, location, file) ?? judgeHookFiles(location, file, context.projectDir);
 }
 
 function answer(input: HookInput, context: HookContext): Answer {

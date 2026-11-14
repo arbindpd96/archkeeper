@@ -26,7 +26,7 @@ A force-push to a named main or master is denied, `git send-pack --force` includ
 
 ## guard-secrets
 
-guard-secrets runs before every Write, Edit, MultiEdit and NotebookEdit. It denies a likely secret, such as a cloud, GitHub, Anthropic, OpenAI, Slack, Stripe, Google or npm key, a private key, a JWT, a URL with a password, or a random-looking value assigned to a name such as `API_KEY`, `*_SECRET`, `*_TOKEN` or `*PASSWORD`, and names the rule and the file but never the value. It asks before any edit to a `.env`, `.env.*` or `.envrc` file, templates such as `.env.example` aside.
+guard-secrets runs before every Write, Edit, MultiEdit and NotebookEdit. It denies a likely secret, such as a cloud, GitHub, Anthropic, OpenAI, Slack, Stripe, Google or npm key, a private key, a JWT, a URL with a password, or a random-looking value assigned to a name such as `API_KEY`, `*_SECRET`, `*_TOKEN` or `*PASSWORD`, and names the rule and the file but never the value. It asks before any edit to a `.env`, `.env.*` or `.envrc` file, templates such as `.env.example` aside. It also asks before an edit to a file in `node_modules/` or `.venv/` at the project root, judged by both the given path and its real path, since format-on-edit and the stop check take the tools they run from there, so a tool changed there would run at Claude's next edit or stop.
 
 The assignment rule needs at least 20 characters (32 for a hex value) with letters, digits and enough entropy. It skips values that hold a placeholder word such as `example`, `test`, `your` or `here`, and names such as `key`, `integrity` or `checksum`, so placeholders and lockfile hashes pass.
 
