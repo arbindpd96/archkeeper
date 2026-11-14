@@ -89,6 +89,11 @@ export interface StackProfile {
   readonly frameworks: readonly string[];
   /** Whether the root declares workspaces; reported only. */
   readonly monorepo: boolean;
+  /**
+   * Set when the root holds Yarn Plug'n'Play's loader, `.pnp.cjs` or Yarn 2's `.pnp.js`: Yarn then installs no
+   * `node_modules`, so npm cannot run a script's bins and the hooks find no tool there.
+   */
+  readonly pnp?: true;
   readonly commands: readonly DetectedCommand[];
   /** Project docs at the root that instructions may point to, such as `README.md`. */
   readonly docs: readonly string[];

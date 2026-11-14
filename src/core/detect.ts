@@ -72,6 +72,7 @@ export function detectStack(view: ProjectView): StackProfile {
       found.flatMap((signals) => signals.frameworks),
     ),
     monorepo: found.some((signals) => signals.monorepo),
+    ...(node?.pnp === true ? { pnp: true } : {}),
     commands: found.flatMap((signals) => signals.commands),
     docs: docNames(names),
     claude: claudeSetup(view, names),

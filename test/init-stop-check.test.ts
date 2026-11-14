@@ -88,6 +88,14 @@ describe('init asks to turn on the stop check in full (#38, ADR-0015)', () => {
     expect(result.stdout).not.toContain('--stop-check');
   });
 
+  it("asks nothing in a Yarn Plug'n'Play project, which leaves no node_modules for npm to run the script from", async () => {
+    const { dir } = fixtureCopy('ts-app');
+    writeFiles(dir, { '.pnp.cjs': '' });
+    const result = await runInit(dir, [], { interactive: true, answers: ['full', 'no', true] });
+    expect(result.asked.slice(2)).toEqual(['Apply this plan?']);
+    expect(result.stdout).toContain(`The stop check is off: set checks.stop in ${CONFIG}.\n`);
+  });
+
   it.each(['react-scripts test', 'ng test', 'jest --watch'])(
     'asks nothing where the test script, %j, starts a watcher that never exits',
     async (script) => {
@@ -182,6 +190,17 @@ describe('init sets the stop check in a scripted run only with --stop-check (#38
     expect(result.code).toBe(1);
     expect(result.stderr).toContain(NO_TEST_COMMAND);
     expect(result.stderr).toContain(`"checks.stop" in options.stop-check in ${CONFIG}`);
+  });
+
+  it("refuses the flag in a Yarn Plug'n'Play project, naming the linker that lets npm run the test script", async () => {
+    const { dir } = fixtureCopy('ts-app');
+    writeFiles(dir, { '.pnp.cjs': '' });
+    const result = await runInit(dir, ['--yes', '--preset', 'full', '--stop-check']);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain(
+      "--stop-check: found no test command: Yarn Plug'n'Play installs no node_modules for npm to run the test script from, and no pytest",
+    );
+    expect(result.stderr).toContain('set nodeLinker: node-modules in .yarnrc.yml and run yarn install');
   });
 
   it('refuses the flag where the only test script starts a watcher', async () => {

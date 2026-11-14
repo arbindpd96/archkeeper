@@ -137,6 +137,17 @@ describe('detectStack', () => {
     expect(testCommandOf(script)).toEqual({ stack: 'ts', purpose: 'test', command: 'npm run test' });
   });
 
+  it.each(['.pnp.cjs', '.pnp.js'])(
+    "marks a project whose root holds Yarn Plug'n'Play's loader, %s, which installs no node_modules",
+    (loader) => {
+      expect(detectIn({ 'package.json': '{}', [loader]: '' }).pnp).toBe(true);
+    },
+  );
+
+  it("says nothing of Plug'n'Play in a project without its loader", () => {
+    expect(detectIn({ 'package.json': '{}', 'yarn.lock': '' })).not.toHaveProperty('pnp');
+  });
+
   it('formats with black when a project has both black and ruff, which it then uses to lint', () => {
     const pyproject = '[tool.black]\nline-length = 100\n\n[tool.ruff]\nselect = ["E"]\n';
     const commands = detectIn({ 'pyproject.toml': pyproject }).commands.map((command) => command.command);

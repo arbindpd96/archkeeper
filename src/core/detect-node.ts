@@ -34,6 +34,7 @@ const NPM_PLACEHOLDER = 'no test specified';
 const WATCHES = /\b(?:react-scripts|ng) test\b|--watch(?:All)?(?:=true)?(?![\w=-])/;
 const WATCH_OFF = /--(?:no-watch|watch(?:All)?=false)(?![\w-])/;
 const WORKSPACE_FILES = ['pnpm-workspace.yaml', 'lerna.json', 'nx.json', 'turbo.json', 'rush.json'];
+const PNP_LOADERS = ['.pnp.cjs', '.pnp.js'];
 const SCRIPT_NAMES: Readonly<Record<CommandPurpose, readonly string[]>> = {
   build: ['build'],
   test: ['test'],
@@ -162,11 +163,14 @@ function language(names: readonly string[], packages: ReadonlySet<string>): Lang
   return names.includes('tsconfig.json') || packages.has('typescript') ? 'typescript' : 'javascript';
 }
 
-/** The JS/TS package manager and signals of a project root, or undefined when it has no package.json (#25). */
+/**
+ * The JS/TS package manager, whether Yarn Plug'n'Play installs the packages, and the signals of a project root, or
+ * undefined when it has no package.json (#25).
+ */
 export function nodeSignals(
   view: ProjectView,
   names: readonly string[],
-): (StackSignals & { readonly packageManager: string }) | undefined {
+): (StackSignals & { readonly packageManager: string; readonly pnp: boolean }) | undefined {
   const text = names.includes(PACKAGE_JSON) ? view.read(PACKAGE_JSON) : undefined;
   if (text === undefined) return undefined;
   const warnings: ProblemReport[] = [];
@@ -178,6 +182,7 @@ export function nodeSignals(
   return {
     languages: [language(names, facts.packages)],
     packageManager: manager,
+    pnp: names.some((name) => PNP_LOADERS.includes(name)),
     tools: tools.map(([tool]) => tool),
     frameworks: NODE_FRAMEWORKS.filter((framework) => facts.packages.has(framework)),
     monorepo: facts.workspaces || WORKSPACE_FILES.some((file) => names.includes(file)),
