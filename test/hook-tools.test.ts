@@ -10,6 +10,8 @@ const PRINT_COLOUR = 'process.stdout.write(`${process.env.FORCE_COLOR}|${process
 const LEAVES_A_PROCESS =
   "require('node:child_process').spawn(process.execPath, ['-e', 'setTimeout(() => {}, 4000)'], { stdio: 'inherit', detached: true }).unref();\nconsole.log('1 failed');\nprocess.exit(1);";
 const IGNORES_SIGTERM = "process.on('SIGTERM', () => {});\nsetTimeout(() => process.exit(1), 5000);";
+// A crash, or the OOM killer, ends a program with a signal no deadline sent.
+const KILLS_ITSELF = "require('node:fs').writeSync(1, 'crashed\\n');\nprocess.kill(process.pid, 'SIGKILL');";
 
 describe('programs a hook runs (ADR-0015)', () => {
   it('runs a Node.js tool through the Node.js that runs the hook, with no shell', () => {
@@ -43,6 +45,16 @@ describe('programs a hook runs (ADR-0015)', () => {
     expect(run.status).toBeNull();
     expect(Date.now() - started).toBeLessThan(4000);
   });
+
+  it.skipIf(onWindows)(
+    'gives a program a signal ended on its own 128 plus the signal number, as a shell does',
+    () => {
+      const dir = tempDir();
+      writeFiles(dir, { 'tool.cjs': KILLS_ITSELF });
+      const run = runNodeTool(path.join(dir, 'tool.cjs'), [], { cwd: dir });
+      expect(run).toMatchObject({ status: 137, stdout: 'crashed\n' });
+    },
+  );
 
   it('stops a program that prints more than maxBuffer bytes, with no status', () => {
     const dir = tempDir();
