@@ -6,7 +6,11 @@ import { type ProjectView, recordOf, type StackProfile, stackSummary } from './s
 import { type TemplateScope, unsafeValue } from './template.js';
 import { compareText, UNPRINTABLE } from './text.js';
 
-const LEFT_OUT = new Set([
+/**
+ * The folder names the map's Layout leaves out at either level, besides the state folder: dependency, build and cache
+ * folders, which `/update-map` tells Claude to leave out too.
+ */
+export const LEFT_OUT_FOLDERS: ReadonlySet<string> = new Set([
   'node_modules',
   '.yarn',
   'bower_components',
@@ -77,7 +81,7 @@ function rowOf(folder: string): string {
 
 function listed(folder: string, brand: Brand): boolean {
   const names = folder.slice(0, -1).split('/');
-  const leftOut = names.some((name) => LEFT_OUT.has(name) || name === brand.stateDir);
+  const leftOut = names.some((name) => LEFT_OUT_FOLDERS.has(name) || name === brand.stateDir);
   return !leftOut && writable([folder], rowOf(folder), brand);
 }
 
