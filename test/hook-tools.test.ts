@@ -6,6 +6,10 @@ import { tempDir, writeFiles } from './helpers.js';
 
 const onWindows = process.platform === 'win32';
 const PRINT_COLOUR = 'process.stdout.write(`${process.env.FORCE_COLOR}|${process.env.NO_COLOR}`);';
+// A test run that fails at once, leaving a process that holds its output for 4 seconds, as a server it started would.
+const LEAVES_A_PROCESS =
+  "require('node:child_process').spawn(process.execPath, ['-e', 'setTimeout(() => {}, 4000)'], { stdio: 'inherit', detached: true }).unref();\nconsole.log('1 failed');\nprocess.exit(1);";
+const IGNORES_SIGTERM = "process.on('SIGTERM', () => {});\nsetTimeout(() => process.exit(1), 5000);";
 
 describe('programs a hook runs (ADR-0015)', () => {
   it('runs a Node.js tool through the Node.js that runs the hook, with no shell', () => {
@@ -22,6 +26,22 @@ describe('programs a hook runs (ADR-0015)', () => {
     expect(runNodeTool(entry, [], { cwd: dir }).stdout).toBe('0|1');
     const env = { ...process.env, FORCE_COLOR: '3', NO_COLOR: '' };
     expect(runNodeTool(entry, [], { cwd: dir, env }).stdout).toBe('3|');
+  });
+
+  it('keeps the exit status of a program that exited while a process it left holds its output', () => {
+    const dir = tempDir();
+    writeFiles(dir, { 'tool.cjs': LEAVES_A_PROCESS });
+    const run = runNodeTool(path.join(dir, 'tool.cjs'), [], { cwd: dir, timeoutMs: 500 });
+    expect(run).toMatchObject({ status: 1, stdout: '1 failed\n' });
+  });
+
+  it('kills a program that ignores SIGTERM at its deadline, with no status', () => {
+    const dir = tempDir();
+    writeFiles(dir, { 'tool.cjs': IGNORES_SIGTERM });
+    const started = Date.now();
+    const run = runNodeTool(path.join(dir, 'tool.cjs'), [], { cwd: dir, timeoutMs: 1000 });
+    expect(run.status).toBeNull();
+    expect(Date.now() - started).toBeLessThan(4000);
   });
 
   it('stops a program that prints more than maxBuffer bytes, with no status', () => {
