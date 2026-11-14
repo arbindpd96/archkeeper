@@ -55,7 +55,9 @@ export function trackedFolders(root: string, folders: readonly string[]): string
   const found: string[] = [];
   for (const folder of folders) {
     const listed = git(['ls-files', '-z', '--', `:(icase)${folder}`]);
-    if (listed.stdout !== '') found.push(folder);
+    // Names before status: a folder git tracks in full prints past the 4 KiB read, which stops git with no status. A
+    // git that could not start printed nothing, and its output is undefined, as spawnSync leaves it, so test by truth.
+    if (listed.stdout) found.push(folder);
     else if (listed.status !== 0) return undefined;
   }
   return found;

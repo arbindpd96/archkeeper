@@ -176,4 +176,13 @@ describe('trackedFolders (#37, #38)', () => {
   it('gives no answer outside a repository', () => {
     expect(trackedFolders(tempDir(), ['.venv'])).toBeUndefined();
   });
+
+  it.skipIf(process.platform === 'win32')('gives no answer when the git it finds cannot start', () => {
+    const repo = tempRepo({ 'src/a.ts': '' });
+    const bin = tempDir();
+    writeFiles(bin, { git: '#!/nonexistent/interpreter\n' });
+    chmodSync(path.join(bin, 'git'), 0o755);
+    stubEnv('PATH', bin);
+    expect(trackedFolders(repo, ['node_modules', '.venv'])).toBeUndefined();
+  });
 });
