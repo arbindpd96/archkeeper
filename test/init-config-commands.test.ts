@@ -83,7 +83,7 @@ describe('init names the commands a config has the hooks run (#37, #38, ADR-0015
     );
     expect(result.asked.slice(1)).toEqual([QUESTION, 'Apply this plan?']);
     expect(result.stdout).toContain(
-      `The stop check still runs "pytest" before Claude stops, until update removes its hook; to turn it off now, set checks.stop in ${CONFIG} to [].`,
+      `The stop check still runs "pytest" before Claude stops, until update removes its hook; to turn it off now, set checks.stop under options.stop-check in ${CONFIG} to [].`,
     );
   });
 
