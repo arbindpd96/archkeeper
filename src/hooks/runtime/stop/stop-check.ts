@@ -78,7 +78,6 @@ function ran(check: Check, tool: ProjectTool, args: readonly string[]): Answer {
   const run = runProjectTool(tool, args, {
     cwd: check.projectDir,
     timeoutMs: check.seconds * 1000,
-    env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
     maxBuffer: 16_000_000,
   });
   const fingerprint = changeFingerprint(check.projectDir, check.command) ?? check.fingerprint;

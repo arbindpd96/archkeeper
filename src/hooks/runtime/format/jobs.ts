@@ -101,8 +101,7 @@ function runJob(job: Job, { edited, projectDir, results }: Batch, remainingMs: n
     results.skipped.push({ job, why: 'missing' in found ? `not found in ${found.missing}` : found.refused });
     return;
   }
-  const env = { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' };
-  const options = { cwd: projectDir, timeoutMs: remainingMs, env };
+  const options = { cwd: projectDir, timeoutMs: remainingMs };
   const run = runProjectTool(found.tool, [...found.args, edited.file], options);
   if (run.status === 0) return;
   const exited =
