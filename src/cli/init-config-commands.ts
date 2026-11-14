@@ -2,17 +2,14 @@ import type { Brand } from '../core/brand.js';
 import { configPath } from '../core/config.js';
 import { isCommandList, isStringList, quoted } from '../core/text.js';
 import type { Asking } from './init-answers.js';
-import type { Planned } from './init-run.js';
+import { hookRuns, type Planned } from './init-run.js';
 
 const shown = (command: readonly string[]): string => quoted(command.join(' '));
 
-// The value the config on disk gives an option of a module whose hook runs: one selected in this run, or one left out
-// whose bundle the previous lock still owns, since init removes nothing it installed. This run's answers, such as a
-// yes to the stop check, are not on disk yet.
+// The value the config on disk gives an option of a module whose hook runs once init is done. This run's answers, such
+// as a yes to the stop check, are not on disk yet.
 function onDisk(planned: Planned, module: string, option: string, brand: Brand): unknown {
-  const runs =
-    planned.modules.includes(module) || planned.hooksKept.includes(`${brand.hookDir}/${module}.mjs`);
-  return runs ? planned.existing?.config.options[module]?.[option] : undefined;
+  return hookRuns(planned, module, brand) ? planned.existing?.config.options[module]?.[option] : undefined;
 }
 
 /**

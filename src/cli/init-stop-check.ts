@@ -6,14 +6,11 @@ import type { StackProfile } from '../core/stack-profile.js';
 import { isStringList, quoted } from '../core/text.js';
 import { gitFix } from './init-answers.js';
 import type { ConfigAnswers } from './init-config.js';
-import type { InitRun, Planned } from './init-run.js';
+import { hookRuns, type InitRun, isSelected, type Planned } from './init-run.js';
 import type { Settled } from './init-tools.js';
 
 const MODULE = 'stop-check';
 const OPTION = 'checks.stop';
-
-const selected = (settled: Settled): boolean =>
-  settled.resolution.modules.some((kit) => kit.manifest.id === MODULE);
 
 /**
  * The test command init proposes for the stop check (#38): the package.json `test` script through npm, whatever the
@@ -50,7 +47,7 @@ function warnKept(run: InitRun, kept: readonly string[], detected: readonly stri
 // already runs.
 function flagged(run: InitRun, settled: Settled, profile: StackProfile): ConfigAnswers['options'] {
   const where = `options.${MODULE} in ${configPath(run.brand)}`;
-  if (!selected(settled)) {
+  if (!isSelected(settled, MODULE)) {
     refuseFlag(
       'needs the stop-check module, which only the full preset has',
       `pass --preset full or --modules +stop-check; ${where} holds its command`,
@@ -100,7 +97,12 @@ export async function stopCheckOptions(
   }
   const own = settled.next.config.options[MODULE] ?? {};
   const proposed = proposedStopCommand(profile, settled);
-  if (!run.asking.interactive || !selected(settled) || Object.hasOwn(own, OPTION) || proposed === undefined) {
+  if (
+    !run.asking.interactive ||
+    !isSelected(settled, MODULE) ||
+    Object.hasOwn(own, OPTION) ||
+    proposed === undefined
+  ) {
     return undefined;
   }
   const question = `Turn on the stop check? Before Claude stops, it runs ${quoted(proposed.join(' '))}, and so the code Claude wrote, without asking. The command must exit on its own, with no watch mode.`;
@@ -125,10 +127,9 @@ function offStep(planned: Planned, where: string): string {
  */
 export function stopCheckSteps(planned: Planned, brand: Brand): string[] {
   const selected = planned.modules.includes(MODULE);
-  const kept = planned.hooksKept.includes(`${brand.hookDir}/${MODULE}.mjs`);
   const command = planned.next.config.options[MODULE]?.[OPTION];
   const where = `${OPTION} in ${configPath(brand)}`;
-  if (!selected && !kept) return [];
+  if (!hookRuns(planned, MODULE, brand)) return [];
   if (selected && command === undefined) return [offStep(planned, where)];
   if (!isStringList(command) || command.length === 0) return [];
   const runs = quoted(command.join(' '));
