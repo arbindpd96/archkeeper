@@ -37,7 +37,8 @@ function hintsOf(skipped: Results['skipped']): Hint[] {
   }));
 }
 
-// Each hint shows once on a machine: one that cannot be recorded is skipped, so it never repeats on every edit.
+// Each hint shows once on a machine: one that cannot be recorded is skipped, so it never repeats on every edit, with a
+// note after the run's own, which a state folder that cannot be written would otherwise hide on every edit.
 function withHints(projectDir: string, hints: readonly Hint[], note: string | undefined): Answer {
   const shown = hints.length === 0 ? new Set<string>() : shownHints(projectDir);
   const fresh = hints.filter(
@@ -45,7 +46,11 @@ function withHints(projectDir: string, hints: readonly Hint[], note: string | un
   );
   if (fresh.length === 0) return noAnswer(note);
   const saved = recordShown(projectDir, shown, fresh);
-  if (!saved.written) return noAnswer(`format-on-edit: skipped a hint: ${slashed(saved.problem)}`);
+  if (!saved.written) {
+    return noAnswer(
+      `${note === undefined ? '' : `${note}; `}format-on-edit: skipped a hint: ${slashed(saved.problem)}`,
+    );
+  }
   const head = `${BRAND.displayName} format-on-edit skipped these; install the project's dependencies or fix the config:`;
   return systemMessage([head, ...fresh.map((hint) => `- ${hint.text}`)].join('\n'), note);
 }
