@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { configCommandWarnings } from '../src/cli/init-config-commands.js';
 import type { Planned } from '../src/cli/init-run.js';
-import { fixtureCopy, writeFiles } from './helpers.js';
+import { fixtureCopy, tempDir, writeFiles } from './helpers.js';
 import { projectText } from './install-helpers.js';
 import { runInit } from './init-helpers.js';
 import { TEST_BRAND } from './kit-fixtures.js';
@@ -140,5 +140,42 @@ describe('init names the commands a config has the hooks run (#37, #38, ADR-0015
     expect([flagged.code, medium.code]).toEqual([0, 0]);
     expect(flagged.stderr).not.toContain('without asking');
     expect(medium.stderr).not.toContain('without asking');
+  });
+});
+
+describe("init warns while Claude Code's sandbox is on, since hooks run outside it (#37, #38)", () => {
+  const SANDBOX_ON = JSON.stringify({ sandbox: { enabled: true } });
+  const sandboxWarning = (settings: string, runs: string): string =>
+    `Claude Code's sandbox is on in ${settings}, but hooks run outside it with your full access, so ${runs} would run, unsandboxed, what a sandboxed command writes in this project, such as a tool config, a package in node_modules or a test;`;
+
+  it('names the project settings that turn it on and each hook that runs tools, and asks on a terminal', async () => {
+    const { dir } = fixtureCopy('py-app');
+    writeFiles(dir, { '.claude/settings.local.json': SANDBOX_ON });
+    const scripted = await runInit(dir, ['--yes', '--preset', 'full', '--stop-check', '--dry-run']);
+    expect(scripted.stderr).toContain(
+      sandboxWarning('.claude/settings.local.json', 'format-on-edit and the stop check'),
+    );
+    const setup = { interactive: true, answers: ['no', false] };
+    const result = await runInit(dir, ['--preset', 'medium'], setup);
+    expect(result.code).toBe(1);
+    expect(result.asked.slice(1)).toEqual([QUESTION]);
+  });
+
+  it("reads the user's settings, unless the project's own turn the sandbox off", async () => {
+    const home = tempDir();
+    writeFiles(home, { '.claude/settings.json': SANDBOX_ON });
+    const user = await runInit(fixtureCopy('py-app').dir, ['--yes'], { home });
+    expect(user.stderr).toContain(sandboxWarning('~/.claude/settings.json', 'format-on-edit'));
+    const { dir } = fixtureCopy('py-app');
+    writeFiles(dir, { '.claude/settings.json': JSON.stringify({ sandbox: { enabled: false } }) });
+    expect((await runInit(dir, ['--yes'], { home })).stderr).not.toContain('sandbox');
+  });
+
+  it('says nothing of the sandbox while no hook runs project tools', async () => {
+    const { dir } = fixtureCopy('py-app');
+    writeFiles(dir, { '.claude/settings.local.json': SANDBOX_ON });
+    const result = await runInit(dir, ['--yes', '--preset', 'small']);
+    expect(result.code).toBe(0);
+    expect(result.stderr).not.toContain('sandbox');
   });
 });

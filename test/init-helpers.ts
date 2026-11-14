@@ -7,7 +7,7 @@ import { main } from '../src/cli/main.js';
 import type { Prompter } from '../src/cli/prompts.js';
 import { type Catalog, type KitModule, loadCatalog, type ReadKitFile } from '../src/core/loader.js';
 import { render, type RenderTree } from '../src/core/render.js';
-import { fixtureCopy, REPO_ROOT, writeFiles } from './helpers.js';
+import { fixtureCopy, REPO_ROOT, tempDir, writeFiles } from './helpers.js';
 import { filesUnder } from './install-helpers.js';
 import { TEST_BRAND } from './kit-fixtures.js';
 
@@ -125,7 +125,7 @@ export interface InitSetup {
   readonly whileAsking?: (question: string) => void;
   /** The kit version to run as, such as a newer one after an upgrade. */
   readonly version?: string;
-  /** The home folder to run with, so a test never involves the real one. */
+  /** The home folder to run with, a fresh empty one by default, so no real or repository settings reach init. */
   readonly home?: string;
 }
 
@@ -180,7 +180,7 @@ export async function runInit(
     loadKit: () => setup.catalog ?? KIT,
     brand: TEST_BRAND,
     cwd: dir,
-    home: setup.home ?? REPO_ROOT,
+    home: setup.home ?? tempDir(),
     interactive: setup.interactive ?? false,
     prompter: scriptedPrompter(setup, (question, initial) => {
       asked.push(question);

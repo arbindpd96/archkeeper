@@ -25,7 +25,7 @@ import {
   stackFlag,
 } from './init-answers.js';
 import { type ExistingConfig, readExistingConfig, withConfig } from './init-config.js';
-import { configCommandWarnings, goOnWithCommands, shippedToolFolders } from './init-config-commands.js';
+import { configCommandWarnings, goOnWithCommands, toolRisks } from './init-config-commands.js';
 import { plannedWrites } from './apply.js';
 import { applyPlanned, finishDryRun } from './init-finish.js';
 import {
@@ -198,10 +198,10 @@ async function planInit(
   const plan = withConfig(installPlan, next, existing, run.brand);
   const written = plannedWrites(run.rootReal, plan, run.brand);
   const hooksKept = ownedHooks(lock, run.brand);
-  const shipped = shippedToolFolders(run, { modules, hooksKept, next });
+  const risks = toolRisks(run, { modules, hooksKept, next });
   const { dropped } = resolution;
   const planned = { profile, existing, next, stack, modules, dropped, tree, plan, written, optedOut };
-  return { ...planned, hooksKept, shipped };
+  return { ...planned, hooksKept, ...risks };
 }
 
 function planListing(run: InitRun, planned: Planned): string[] {
