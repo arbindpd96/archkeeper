@@ -18,9 +18,10 @@ const ECHO = 'process.stdout.write(JSON.stringify(process.argv.slice(2)));\n';
 const REFUSED_NAMES = [
   ...'sh bash zsh dash ksh fish csh tcsh cmd powershell pwsh'.split(' '),
   ...'env xargs sudo doas nohup timeout nice exec'.split(' '),
-  ...'npm npx pnpm yarn bun bunx deno corepack uv uvx pip pip3 pipx poetry pipenv pdm hatch rye conda'.split(
+  ...'npm npx pnpm yarn bun bunx deno corepack uv uvx pip pip3 pipx poetry pipenv pdm hatch rye pixi'.split(
     ' ',
   ),
+  ...'conda mamba micromamba'.split(' '),
   ...'tox nox pre-commit make just'.split(' '),
 ];
 

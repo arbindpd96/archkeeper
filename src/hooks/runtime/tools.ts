@@ -3,7 +3,6 @@ import { accessSync, constants, statSync } from 'node:fs';
 import path from 'node:path';
 import { isInside, realOrUndefined } from './project.js';
 
-const DEFAULT_TIMEOUT_MS = 10_000;
 /** An npm `.cmd` or `.bat` shim, which needs a shell on Windows (ADR-0015). */
 export const SHIM = /\.(?:cmd|bat)$/i;
 
@@ -20,6 +19,7 @@ export interface ToolRun {
 /** Where and how long a program runs, and how much it may print. */
 export interface ToolOptions {
   readonly cwd: string;
+  /** How long it may run, in milliseconds: 10,000 by default, a literal since each hook bundle counts its bytes. */
   readonly timeoutMs?: number;
   /** Its environment; by default this process's with colour off (`FORCE_COLOR=0`, `NO_COLOR=1`), as a hook reads it. */
   readonly env?: NodeJS.ProcessEnv;
@@ -50,7 +50,7 @@ export function runProgram(file: string, args: readonly string[], options: ToolO
     cwd: options.cwd,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
-    timeout: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    timeout: options.timeoutMs ?? 10_000,
     killSignal: 'SIGKILL',
     windowsHide: true,
     env: options.env ?? { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
