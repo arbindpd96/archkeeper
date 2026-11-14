@@ -10,6 +10,8 @@ const CONFIG = `${TEST_BRAND.stateDir}/config.json`;
 const QUESTION = 'Continue, letting the hooks run these commands?';
 const PAYLOAD = { 'stop-check': { 'checks.stop': ['node', '-e', 'x'] } };
 const STOP_WARNING = `checks.stop in ${CONFIG} runs "node -e x" before Claude stops, without asking; remove it unless you trust whoever wrote it`;
+const SHIPPED = 'git tracks files in .venv/, so format-on-edit would run tools this repository ships';
+const SHIPPED_WARNING = `${SHIPPED} rather than ones you installed, without asking; delete those files and install your own unless you trust whoever committed them`;
 
 /** ts-app with a config whose options name commands for the hooks, as a cloned repository may ship one. */
 function clonedWith(preset: string, options: object): string {
@@ -57,7 +59,12 @@ describe('init names the commands a config has the hooks run (#37, #38, ADR-0015
   it('names no format-on-edit commands from a value the hook would not run, such as one with an empty command', () => {
     const options = { 'format-on-edit': { commands: [['node', 'scripts/check.mjs'], []] } };
     const existing = { config: { options } };
-    const planned = { modules: ['format-on-edit'], existing, hooksKept: [] } as unknown as Planned;
+    const planned = {
+      modules: ['format-on-edit'],
+      existing,
+      hooksKept: [],
+      shipped: [],
+    } as unknown as Planned;
     expect(configCommandWarnings(planned, TEST_BRAND)).toEqual([]);
   });
 
@@ -76,6 +83,34 @@ describe('init names the commands a config has the hooks run (#37, #38, ADR-0015
     expect(result.stdout).toContain(
       `The stop check still runs "pytest" before Claude stops, until update removes its hook; to turn it off now, set checks.stop in ${CONFIG} to [].`,
     );
+  });
+
+  it('warns and asks when git tracks files in .venv, where format-on-edit would find its ruff', async () => {
+    const { dir } = fixtureCopy('py-app');
+    writeFiles(dir, { '.venv/bin/ruff': '#!/bin/sh\n' });
+    const before = projectText(dir);
+    const setup = { interactive: true, answers: ['no', false], shipped: ['.venv'] };
+    const result = await runInit(dir, ['--preset', 'medium'], setup);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain(SHIPPED_WARNING);
+    expect(result.asked.slice(1)).toEqual([QUESTION]);
+    expect(projectText(dir)).toBe(before);
+  });
+
+  it('names the stop check beside format-on-edit once checks.stop names a command', async () => {
+    const args = ['--yes', '--preset', 'full', '--stop-check'];
+    const result = await runInit(fixtureCopy('py-app').dir, args, { shipped: ['node_modules', '.venv'] });
+    expect(result.code).toBe(0);
+    expect(result.stderr).toContain(
+      'git tracks files in node_modules/ and .venv/, so format-on-edit and the stop check would run tools',
+    );
+  });
+
+  it('names no tools a repository ships while no hook runs one', async () => {
+    const args = ['--yes', '--preset', 'small'];
+    const result = await runInit(fixtureCopy('py-app').dir, args, { shipped: ['.venv'] });
+    expect(result.code).toBe(0);
+    expect(result.stderr).not.toContain('git tracks files in');
   });
 
   it('names no command this run set, and none of a module the preset leaves out', async () => {

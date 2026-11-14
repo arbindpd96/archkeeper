@@ -27,6 +27,8 @@ export interface CliContext {
   readonly gitState: (root: string) => GitState;
   /** The files git tracks in a project folder, relative to it, or undefined when git gives no list. */
   readonly trackedFiles: (root: string) => readonly string[] | undefined;
+  /** Which of these folders of a project folder hold a file git tracks, or undefined when git gives no answer. */
+  readonly trackedFolders: (root: string, folders: readonly string[]) => readonly string[] | undefined;
 }
 
 /** The global flags of every command (#26). */
