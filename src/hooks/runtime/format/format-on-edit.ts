@@ -55,6 +55,8 @@ function withHints(projectDir: string, hints: readonly Hint[], note: string | un
   return systemMessage([head, ...fresh.map((hint) => `- ${hint.text}`)].join('\n'), note);
 }
 
+// Exit 2 sends stderr to Claude alone, so beside a report the run's notes, such as a formatter that failed, come first
+// as one quoted line that is not Claude's to fix; otherwise they go to stderr as the note.
 function formatted(edited: EditedFile, settings: FormatSettings, projectDir: string): Answer {
   const { reports, skipped, notes } = runJobs(
     jobsFor(edited, settings, projectDir),
@@ -62,8 +64,13 @@ function formatted(edited: EditedFile, settings: FormatSettings, projectDir: str
     projectDir,
     BUDGET_MS,
   );
-  if (reports.length > 0) return refuse(feedback(edited, reports));
-  const note = notes.length === 0 ? undefined : escapeUnprintable(`format-on-edit: ${notes.join('; ')}`);
+  const noted = notes.join('; ');
+  if (reports.length > 0) {
+    return refuse(
+      feedback(edited, noted === '' ? reports : [`Not for you to fix: ${quoted(noted)}`, ...reports]),
+    );
+  }
+  const note = noted === '' ? undefined : escapeUnprintable(`format-on-edit: ${noted}`);
   return withHints(projectDir, hintsOf(skipped), note);
 }
 
