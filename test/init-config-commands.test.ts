@@ -153,7 +153,7 @@ describe("init warns while Claude Code's sandbox is on, since hooks run outside 
     writeFiles(dir, { '.claude/settings.local.json': SANDBOX_ON });
     const scripted = await runInit(dir, ['--yes', '--preset', 'full', '--stop-check', '--dry-run']);
     expect(scripted.stderr).toContain(
-      sandboxWarning('.claude/settings.local.json', 'format-on-edit and the stop check'),
+      `${sandboxWarning('.claude/settings.local.json', 'format-on-edit and the stop check')} leave them out with --modules -format-on-edit,-stop-check unless you accept that`,
     );
     const setup = { interactive: true, answers: ['no', false] };
     const result = await runInit(dir, ['--preset', 'medium'], setup);
@@ -165,10 +165,23 @@ describe("init warns while Claude Code's sandbox is on, since hooks run outside 
     const home = tempDir();
     writeFiles(home, { '.claude/settings.json': SANDBOX_ON });
     const user = await runInit(fixtureCopy('py-app').dir, ['--yes'], { home });
-    expect(user.stderr).toContain(sandboxWarning('~/.claude/settings.json', 'format-on-edit'));
+    expect(user.stderr).toContain(
+      `${sandboxWarning('~/.claude/settings.json', 'format-on-edit')} leave it out with --modules -format-on-edit unless you accept that`,
+    );
     const { dir } = fixtureCopy('py-app');
     writeFiles(dir, { '.claude/settings.json': JSON.stringify({ sandbox: { enabled: false } }) });
     expect((await runInit(dir, ['--yes'], { home })).stderr).not.toContain('sandbox');
+  });
+
+  it('names no flag for a hook the lock keeps for a module already left out, which the flag cannot remove', async () => {
+    const { dir } = fixtureCopy('py-app');
+    expect((await runInit(dir, ['--yes', '--preset', 'full', '--stop-check'])).code).toBe(0);
+    writeFiles(dir, { '.claude/settings.local.json': SANDBOX_ON });
+    const result = await runInit(dir, ['--yes', '--modules', '-stop-check']);
+    expect(result.code).toBe(0);
+    expect(result.stderr).toContain(
+      `${sandboxWarning('.claude/settings.local.json', 'format-on-edit and the stop check')} leave them out with --modules -format-on-edit unless you accept that`,
+    );
   });
 
   it('says nothing of the sandbox while no hook runs project tools', async () => {
