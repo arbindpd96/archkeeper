@@ -2,6 +2,7 @@ import type { Brand } from '../core/brand.js';
 import { configPath } from '../core/config.js';
 import { UsageError } from '../core/errors.js';
 import { detectedTools } from '../core/format-tools.js';
+import type { Stack } from '../core/schema-parts.js';
 import type { StackProfile } from '../core/stack-profile.js';
 import { isStringList, quoted } from '../core/text.js';
 import { gitFix } from './init-answers.js';
@@ -38,8 +39,27 @@ function refuseFlag(problem: string, hint: string): never {
   throw new UsageError({ file: '--stop-check', location: '', problem, hint });
 }
 
-// Under Yarn Plug'n'Play, the test script is there but npm finds none of the tools it runs.
-function refuseWithoutCommand(profile: StackProfile, where: string): never {
+// The test commands detection found for a stack that --stack or the config's stack leaves out, each with its stack.
+function leftOutCommands(profile: StackProfile, stack: readonly Stack[]): [command: string, owner: Stack][] {
+  const found: [string, Stack][] = [];
+  if (profile.pnp !== true && exitingTestScript(profile)) found.push(['npm run test', 'ts']);
+  if (detectedTools(profile, ['python']).includes('pytest')) found.push(['pytest', 'python']);
+  return found.filter(([, owner]) => !stack.includes(owner));
+}
+
+// A test command of a stack the run leaves out is there, but only a stack in effect counts; under Yarn Plug'n'Play,
+// the test script is there but npm finds none of the tools it runs.
+function refuseWithoutCommand(profile: StackProfile, stack: readonly Stack[], where: string): never {
+  const leftOut = leftOutCommands(profile, stack);
+  if (leftOut.length > 0) {
+    const commands = leftOut.map(([command]) => quoted(command)).join(' and ');
+    const owners = leftOut.map(([, owner]) => owner).join(' and ');
+    const [is, stacks] = leftOut.length === 1 ? ['is', 'stack'] : ['are', 'stacks'];
+    refuseFlag(
+      `found no test command: the detected ${commands} ${is} for the ${owners} ${stacks}, which --stack or the config's stack leaves out`,
+      `pass --stack ts,python, or set "${OPTION}" in ${where}`,
+    );
+  }
   if (profile.pnp === true && exitingTestScript(profile)) {
     refuseFlag(
       "found no test command: Yarn Plug'n'Play installs no node_modules for npm to run the test script from, and no pytest",
@@ -78,7 +98,7 @@ function flagged(run: InitRun, settled: Settled, profile: StackProfile): ConfigA
     warnKept(run, current, proposed);
     return undefined;
   }
-  if (proposed === undefined) refuseWithoutCommand(profile, where);
+  if (proposed === undefined) refuseWithoutCommand(profile, settled.stack, where);
   return { [MODULE]: { [OPTION]: proposed } };
 }
 
