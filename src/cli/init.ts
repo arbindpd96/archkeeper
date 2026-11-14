@@ -179,7 +179,8 @@ async function planInit(
   const kits = resolution.modules;
   warnAll(run, unknownOptOutReports(kits, options, run.brand));
   const modules = kits.map((kit) => kit.manifest.id);
-  const values = initValues(run, profile, stack, kits);
+  const lock = previousLock(run.rootReal, run.kit, run.brand);
+  const values = initValues(run, profile, stack, { kits, lock });
   const tree = treeToWrite(run, render(kits, { stack, options, tools, values }, run.brand));
   const planWith = (entries: readonly ModuleOptOut[]): Plan =>
     planProject(run.rootReal, tree, {
@@ -193,7 +194,6 @@ async function planInit(
   // A second plan keeps the bundles that guard registrations the user changed, and the first plan kept, still run.
   const optOuts = keepingRegisteredScripts(everyOptOut, firstPlan.ops);
   const installPlan = optOuts === everyOptOut ? firstPlan : planWith(optOuts);
-  const lock = previousLock(run.rootReal, run.kit, run.brand);
   const optedOut = unrecordedOptOuts(optOuts, lock, installPlan.ops);
   const plan = withConfig(installPlan, next, existing, run.brand);
   const written = plannedWrites(run.rootReal, plan, run.brand);

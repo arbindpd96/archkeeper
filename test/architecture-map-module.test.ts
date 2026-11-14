@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseBlocks } from '../src/core/blocks-file.js';
@@ -154,6 +154,17 @@ describe('init with the architecture-map module (#36)', () => {
     expect((await runInit(dir, ['--yes', '--preset', 'medium'], counted('medium'))).code).toBe(0);
     expect((await runInit(dir, ['--yes'], counted('again'))).code).toBe(0);
     expect(listings).toEqual({ small: 0, medium: 1, again: 0 });
+  });
+
+  it('lists nothing once the user has deleted the map, which init never writes again', async () => {
+    const listings = { deleted: 0, recorded: 0 };
+    const counted = (run: keyof typeof listings): InitSetup => ({ onTracked: () => (listings[run] += 1) });
+    const dir = await mediumInit('ts-app');
+    renameSync(path.join(dir, MAP), path.join(dir, 'docs', 'old-map.md'));
+    expect((await runInit(dir, ['--yes'], counted('deleted'))).code).toBe(0);
+    expect((await runInit(dir, ['--yes'], counted('recorded'))).code).toBe(0);
+    expect(listings).toEqual({ deleted: 0, recorded: 0 });
+    expect(existsSync(path.join(dir, MAP))).toBe(false);
   });
 
   it('writes nothing of its own with the small preset', async () => {
