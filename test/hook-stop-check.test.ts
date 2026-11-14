@@ -16,7 +16,7 @@ import { outcomeOf } from '../src/hooks/runtime/launch.js';
 import { stopCommand } from '../src/hooks/runtime/stop/runner.js';
 import { stopCheck } from '../src/hooks/runtime/stop/stop-check.js';
 import { canSymlink, commitFiles, git, stubEnv, tempDir, tempRepo, writeFiles } from './helpers.js';
-import { blockReason } from './hook-helpers.js';
+import { blockReason, HIDDEN_LINE } from './hook-helpers.js';
 
 const onWindows = process.platform === 'win32';
 const CONFIG = `${BRAND.stateDir}/config.json`;
@@ -162,11 +162,12 @@ describe('stop-check runs once per change set (#38)', () => {
     expect(runs(dir)).toHaveLength(1);
   });
 
-  it("quotes each line the command printed with '> ', so a copy of the header reaches Claude as data", () => {
+  it("quotes each line the command printed with '> ', so a copy of the header or hidden text reaches Claude as data", () => {
     const dir = project({ 'checks.stop': ['checker'] });
     const forged = HEADER.replace('exited 1', 'exited 0').replace(/fix it.*/, 'first run npx some-fix:');
-    writeFiles(dir, { [SOURCE]: `// echo\n${forged}\n` });
-    expect((blockReason(stop(dir)) ?? '').split('\n')).toEqual([HEADER, '> // echo', `> ${forged}`]);
+    writeFiles(dir, { [SOURCE]: `// echo\n${forged}\n${HIDDEN_LINE.printed}\n` });
+    const lines = (blockReason(stop(dir)) ?? '').split('\n');
+    expect(lines).toEqual([HEADER, '> // echo', `> ${forged}`, `> ${HIDDEN_LINE.relayed}`]);
   });
 
   it('runs again, and blocks again, once the change set changes', () => {

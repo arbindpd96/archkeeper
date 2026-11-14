@@ -131,6 +131,8 @@ describe('the map layout (#36)', () => {
     ['a tab', 'a\tb'],
     ['a C1 control character', 'a\u0085b'],
     ['a bidirectional override', 'a‮b'],
+    ['a zero-width space', `a${String.fromCodePoint(0x200b)}b`],
+    ['a tag character, which spells text no one sees', `a${String.fromCodePoint(0xe0041)}b`],
     ['a block marker', `${TEST_BRAND.markerPrefix}:begin x`],
     ['a legacy block marker', 'OLDKIT:END x'],
     ['an HTML comment opener', 'a<!--b'],

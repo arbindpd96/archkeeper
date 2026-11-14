@@ -5,10 +5,12 @@ export function compareText(left: string, right: string): number {
 }
 
 /**
- * A regex character-class body (for the `u` flag) of what may erase, move or disguise text where a terminal
- * prints it: control characters (C0, DEL and C1, so ESC and CSI), line separators and bidirectional overrides.
+ * A regex character-class body (for the `u` flag) of what may erase, move, disguise or hide text where a terminal
+ * prints it or Claude reads it: control characters (C0, DEL and C1, so ESC and CSI), line separators, and format
+ * characters, among them bidirectional overrides, zero-width characters and the tag characters that spell out text
+ * no one sees.
  */
-export const UNPRINTABLE = String.raw`\p{Cc}\u2028\u2029\u200E\u200F\u202A-\u202E\u2066-\u2069`;
+export const UNPRINTABLE = String.raw`\p{Cc}\p{Cf}\u2028\u2029`;
 
 const UNPRINTABLE_CHARACTER = new RegExp(`[${UNPRINTABLE}]`, 'gu');
 
