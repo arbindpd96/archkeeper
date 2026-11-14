@@ -8,6 +8,7 @@ import type { StackProfile } from '../core/stack-profile.js';
 import type { Session } from './context.js';
 import type { Asking } from './init-answers.js';
 import type { ExistingConfig, NextConfig } from './init-config.js';
+import type { Settled } from './init-tools.js';
 import { readConfined } from './project-files.js';
 
 /** The flags of `init` itself (#27); the global ones come from the session. */
@@ -59,6 +60,23 @@ export interface Planned {
    * module is now left out.
    */
   readonly hooksKept: readonly string[];
+}
+
+/** Whether the resolver keeps a module, so this init installs it. */
+export function isSelected(settled: Pick<Settled, 'resolution'>, moduleId: string): boolean {
+  return settled.resolution.modules.some((kit) => kit.manifest.id === moduleId);
+}
+
+/**
+ * Whether a module's hook runs once init is done: the module is selected, or the previous lock still owns its bundle,
+ * `<hook dir>/<module>.mjs`, which init keeps while the module is left out, since it removes nothing it installed.
+ */
+export function hookRuns(
+  planned: Pick<Planned, 'modules' | 'hooksKept'>,
+  moduleId: string,
+  brand: Brand,
+): boolean {
+  return planned.modules.includes(moduleId) || planned.hooksKept.includes(`${brand.hookDir}/${moduleId}.mjs`);
 }
 
 /** A project file's text, or undefined when it is absent or not a regular text file. */
