@@ -6,7 +6,7 @@ import type { Stack } from '../core/schema-parts.js';
 import type { StackProfile } from '../core/stack-profile.js';
 import { chooseCompose } from './init-compose.js';
 import { type ConfigAnswers, type ExistingConfig, nextConfig, type NextConfig } from './init-config.js';
-import type { InitRun } from './init-run.js';
+import { type InitRun, isSelected } from './init-run.js';
 import { stopCheckOptions } from './init-stop-check.js';
 
 const FORMAT_ON_EDIT = 'format-on-edit';
@@ -43,9 +43,9 @@ function settle(
 // format-on-edit runs only what the config records, so init records the detected tools once, while the config sets
 // neither list: a value the config has, even an empty list, is the user's and stays as it is.
 function recordedTools(settled: Settled, profile: StackProfile): ConfigAnswers['options'] {
-  const selected = settled.resolution.modules.some((kit) => kit.manifest.id === FORMAT_ON_EDIT);
   const own = settled.next.config.options[FORMAT_ON_EDIT] ?? {};
-  if (!selected || Object.hasOwn(own, 'formatters') || Object.hasOwn(own, 'linters')) return undefined;
+  const set = Object.hasOwn(own, 'formatters') || Object.hasOwn(own, 'linters');
+  if (!isSelected(settled, FORMAT_ON_EDIT) || set) return undefined;
   const { formatters, linters } = formatTools(profile, settled.stack);
   return { [FORMAT_ON_EDIT]: { formatters: [...formatters], linters: [...linters] } };
 }
