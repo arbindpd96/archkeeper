@@ -60,6 +60,8 @@ export interface Planned {
    * module is now left out.
    */
   readonly hooksKept: readonly string[];
+  /** The folders the hooks take project tools from, of `node_modules` and `.venv`, that hold files git tracks. */
+  readonly shipped: readonly string[];
 }
 
 /** Whether the resolver keeps a module, so this init installs it. */

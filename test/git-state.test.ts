@@ -1,7 +1,7 @@
 import { chmodSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { gitState, trackedFiles } from '../src/cli/git-state.js';
+import { gitState, trackedFiles, trackedFolders } from '../src/cli/git-state.js';
 import { compareText } from '../src/core/text.js';
 import { commitFiles, git, stubEnv, tempDir, tempRepo, writeFiles } from './helpers.js';
 
@@ -147,5 +147,33 @@ describe('trackedFiles (#36)', () => {
     const repo = tempRepo({ 'README.md': '' });
     stubEnv('PATH', '');
     expect(trackedFiles(repo)).toBeUndefined();
+  });
+});
+
+describe('trackedFolders (#37, #38)', () => {
+  it('names each folder that holds a file git tracks, matching its name in any case', () => {
+    const repo = tempRepo({
+      '.venv/bin/ruff': '#!/bin/sh\n',
+      'Node_Modules/prettier/package.json': '{}\n',
+      'src/a.ts': '',
+    });
+    expect(trackedFolders(repo, ['node_modules', '.venv', 'venv'])).toEqual(['node_modules', '.venv']);
+  });
+
+  it('names no folder whose files git does not track', () => {
+    const repo = tempRepo({ '.gitignore': 'node_modules/\n', 'src/a.ts': '' });
+    writeFiles(repo, { '.venv/bin/ruff': '#!/bin/sh\n', 'node_modules/prettier/package.json': '{}\n' });
+    expect(trackedFolders(repo, ['node_modules', '.venv'])).toEqual([]);
+  });
+
+  it('reads only to the first names of a folder git tracks in full', () => {
+    const files = Object.fromEntries(
+      Array.from({ length: 400 }, (_, index) => [`node_modules/pkg-${String(index)}/index.js`, '']),
+    );
+    expect(trackedFolders(tempRepo(files), ['node_modules'])).toEqual(['node_modules']);
+  });
+
+  it('gives no answer outside a repository', () => {
+    expect(trackedFolders(tempDir(), ['.venv'])).toBeUndefined();
   });
 });

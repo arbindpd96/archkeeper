@@ -2,6 +2,7 @@ import { gitRunner, unsafeForStatus } from '../hooks/runtime/git.js';
 
 const LIST_BUDGET_MS = 5_000;
 const LIST_MAX_BYTES = 32 * 1024 * 1024;
+const FOLDER_PEEK_BYTES = 4096;
 
 /**
  * What git says about a project folder: nothing to commit, uncommitted changes, no repository, a folder its
@@ -40,4 +41,22 @@ export function trackedFiles(root: string): string[] | undefined {
   const listed = gitRunner(root, LIST_BUDGET_MS, LIST_MAX_BYTES)?.(['ls-files', '-z', '--', '.']);
   if (listed?.status !== 0) return undefined;
   return listed.stdout.split('\0').filter((file) => file !== '');
+}
+
+/**
+ * Which of these folders of `root`, such as `node_modules`, hold a file git tracks (#37, #38): `git ls-files` through
+ * the same hardened runner, a folder at a time, its name matched in any case, as a case-insensitive file system
+ * resolves it, and read only to its first names, so a repository that tracks a whole node_modules costs no more.
+ * Undefined when git gives no answer.
+ */
+export function trackedFolders(root: string, folders: readonly string[]): string[] | undefined {
+  const git = gitRunner(root, LIST_BUDGET_MS, FOLDER_PEEK_BYTES);
+  if (git === undefined) return undefined;
+  const found: string[] = [];
+  for (const folder of folders) {
+    const listed = git(['ls-files', '-z', '--', `:(icase)${folder}`]);
+    if (listed.stdout !== '') found.push(folder);
+    else if (listed.status !== 0) return undefined;
+  }
+  return found;
 }

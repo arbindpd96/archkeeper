@@ -118,6 +118,8 @@ export interface InitSetup {
   readonly tracked?: readonly string[] | null;
   /** Runs each time init lists the files git tracks, so a test can count the listings. */
   readonly onTracked?: () => void;
+  /** The folders init asks git about, such as `.venv`, that hold a tracked file; none by default. */
+  readonly shipped?: readonly string[];
   readonly catalog?: Catalog;
   /** Runs before each answer is given, such as an edit made while init waits. */
   readonly whileAsking?: (question: string) => void;
@@ -190,6 +192,7 @@ export async function runInit(
       setup.onTracked?.();
       return setup.tracked === null ? undefined : (setup.tracked ?? filesUnder(root));
     },
+    trackedFolders: (_root, folders) => folders.filter((folder) => setup.shipped?.includes(folder) === true),
   };
   const code = await main(['init', '--cwd', dir, ...args], context);
   return { code, ...written, asked, defaults };
