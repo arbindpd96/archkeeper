@@ -186,7 +186,9 @@ describe('init sets the stop check in a scripted run only with --stop-check (#38
     expect(result.stderr).toContain(
       '--stop-check: needs the stop-check module, which only the full preset has',
     );
-    expect(result.stderr).toContain(`options.stop-check in ${CONFIG}`);
+    expect(result.stderr).toContain(
+      `pass --preset full or --modules +stop-check; checks.stop under options.stop-check in ${CONFIG} holds its command`,
+    );
   });
 
   it('refuses the flag where it detects no test command, naming the option to set', async () => {
@@ -195,19 +197,27 @@ describe('init sets the stop check in a scripted run only with --stop-check (#38
     const result = await runInit(dir, ['--yes', '--preset', 'full', '--stop-check']);
     expect(result.code).toBe(1);
     expect(result.stderr).toContain(NO_TEST_COMMAND);
-    expect(result.stderr).toContain(`"checks.stop" in options.stop-check in ${CONFIG}`);
+    expect(result.stderr).toContain(`set checks.stop under options.stop-check in ${CONFIG} to yours`);
   });
 
+  const PYTEST = {
+    'pyproject.toml': '[project]\nname = "app"\n\n[dependency-groups]\ndev = ["pytest>=8.3"]\n',
+  };
+  const TEST_SCRIPT = { 'package.json': '{"scripts":{"test":"vitest run"}}' };
+
   it.each([
+    ['ts', '"pytest" is for the python stack', 'ts,python', PYTEST],
+    ['python', '"npm run test" is for the ts stack', 'ts,python', TEST_SCRIPT],
+    ['none', '"npm run test" is for the ts stack', 'ts', TEST_SCRIPT],
     [
-      'ts',
-      '"pytest" is for the python stack',
-      { 'pyproject.toml': '[project]\nname = "app"\n\n[dependency-groups]\ndev = ["pytest>=8.3"]\n' },
+      'none',
+      '"npm run test" and "pytest" are for the ts and python stacks',
+      'ts,python',
+      { ...TEST_SCRIPT, ...PYTEST },
     ],
-    ['python', '"npm run test" is for the ts stack', { 'package.json': '{"scripts":{"test":"vitest run"}}' }],
   ])(
-    'refuses the flag with --stack %s, naming the stack it left out with the test command',
-    async (stack, found, files) => {
+    'refuses the flag with --stack %s where the detected %s, naming the stacks to pass',
+    async (stack, found, flag, files) => {
       const dir = tempDir();
       writeFiles(dir, {
         'package.json': JSON.stringify({ devDependencies: { prettier: '^3.0.0' } }),
@@ -219,7 +229,7 @@ describe('init sets the stop check in a scripted run only with --stop-check (#38
         `--stop-check: found no test command: the detected ${found}, which --stack or the config's stack leaves out`,
       );
       expect(result.stderr).toContain(
-        `pass --stack ts,python, or set "checks.stop" in options.stop-check in ${CONFIG}`,
+        `pass --stack ${flag}, or set checks.stop under options.stop-check in ${CONFIG}`,
       );
     },
   );
