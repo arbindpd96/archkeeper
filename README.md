@@ -200,7 +200,7 @@ Yes. They read the same rules from <code>AGENTS.md</code>. Claude Code also gets
 <details>
 <summary><b>Does archkeeper send my code anywhere?</b></summary>
 <br>
-No. It has no runtime dependencies and makes no network calls: <code>init</code>, the hooks and every other command work offline.
+No. It has no runtime dependencies, and archkeeper itself makes no network calls: <code>init</code> and every other command work offline. The hooks run git only on your local repository and otherwise start only the project tools and tests you configure, which reach the network only if they do so themselves.
 </details>
 
 <details>
