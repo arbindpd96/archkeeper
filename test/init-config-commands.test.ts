@@ -12,6 +12,8 @@ const PAYLOAD = { 'stop-check': { 'checks.stop': ['node', '-e', 'x'] } };
 const STOP_WARNING = `checks.stop in ${CONFIG} runs "node -e x" before Claude stops, without asking; remove it unless you trust whoever wrote it`;
 const SHIPPED = 'git tracks files in .venv/, so format-on-edit would run tools this repository ships';
 const SHIPPED_WARNING = `${SHIPPED} rather than ones you installed, without asking; delete those files and install your own unless you trust whoever committed them`;
+const UNANSWERED_WARNING =
+  'git cannot say whether you installed the tools in .venv/, so format-on-edit would run whatever is there, without asking; delete that folder and install your own unless you trust where this project came from';
 
 /** ts-app with a config whose options name commands for the hooks, as a cloned repository may ship one. */
 function clonedWith(preset: string, options: object): string {
@@ -63,7 +65,7 @@ describe('init names the commands a config has the hooks run (#37, #38, ADR-0015
       modules: ['format-on-edit'],
       existing,
       hooksKept: [],
-      shipped: [],
+      shipped: { folders: [], tracked: true },
     } as unknown as Planned;
     expect(configCommandWarnings(planned, TEST_BRAND)).toEqual([]);
   });
@@ -104,6 +106,25 @@ describe('init names the commands a config has the hooks run (#37, #38, ADR-0015
     expect(result.stderr).toContain(
       'git tracks files in node_modules/ and .venv/, so format-on-edit and the stop check would run tools',
     );
+  });
+
+  it('warns and asks where git cannot say whether the user installed the tools in a .venv that exists', async () => {
+    const { dir } = fixtureCopy('py-app');
+    writeFiles(dir, { '.venv/bin/ruff': '#!/bin/sh\n' });
+    const before = projectText(dir);
+    const setup = { interactive: true, answers: ['no', false], shipped: null };
+    const result = await runInit(dir, ['--preset', 'medium'], setup);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain(UNANSWERED_WARNING);
+    expect(result.asked.slice(1)).toEqual([QUESTION]);
+    expect(projectText(dir)).toBe(before);
+  });
+
+  it('names no folder where git cannot say and neither node_modules nor .venv exists', async () => {
+    const args = ['--yes', '--preset', 'medium'];
+    const result = await runInit(fixtureCopy('py-app').dir, args, { shipped: null });
+    expect(result.code).toBe(0);
+    expect(result.stderr).not.toContain('git cannot say');
   });
 
   it('names no tools a repository ships while no hook runs one', async () => {

@@ -1,8 +1,10 @@
+import path from 'node:path';
 import type { Brand } from '../core/brand.js';
 import { configPath } from '../core/config.js';
 import { isCommandList, isStringList, quoted } from '../core/text.js';
 import type { Asking } from './init-answers.js';
-import { hookRuns, type InitRun, type Planned } from './init-run.js';
+import { hookRuns, type InitRun, type Planned, type ShippedFolders } from './init-run.js';
+import { lstatOrUndefined } from './project-files.js';
 
 const TOOL_FOLDERS = ['node_modules', '.venv'];
 
@@ -23,13 +25,30 @@ function toolHooks(planned: ToolPlan, brand: Brand): string[] {
 }
 
 /**
- * The folders the hooks take project tools from, `node_modules` and `.venv`, that hold files git tracks, while
- * format-on-edit or the stop check runs tools (#37, #38): a repository that commits its own ruff or prettier there has
- * the hooks run that one, not one the user installed. Empty while no hook runs tools, and when git gives no answer.
+ * The folders the hooks take project tools from, `node_modules` and `.venv`, that may hold tools the user never
+ * installed, while format-on-edit or the stop check runs tools (#37, #38): those that hold files git tracks, since a
+ * repository that commits its own ruff or prettier there has the hooks run that one, or, where git gives no answer, as
+ * in a copy downloaded without `.git`, those that exist. None while no hook runs tools.
  */
-export function shippedToolFolders(run: InitRun, planned: ToolPlan): string[] {
-  if (toolHooks(planned, run.brand).length === 0) return [];
-  return [...(run.session.context.trackedFolders(run.rootReal, TOOL_FOLDERS) ?? [])];
+export function shippedToolFolders(run: InitRun, planned: ToolPlan): ShippedFolders {
+  if (toolHooks(planned, run.brand).length === 0) return { folders: [], tracked: true };
+  const tracked = run.session.context.trackedFolders(run.rootReal, TOOL_FOLDERS);
+  if (tracked !== undefined) return { folders: [...tracked], tracked: true };
+  const present = TOOL_FOLDERS.filter(
+    (folder) => lstatOrUndefined(path.join(run.rootReal, folder)) !== undefined,
+  );
+  return { folders: present, tracked: false };
+}
+
+// Who put the tools there: the repository, where git tracks them, or anyone, where git cannot say.
+function shippedWarning({ folders, tracked }: ShippedFolders, hooks: readonly string[]): string {
+  const named = folders.map((folder) => `${folder}/`).join(' and ');
+  const runs = hooks.join(' and ');
+  if (tracked) {
+    return `git tracks files in ${named}, so ${runs} would run tools this repository ships rather than ones you installed, without asking; delete those files and install your own unless you trust whoever committed them`;
+  }
+  const them = folders.length === 1 ? 'that folder' : 'those folders';
+  return `git cannot say whether you installed the tools in ${named}, so ${runs} would run whatever is there, without asking; delete ${them} and install your own unless you trust where this project came from`;
 }
 
 // The value the config on disk gives an option of a module whose hook runs once init is done. This run's answers, such
@@ -62,13 +81,8 @@ export function configCommandWarnings(planned: Planned, brand: Brand): string[] 
       `commands in ${config} run ${commands.map(shown).join(', ')} after each edit Claude makes, without asking; remove them unless you trust whoever wrote them`,
     );
   }
-  const hooks = planned.shipped.length === 0 ? [] : toolHooks(planned, brand);
-  if (hooks.length > 0) {
-    const folders = planned.shipped.map((folder) => `${folder}/`).join(' and ');
-    warnings.push(
-      `git tracks files in ${folders}, so ${hooks.join(' and ')} would run tools this repository ships rather than ones you installed, without asking; delete those files and install your own unless you trust whoever committed them`,
-    );
-  }
+  const hooks = planned.shipped.folders.length === 0 ? [] : toolHooks(planned, brand);
+  if (hooks.length > 0) warnings.push(shippedWarning(planned.shipped, hooks));
   return warnings;
 }
 
