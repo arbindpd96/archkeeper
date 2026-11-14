@@ -84,7 +84,9 @@ describe('init asks to turn on the stop check in full (#38, ADR-0015)', () => {
     writeFiles(dir, { 'package.json': JSON.stringify({ devDependencies: { prettier: '^3.0.0' } }) });
     const result = await runInit(dir, [], { interactive: true, answers: ['full', 'no', true] });
     expect(result.asked.slice(2)).toEqual(['Apply this plan?']);
-    expect(result.stdout).toContain(`\n  3. The stop check is off: set checks.stop in ${CONFIG}.\n`);
+    expect(result.stdout).toContain(
+      `\n  3. The stop check is off: set checks.stop under options.stop-check in ${CONFIG}.\n`,
+    );
     expect(result.stdout).not.toContain('--stop-check');
   });
 
@@ -93,7 +95,9 @@ describe('init asks to turn on the stop check in full (#38, ADR-0015)', () => {
     writeFiles(dir, { '.pnp.cjs': '' });
     const result = await runInit(dir, [], { interactive: true, answers: ['full', 'no', true] });
     expect(result.asked.slice(2)).toEqual(['Apply this plan?']);
-    expect(result.stdout).toContain(`The stop check is off: set checks.stop in ${CONFIG}.\n`);
+    expect(result.stdout).toContain(
+      `The stop check is off: set checks.stop under options.stop-check in ${CONFIG}.\n`,
+    );
   });
 
   it.each(['react-scripts test', 'ng test', 'jest --watch'])(
@@ -104,7 +108,9 @@ describe('init asks to turn on the stop check in full (#38, ADR-0015)', () => {
         answers: ['full', 'no', true],
       });
       expect(result.asked.slice(2)).toEqual(['Apply this plan?']);
-      expect(result.stdout).toContain(`The stop check is off: set checks.stop in ${CONFIG}.\n`);
+      expect(result.stdout).toContain(
+        `The stop check is off: set checks.stop under options.stop-check in ${CONFIG}.\n`,
+      );
     },
   );
 
@@ -138,7 +144,7 @@ describe('init sets the stop check in a scripted run only with --stop-check (#38
     expect(stopCheckOf(dir)).toBeUndefined();
     expect(result.stdout).not.toContain('The stop check runs');
     expect(result.stdout).toContain(
-      `\n  3. The stop check is off: set checks.stop in ${CONFIG}, or run init with --stop-check.\n`,
+      `\n  3. The stop check is off: set checks.stop under options.stop-check in ${CONFIG}, or run init with --stop-check.\n`,
     );
   });
 
