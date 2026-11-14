@@ -119,7 +119,7 @@ export async function stopCheckOptions(
   ) {
     return undefined;
   }
-  const question = `Turn on the stop check? Before Claude stops, it runs ${quoted(proposed.join(' '))}, and so the code Claude wrote, without asking. The command must exit on its own, with no watch mode.`;
+  const question = `Turn on the stop check? Before Claude stops, it runs ${quoted(proposed.join(' '))} without asking, and so whatever it collects in this folder, code Claude writes, clones or downloads included. The command must exit on its own, with no watch mode.`;
   const yes = await run.asking.prompter.confirm(question, false);
   if (yes !== true) return yes === undefined ? null : { [MODULE]: { [OPTION]: [] } };
   warnWithoutGit(run);

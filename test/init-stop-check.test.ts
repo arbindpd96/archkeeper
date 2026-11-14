@@ -8,7 +8,7 @@ import { TEST_BRAND } from './kit-fixtures.js';
 
 const CONFIG = `${TEST_BRAND.stateDir}/config.json`;
 const question = (command: string): string =>
-  `Turn on the stop check? Before Claude stops, it runs "${command}", and so the code Claude wrote, without asking. The command must exit on its own, with no watch mode.`;
+  `Turn on the stop check? Before Claude stops, it runs "${command}" without asking, and so whatever it collects in this folder, code Claude writes, clones or downloads included. The command must exit on its own, with no watch mode.`;
 const NO_TEST_COMMAND =
   '--stop-check: found no test command: no package.json test script that exits on its own, and no pytest';
 
