@@ -6,7 +6,9 @@
 # copy has no .venv, so the hook runs pytest from the recording machine's PATH; acceptEdits lets Claude edit without a
 # prompt. Every line types at 10 ms a key and the last frame holds 2 s, since Claude takes two turns of a read and an
 # edit each. The GIF may run 30 s, so the tape waits on Claude Code's screen instead of sleeping; check each pattern
-# when recording, and that Claude does not first ask which feature the session is for.
+# when recording, and that Claude does not first ask which feature the session is for. Record with sandbox.enabled
+# unset or false in ~/.claude/settings.json, the one settings file that reaches the copy: while it is on, init adds its
+# 4-row sandbox warning to its 20 lines and the screen before clear scrolls.
 # fixture: py-app
 Type@10ms "{{brand.binName}} init --yes --preset full --stop-check"
 Enter
