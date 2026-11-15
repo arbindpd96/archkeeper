@@ -5,7 +5,7 @@ import net from 'node:net';
 import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { gitState } from '../src/cli/git-state.js';
-import { fixtureCopy, tempDir, writeFiles } from './helpers.js';
+import { REPO_ROOT, fixtureCopy, tempDir, writeFiles } from './helpers.js';
 import { projectText } from './install-helpers.js';
 import { KIT, runInit } from './init-helpers.js';
 import { TEST_BRAND } from './kit-fixtures.js';
@@ -188,8 +188,16 @@ describe('init offers Superpowers and Spec Kit after the preset (#39, ADR-0008)'
     const result = await runInit(fixtureCopy('ts-app').dir, ['--yes', '--with', 'superpowers,speckit']);
     const lines = result.stdout.trimEnd().split('\n');
     expect(lines.length).toBeLessThanOrEqual(SCREEN.rows);
-    const nextSteps = lines.slice(lines.indexOf('Next steps:'));
-    expect(nextSteps.filter((line) => line.length > SCREEN.columns)).toEqual([]);
+    // The first line names the project's folder, whose temp path differs on the renderer.
+    expect(lines.slice(1).filter((line) => line.length > SCREEN.columns)).toEqual([]);
+  });
+
+  it("prints the text compose.tape waits for on one line, so the render's wait matches", async () => {
+    const tape = readFileSync(path.join(REPO_ROOT, 'docs/media/tapes/compose.tape'), 'utf8');
+    const waitsFor = new RegExp(/^Wait\+Screen \/(.+)\/$/m.exec(tape)?.[1] ?? '^$');
+    const result = await runInit(fixtureCopy('ts-app').dir, ['--yes', '--with', 'superpowers,speckit']);
+    const lines = result.stdout.trimEnd().split('\n');
+    expect(lines.filter((line) => waitsFor.test(line) && line.length <= SCREEN.columns)).toHaveLength(1);
   });
 });
 
