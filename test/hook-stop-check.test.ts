@@ -26,13 +26,14 @@ const HEADER = `${BRAND.displayName} stop check: "checker" exited 1; fix it if y
 // A stand-in test runner, installed as a JS bin: it logs each run beside itself, fails printing src/a.ts while it
 // starts with // echo, fails with 60 coloured lines while it says broken, sleeps while it says slow, prints 17 MB
 // while it says loud, fails at once, leaving a process that holds its output for 4 seconds, while it says orphan,
-// and kills itself with SIGKILL, as a crash or the OOM killer ends a run, while it says crash.
+// and kills itself with SIGKILL, as a crash or the OOM killer ends a run, while it says crash. The process left
+// behind works in the system temp folder, since Windows cannot delete a folder a live process works in.
 const RUNNER = `const fs = require('node:fs');
 fs.appendFileSync(__filename + '.log', JSON.stringify(process.argv.slice(2)) + '\\n');
 const source = fs.readFileSync('src/a.ts', 'utf8');
 if (source.startsWith('// echo')) { process.stdout.write(source); process.exit(1); }
 if (source.includes('orphan')) {
-  require('node:child_process').spawn(process.execPath, ['-e', 'setTimeout(() => {}, 4000)'], { stdio: 'inherit', detached: true }).unref();
+  require('node:child_process').spawn(process.execPath, ['-e', 'setTimeout(() => {}, 4000)'], { cwd: require('node:os').tmpdir(), stdio: 'inherit', detached: true }).unref();
   console.log('1 failed');
   process.exit(1);
 }
