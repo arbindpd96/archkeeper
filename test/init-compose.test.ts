@@ -29,10 +29,10 @@ const SUPERPOWERS =
 const SPEC_KIT =
   'Add Spec Kit: uv tool install specify-cli==1.2.1, then specify init --here --integration claude';
 const WARNING =
-  'Commit first: specify init --here may replace files. Read specify init --help before passing --force.';
-// The compose tape's frame: 1100×560 in JetBrains Mono 16 holds 23 rows of 109 columns, and the shell's prompt
-// takes the row after init's output.
-const SCREEN = { rows: 22, columns: 109 };
+  'Commit first: specify init --here may replace files. Read specify init --help before --force.';
+// The compose tape's frame: 1100×560 in JetBrains Mono 16 holds 23 rows of 100 columns on the CI renderer, whose
+// cells measure 10.3 px in a rendered frame, and the shell's prompt takes the row after init's output.
+const SCREEN = { rows: 22, columns: 100 };
 
 interface Json {
   readonly compose: unknown;

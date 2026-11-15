@@ -162,7 +162,7 @@ function offStep(planned: Planned, where: string): string {
  * the config sets no `checks.stop`, that it runs nothing until one is set; none after a no, recorded as `[]`. While
  * the module is left out but init keeps the hook it installed earlier, the line says the command still runs. A line
  * that asks for an edit names the option's place in full, `checks.stop under options.stop-check`, while the runs line
- * keeps to one row of the stop-check tape's 109 columns.
+ * keeps to one row of the stop-check tape's 100 columns.
  */
 export function stopCheckSteps(planned: Planned, brand: Brand): string[] {
   const selected = planned.modules.includes(MODULE);
