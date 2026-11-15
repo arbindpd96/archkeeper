@@ -7,8 +7,9 @@ import { tempDir, writeFiles } from './helpers.js';
 const onWindows = process.platform === 'win32';
 const PRINT_COLOUR = 'process.stdout.write(`${process.env.FORCE_COLOR}|${process.env.NO_COLOR}`);';
 // A test run that fails at once, leaving a process that holds its output for 4 seconds, as a server it started would.
+// That process works in the system temp folder, since Windows cannot delete a folder a live process works in.
 const LEAVES_A_PROCESS =
-  "require('node:child_process').spawn(process.execPath, ['-e', 'setTimeout(() => {}, 4000)'], { stdio: 'inherit', detached: true }).unref();\nconsole.log('1 failed');\nprocess.exit(1);";
+  "require('node:child_process').spawn(process.execPath, ['-e', 'setTimeout(() => {}, 4000)'], { cwd: require('node:os').tmpdir(), stdio: 'inherit', detached: true }).unref();\nconsole.log('1 failed');\nprocess.exit(1);";
 const IGNORES_SIGTERM = "process.on('SIGTERM', () => {});\nsetTimeout(() => process.exit(1), 5000);";
 // A crash, or the OOM killer, ends a program with a signal no deadline sent.
 const KILLS_ITSELF = "require('node:fs').writeSync(1, 'crashed\\n');\nprocess.kill(process.pid, 'SIGKILL');";
