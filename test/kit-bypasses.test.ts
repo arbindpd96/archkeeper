@@ -163,6 +163,7 @@ describe('@ imports the kit never writes', () => {
     '@.envrc/',
     '@.claude//settings.local.json',
     '<!---->@.<!---->env',
+    '<!---->@.<!--x--!>y-->env',
     '@.env.example.local',
   ])('finds an import of a private file in %j', (text) => {
     expect(importProblem(text)).toContain('secrets or personal file');
