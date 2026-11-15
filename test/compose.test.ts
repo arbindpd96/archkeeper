@@ -86,7 +86,7 @@ describe('modules/compose.json (#39, ADR-0008)', () => {
       'specify init --here --integration claude',
     ]);
     expect(specKit.warning).toBe(
-      'Commit first: specify init --here may replace files. Read specify init --help before passing --force.',
+      'Commit first: specify init --here may replace files. Read specify init --help before --force.',
     );
     expect(specKit.skillPrefixes).toEqual(['speckit.', 'speckit-']);
   });
