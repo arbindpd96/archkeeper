@@ -143,6 +143,7 @@ describe('the map layout (#36)', () => {
     ['a legacy block marker', 'OLDKIT:END x'],
     ['an HTML comment opener', 'a<!--b'],
     ['an HTML comment closer', 'a-->b'],
+    ['the other HTML comment closer', 'a--!>b'],
     ['an AWS access key', awsKey],
     ['a GitHub token', githubToken],
     ['an @ import of the home folder', 'notes@~'],
