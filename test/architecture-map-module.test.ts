@@ -45,8 +45,7 @@ describe('the architecture-map module (#36)', () => {
   it('keeps the Overview to a prompt in a comment and the stack line, since session start injects it', () => {
     const overview = section(moduleContent(TREE, 'architecture-map', MAP), 'Overview');
     expect(overview).toHaveLength(3);
-    expect(overview[0]?.startsWith('<!-- ')).toBe(true);
-    expect(overview[0]?.endsWith(' -->')).toBe(true);
+    expect([overview[0]?.slice(0, 5), overview[0]?.slice(-4)]).toEqual(['<!-- ', ' -->']);
     expect(overview.slice(1)).toEqual(['', '- Stack: not detected']);
   });
 
