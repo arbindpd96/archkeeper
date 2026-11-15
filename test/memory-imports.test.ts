@@ -33,6 +33,7 @@ const ROWS: readonly (readonly [text: string, imports: boolean])[] = [
   ['<!-- x --> **@AGENTS.md**', false],
   ['<!--\n@AGENTS.md\n-->', false],
   ['<!--\nnote\n--> @AGENTS.md', true],
+  ['<!-- a --!> @AGENTS.md -->', false],
   ['<p\n\n@AGENTS.md', false],
   ['<pre>\n\n@AGENTS.md\n</pre>', false],
   ['<?php\n\n@AGENTS.md ?>', false],
