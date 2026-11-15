@@ -34,8 +34,8 @@ const MAX_CONDITIONS = 4;
 // A name, condition or target past 100 characters reads as prose, not an identifier, in the map Claude checks.
 const MAX_NAME = 100;
 // A backtick ends the code span a name sits in and a bar splits its table row; a comment delimiter would let render's
-// import check, which cuts HTML comments first, read two names as one word.
-const BREAKS_MARKDOWN = /[`|]|<!--|-->/;
+// import check, which cuts HTML comments first, read two names as one word. HTML also ends a comment at `--!>`.
+const BREAKS_MARKDOWN = /[`|]|<!--|--!?>/;
 const UNPRINTABLE_CHARACTER = new RegExp(`[${UNPRINTABLE}]`, 'u');
 const NO_LAYOUT = 'Run `/update-map` to list the project folders here.';
 const NO_ENTRY_POINTS = 'None found in `package.json` or `pyproject.toml`.';
